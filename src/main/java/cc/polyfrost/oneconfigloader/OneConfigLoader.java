@@ -29,33 +29,34 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
         if (!oneConfigDir.exists() && !oneConfigDir.mkdir())
             throw new IllegalStateException("Could not create OneConfig dir!");
         File oneConfigFile = new File(oneConfigDir, "OneConfig (1.8.9).jar");
-        if (isInitialized(oneConfigFile)) return;
-        JsonElement json = getRequest("https://polyfrost.cc/static/oneconfig-versions.json");
-        if (json != null && json.isJsonObject()) {
-            JsonObject jsonObject = json.getAsJsonObject();
-            if (jsonObject.has("oneconfig") && jsonObject.getAsJsonObject("oneconfig").has("url")
-                    && jsonObject.getAsJsonObject("oneconfig").has("checksum")) {
-                String checksum = jsonObject.getAsJsonObject("oneconfig").get("checksum").getAsString();
-                String downloadUrl = jsonObject.getAsJsonObject("oneconfig").get("url").getAsString();
-                if (!oneConfigFile.exists() || !checksum.equals(getChecksum(oneConfigFile))) {
-                    System.out.println("Updating OneConfig...");
-                    File newOneConfigFile = new File(oneConfigDir, "OneConfig-NEW (1.8.9).jar");
-                    downloadFile(downloadUrl, newOneConfigFile);
-                    if (newOneConfigFile.exists() && checksum.equals(getChecksum(newOneConfigFile))) {
-                        try {
-                            Files.move(newOneConfigFile.toPath(), oneConfigFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                            System.out.println("Updated OneConfig");
-                        } catch (IOException ignored) {
+        if (!isInitialized(oneConfigFile)) {
+            JsonElement json = getRequest("https://polyfrost.cc/static/oneconfig-versions.json");
+            if (json != null && json.isJsonObject()) {
+                JsonObject jsonObject = json.getAsJsonObject();
+                if (jsonObject.has("oneconfig") && jsonObject.getAsJsonObject("oneconfig").has("url")
+                        && jsonObject.getAsJsonObject("oneconfig").has("checksum")) {
+                    String checksum = jsonObject.getAsJsonObject("oneconfig").get("checksum").getAsString();
+                    String downloadUrl = jsonObject.getAsJsonObject("oneconfig").get("url").getAsString();
+                    if (!oneConfigFile.exists() || !checksum.equals(getChecksum(oneConfigFile))) {
+                        System.out.println("Updating OneConfig...");
+                        File newOneConfigFile = new File(oneConfigDir, "OneConfig-NEW (1.8.9).jar");
+                        downloadFile(downloadUrl, newOneConfigFile);
+                        if (newOneConfigFile.exists() && checksum.equals(getChecksum(newOneConfigFile))) {
+                            try {
+                                Files.move(newOneConfigFile.toPath(), oneConfigFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                                System.out.println("Updated OneConfig");
+                            } catch (IOException ignored) {
+                            }
+                        } else {
+                            if (newOneConfigFile.exists()) newOneConfigFile.delete();
+                            System.out.println("Failed to update OneConfig, trying to continue...");
                         }
-                    } else {
-                        if (newOneConfigFile.exists()) newOneConfigFile.delete();
-                        System.out.println("Failed to update OneConfig, trying to continue...");
                     }
                 }
             }
+            if (!oneConfigFile.exists()) throw new IllegalStateException("OneConfig jar doesn't exist");
+            addToClasspath(oneConfigFile);
         }
-        if (!oneConfigFile.exists()) throw new IllegalStateException("OneConfig jar doesn't exist");
-        addToClasspath(oneConfigFile);
         try {
             OneConfigTransformer = ((IFMLLoadingPlugin) Launch.classLoader.findClass("cc.polyfrost.oneconfig.lwjgl.plugin.LoadingPlugin").newInstance());
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
@@ -137,7 +138,6 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
             for (byte b : digested) {
                 sb.append(Integer.toString((b & 0xff) + 0x100, 16).substring(1));
             }
-            System.out.println(sb);
             return sb.toString();
         } catch (IOException | NoSuchAlgorithmException e) {
             e.printStackTrace();
@@ -147,26 +147,26 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
 
     @Override
     public String[] getASMTransformerClass() {
-        return OneConfigTransformer.getASMTransformerClass();
+        return OneConfigTransformer == null ? null : OneConfigTransformer.getASMTransformerClass();
     }
 
     @Override
     public String getModContainerClass() {
-        return OneConfigTransformer.getModContainerClass();
+        return OneConfigTransformer == null ? null : OneConfigTransformer.getModContainerClass();
     }
 
     @Override
     public String getSetupClass() {
-        return OneConfigTransformer.getSetupClass();
+        return OneConfigTransformer == null ? null : OneConfigTransformer.getSetupClass();
     }
 
     @Override
     public void injectData(Map<String, Object> data) {
-        OneConfigTransformer.injectData(data);
+        if (OneConfigTransformer != null) OneConfigTransformer.injectData(data);
     }
 
     @Override
     public String getAccessTransformerClass() {
-        return OneConfigTransformer.getAccessTransformerClass();
+        return OneConfigTransformer == null ? null : OneConfigTransformer.getAccessTransformerClass();
     }
 }
