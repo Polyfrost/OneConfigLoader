@@ -3,12 +3,11 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '6.1.0'
     id "net.minecraftforge.gradle.forge" version "ddb1eb0"
     id "java"
-    id "maven-publish"
 }
 
 version = "1.0.0"
 group = "cc.polyfrost"
-archivesBaseName = rootProject.name.toLowerCase(Locale.ENGLISH)
+archivesBaseName = rootProject.name
 
 sourceCompatibility = targetCompatibility = 1.8
 compileJava.options.encoding = 'UTF-8'
@@ -18,6 +17,7 @@ minecraft {
     runDir = "run"
     mappings = "stable_22"
     makeObfSourceJar = false
+    clientJvmArgs += "-Dfml.coreMods.load=cc.polyfrost.oneconfigwrapper.OneConfigWrapper"
 }
 
 configurations {
@@ -26,19 +26,23 @@ configurations {
 }
 
 repositories {
-    mavenCentral()
-    maven { url "https://repo.woverflow.cc/" }
-    maven { url "https://libraries.minecraft.net/" }
 }
 
 dependencies {
-    compileOnly ("com.google.code.gson:gson:2.2.3")
-    compileOnly ("org.apache.httpcomponents:httpclient:4.3.3")
-    include ('io.sentry:sentry:5.6.3')
 }
 
 shadowJar {
     archiveClassifier.set('')
     configurations = [project.configurations.include]
     duplicatesStrategy DuplicatesStrategy.EXCLUDE
+}
+
+jar {
+    manifest.attributes(
+            "ModSide": "CLIENT",
+            "TweakOrder": 0,
+            "ForceLoadAsMod": true,
+            "FMLCorePlugin": "cc.polyfrost.oneconfigwrapper.OneConfigWrapper",
+            "FMLCorePluginContainsFMLMod": "yes",
+    )
 }
