@@ -3,7 +3,6 @@ plugins {
     id 'com.github.johnrengelman.shadow' version '6.1.0'
     id "net.minecraftforge.gradle.forge" version "ddb1eb0"
     id "java"
-    id "maven-publish"
 }
 
 version = "1.0.0"
@@ -26,15 +25,9 @@ configurations {
 }
 
 repositories {
-    mavenCentral()
-    maven { url "https://repo.woverflow.cc/" }
-    maven { url "https://libraries.minecraft.net/" }
 }
 
 dependencies {
-    compileOnly ("com.google.code.gson:gson:2.2.3")
-    compileOnly ("org.apache.httpcomponents:httpclient:4.3.3")
-    include ('io.sentry:sentry:5.6.3')
 }
 
 shadowJar {
