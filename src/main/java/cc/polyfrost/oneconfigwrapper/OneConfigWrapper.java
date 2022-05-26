@@ -26,28 +26,36 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
 
     public OneConfigWrapper() {
         super();
+
         File oneConfigDir = new File(Launch.minecraftHome, "OneConfig");
         if (!oneConfigDir.exists() && !oneConfigDir.mkdir())
             throw new IllegalStateException("Could not create OneConfig dir!");
+
         File oneConfigLoaderFile = new File(oneConfigDir, "OneConfig-Loader (1.8.9).jar");
+
         if (!isInitialized(oneConfigLoaderFile)) {
             JsonElement json = getRequest("https://polyfrost.cc/static/oneconfig-versions.json");
+
             if (json != null && json.isJsonObject()) {
                 JsonObject jsonObject = json.getAsJsonObject();
+
                 if (jsonObject.has("loader") && jsonObject.getAsJsonObject("loader").has("url")
                         && jsonObject.getAsJsonObject("loader").has("checksum")) {
+
                     String checksum = jsonObject.getAsJsonObject("loader").get("checksum").getAsString();
                     String downloadUrl = jsonObject.getAsJsonObject("loader").get("url").getAsString();
+
                     if (!oneConfigLoaderFile.exists() || !checksum.equals(getChecksum(oneConfigLoaderFile))) {
                         System.out.println("Updating OneConfig Loader...");
                         File newLoaderFile = new File(oneConfigDir, "OneConfig-Loader-NEW (1.8.9).jar");
+
                         downloadFile(downloadUrl, newLoaderFile);
+
                         if (newLoaderFile.exists() && checksum.equals(getChecksum(newLoaderFile))) {
                             try {
                                 Files.move(newLoaderFile.toPath(), oneConfigLoaderFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
                                 System.out.println("Updated OneConfig loader");
-                            } catch (IOException ignored) {
-                            }
+                            } catch (IOException ignored) {}
                         } else {
                             if (newLoaderFile.exists()) newLoaderFile.delete();
                             System.out.println("Failed to update OneConfig loader, trying to continue...");
