@@ -26,27 +26,35 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
 
     public OneConfigLoader() {
         File oneConfigDir = new File(Launch.minecraftHome, "OneConfig");
+
         if (!oneConfigDir.exists() && !oneConfigDir.mkdir())
             throw new IllegalStateException("Could not create OneConfig dir!");
+
         File oneConfigFile = new File(oneConfigDir, "OneConfig (1.8.9).jar");
+
         if (!isInitialized(oneConfigFile)) {
             JsonElement json = getRequest("https://polyfrost.cc/static/oneconfig-versions.json");
+
             if (json != null && json.isJsonObject()) {
                 JsonObject jsonObject = json.getAsJsonObject();
+
                 if (jsonObject.has("oneconfig") && jsonObject.getAsJsonObject("oneconfig").has("url")
                         && jsonObject.getAsJsonObject("oneconfig").has("checksum")) {
+
                     String checksum = jsonObject.getAsJsonObject("oneconfig").get("checksum").getAsString();
                     String downloadUrl = jsonObject.getAsJsonObject("oneconfig").get("url").getAsString();
+
                     if (!oneConfigFile.exists() || !checksum.equals(getChecksum(oneConfigFile))) {
                         System.out.println("Updating OneConfig...");
+
                         File newOneConfigFile = new File(oneConfigDir, "OneConfig-NEW (1.8.9).jar");
                         downloadFile(downloadUrl, newOneConfigFile);
+
                         if (newOneConfigFile.exists() && checksum.equals(getChecksum(newOneConfigFile))) {
                             try {
                                 Files.move(newOneConfigFile.toPath(), oneConfigFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
                                 System.out.println("Updated OneConfig");
-                            } catch (IOException ignored) {
-                            }
+                            } catch (IOException ignored) {}
                         } else {
                             if (newOneConfigFile.exists()) newOneConfigFile.delete();
                             System.out.println("Failed to update OneConfig, trying to continue...");
@@ -54,6 +62,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
                     }
                 }
             }
+
             if (!oneConfigFile.exists()) throw new IllegalStateException("OneConfig jar doesn't exist");
             addToClasspath(oneConfigFile);
         }
@@ -67,6 +76,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
     private boolean isInitialized(File file) {
         try {
             URL url = file.toURI().toURL();
+
             return Arrays.asList(((URLClassLoader) Launch.classLoader.getClass().getClassLoader()).getURLs()).contains(url);
         } catch (MalformedURLException e) {
             e.printStackTrace();
