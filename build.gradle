@@ -2,6 +2,8 @@
 plugins {
     id 'com.github.johnrengelman.shadow' version '6.1.0'
     id "net.minecraftforge.gradle.forge" version "ddb1eb0"
+    id "maven-publish"
+    id "signing"
     id "java"
 }
 
@@ -45,4 +47,42 @@ jar {
             "FMLCorePlugin": "cc.polyfrost.oneconfigwrapper.OneConfigWrapper",
             "FMLCorePluginContainsFMLMod": "yes",
     )
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            groupId = "cc.polyfrost"
+            artifactId = archivesBaseName + "-1.8.9-forge"
+
+            from(components["java"])
+        }
+    }
+
+    repositories {
+        maven {
+            name = "releases"
+            url = "https://repo.polyfrost.cc/releases"
+            credentials(PasswordCredentials)
+            authentication {
+                basic(BasicAuthentication)
+            }
+        }
+        maven {
+            name = "snapshots"
+            url = "https://repo.polyfrost.cc/snapshots"
+            credentials(PasswordCredentials)
+            authentication {
+                basic(BasicAuthentication)
+            }
+        }
+        maven {
+            name = "private"
+            url = "https://repo.polyfrost.cc/private"
+            credentials(PasswordCredentials)
+            authentication {
+                basic(BasicAuthentication)
+            }
+        }
+    }
 }

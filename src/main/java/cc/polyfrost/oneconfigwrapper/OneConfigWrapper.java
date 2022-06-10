@@ -22,7 +22,7 @@ import java.util.Map;
 
 @IFMLLoadingPlugin.MCVersion(value = "1.8.9")
 public class OneConfigWrapper implements IFMLLoadingPlugin {
-    private IFMLLoadingPlugin loader;
+    private IFMLLoadingPlugin loader = null;
 
     public OneConfigWrapper() {
         super();
@@ -34,15 +34,15 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
         File oneConfigLoaderFile = new File(oneConfigDir, "OneConfig-Loader (1.8.9).jar");
 
         if (!isInitialized(oneConfigLoaderFile)) {
-            JsonElement json = getRequest("https://polyfrost.cc/static/oneconfig-versions.json");
+            JsonElement json = getRequest("https://api.polyfrost.cc/oneconfig/1.8.9-forge");
 
             if (json != null && json.isJsonObject()) {
                 JsonObject jsonObject = json.getAsJsonObject();
 
                 if (jsonObject.has("loader") && jsonObject.getAsJsonObject("loader").has("url")
-                        && jsonObject.getAsJsonObject("loader").has("checksum")) {
+                        && jsonObject.getAsJsonObject("loader").has("sha256")) {
 
-                    String checksum = jsonObject.getAsJsonObject("loader").get("checksum").getAsString();
+                    String checksum = jsonObject.getAsJsonObject("loader").get("sha256").getAsString();
                     String downloadUrl = jsonObject.getAsJsonObject("loader").get("url").getAsString();
 
                     if (!oneConfigLoaderFile.exists() || !checksum.equals(getChecksum(oneConfigLoaderFile))) {
