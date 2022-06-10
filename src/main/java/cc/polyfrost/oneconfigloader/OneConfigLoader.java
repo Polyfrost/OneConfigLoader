@@ -13,6 +13,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
@@ -27,22 +28,31 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
     public OneConfigLoader() {
         File oneConfigDir = new File(Launch.minecraftHome, "OneConfig");
 
+        boolean update = true;
+        String channel = "release";
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(Files.newInputStream(new File(oneConfigDir, "OneConfig.json").toPath()), StandardCharsets.UTF_8))) {
+            JsonObject config = new JsonParser().parse(reader).getAsJsonObject();
+            update = config.get("autoUpdate").getAsBoolean();
+            channel = config.get("updateChannel").getAsInt() == 0 ? "release" : "snapshot";
+        } catch (Exception ignored) {
+        }
+
         if (!oneConfigDir.exists() && !oneConfigDir.mkdir())
             throw new IllegalStateException("Could not create OneConfig dir!");
 
         File oneConfigFile = new File(oneConfigDir, "OneConfig (1.8.9).jar");
 
         if (!isInitialized(oneConfigFile)) {
-            JsonElement json = getRequest("https://polyfrost.cc/static/oneconfig-versions.json");
+            JsonElement json = update ? getRequest("https://api.polyfrost.cc/oneconfig/1.8.9-forge") : null;
 
             if (json != null && json.isJsonObject()) {
                 JsonObject jsonObject = json.getAsJsonObject();
 
-                if (jsonObject.has("oneconfig") && jsonObject.getAsJsonObject("oneconfig").has("url")
-                        && jsonObject.getAsJsonObject("oneconfig").has("checksum")) {
+                if (jsonObject.has(channel) && jsonObject.getAsJsonObject(channel).has("url")
+                        && jsonObject.getAsJsonObject(channel).has("sha256")) {
 
-                    String checksum = jsonObject.getAsJsonObject("oneconfig").get("checksum").getAsString();
-                    String downloadUrl = jsonObject.getAsJsonObject("oneconfig").get("url").getAsString();
+                    String checksum = jsonObject.getAsJsonObject(channel).get("sha256").getAsString();
+                    String downloadUrl = jsonObject.getAsJsonObject(channel).get("url").getAsString();
 
                     if (!oneConfigFile.exists() || !checksum.equals(getChecksum(oneConfigFile))) {
                         System.out.println("Updating OneConfig...");
@@ -54,7 +64,8 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
                             try {
                                 Files.move(newOneConfigFile.toPath(), oneConfigFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
                                 System.out.println("Updated OneConfig");
-                            } catch (IOException ignored) {}
+                            } catch (IOException ignored) {
+                            }
                         } else {
                             if (newOneConfigFile.exists()) newOneConfigFile.delete();
                             System.out.println("Failed to update OneConfig, trying to continue...");
@@ -67,7 +78,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
             addToClasspath(oneConfigFile);
         }
         try {
-            OneConfigTransformer = ((IFMLLoadingPlugin) Launch.classLoader.findClass("cc.polyfrost.oneconfig.lwjgl.plugin.LoadingPlugin").newInstance());
+            OneConfigTransformer = ((IFMLLoadingPlugin) Launch.classLoader.findClass("cc.polyfrost.oneconfig.internal.plugin.LoadingPlugin").newInstance());
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
