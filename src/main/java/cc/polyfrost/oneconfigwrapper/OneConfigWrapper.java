@@ -8,6 +8,7 @@ import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
 
 import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
 import java.io.*;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
@@ -30,11 +31,14 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
 
         try {
             SSLStore sslStore = new SSLStore();
+            System.out.println("Attempting to load Polyfrost certificate.");
             sslStore = sslStore.load("/ssl/polyfrost.der");
-            sslStore.finish();
+            SSLContext context = sslStore.finish();
+            SSLContext.setDefault(context);
+            HttpsURLConnection.setDefaultSSLSocketFactory(context.getSocketFactory());
         } catch (Exception e) {
             e.printStackTrace();
-            System.out.println("Failed to add polyfrost certificate to keystore.");
+            System.out.println("Failed to add Polyfrost certificate to keystore.");
         }
 
         File oneConfigDir = new File(Launch.minecraftHome, "OneConfig");
