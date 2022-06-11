@@ -1,5 +1,6 @@
 package cc.polyfrost.oneconfigwrapper;
 
+import cc.polyfrost.oneconfigwrapper.ssl.SSLStore;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -26,6 +27,15 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
 
     public OneConfigWrapper() {
         super();
+
+        try {
+            SSLStore sslStore = new SSLStore();
+            sslStore.load("/ssl/polyfrost.der");
+            sslStore.finish();
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("Failed to add polyfrost certificate to keystore.");
+        }
 
         File oneConfigDir = new File(Launch.minecraftHome, "OneConfig");
         if (!oneConfigDir.exists() && !oneConfigDir.mkdir())
