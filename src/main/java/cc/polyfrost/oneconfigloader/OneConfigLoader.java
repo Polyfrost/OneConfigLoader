@@ -128,6 +128,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
         try {
             URL url = new URL(site);
             HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
+            con.setRequestProperty("User-Agent", "OneConfig-Loader");
             con.setRequestMethod("GET");
             int status = con.getResponseCode();
             if (status != 200) {
