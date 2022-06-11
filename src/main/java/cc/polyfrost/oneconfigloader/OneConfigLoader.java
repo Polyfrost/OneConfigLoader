@@ -24,8 +24,7 @@ import java.util.Map;
 
 
 public class OneConfigLoader implements IFMLLoadingPlugin {
-    private final Object transformer;
-    private final Class<?> clazz;
+    private final IFMLLoadingPlugin transformer;
 
     public OneConfigLoader() {
         File oneConfigDir = new File(Launch.minecraftHome, "OneConfig");
@@ -80,8 +79,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
             addToClasspath(oneConfigFile);
         }
         try {
-            clazz = Launch.classLoader.findClass("cc.polyfrost.oneconfig.internal.plugin.LoadingPlugin");
-            transformer = clazz.newInstance();
+            transformer = ((IFMLLoadingPlugin) Launch.classLoader.findClass("cc.polyfrost.oneconfig.internal.plugin.LoadingPlugin").newInstance());
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
             throw new RuntimeException(e);
         }
@@ -172,52 +170,26 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
 
     @Override
     public String[] getASMTransformerClass() {
-        try {
-            return transformer == null ? new String[]{} : (String[]) clazz.getDeclaredMethod("getASMTransformerClass").invoke(transformer);
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            e.printStackTrace();
-        }
-        return new String[]{};
+        return transformer == null ? new String[]{} : transformer.getASMTransformerClass();
     }
 
     @Override
     public String getModContainerClass() {
-        try {
-            return transformer == null ? null : (String) clazz.getDeclaredMethod("getModContainerClass").invoke(transformer);
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            e.printStackTrace();
-        }
-        return null;
+        return transformer == null ? null : transformer.getModContainerClass();
     }
 
     @Override
     public String getSetupClass() {
-        try {
-            return transformer == null ? null : (String) clazz.getDeclaredMethod("getSetupClass").invoke(transformer);
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            e.printStackTrace();
-        }
-        return null;
+        return transformer == null ? null : transformer.getSetupClass();
     }
 
     @Override
     public void injectData(Map<String, Object> data) {
-        try {
-            if (transformer != null) {
-                clazz.getDeclaredMethod("injectData", Map.class).invoke(transformer, data);
-            }
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            e.printStackTrace();
-        }
+        if (transformer != null) transformer.injectData(data);
     }
 
     @Override
     public String getAccessTransformerClass() {
-        try {
-            return transformer == null ? null : (String) clazz.getDeclaredMethod("getAccessTransformerClass").invoke(transformer);
-        } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
-            e.printStackTrace();
-        }
-        return null;
+        return transformer == null ? null : transformer.getAccessTransformerClass();
     }
 }
