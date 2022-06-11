@@ -30,7 +30,7 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
 
         try {
             SSLStore sslStore = new SSLStore();
-            sslStore.load("/ssl/polyfrost.der");
+            sslStore = sslStore.load("/ssl/polyfrost.der");
             sslStore.finish();
         } catch (Exception e) {
             e.printStackTrace();
