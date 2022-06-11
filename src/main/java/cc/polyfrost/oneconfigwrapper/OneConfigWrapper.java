@@ -110,7 +110,7 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
     private void downloadFile(String url, File location) {
         try {
             URLConnection con = new URL(url).openConnection();
-            con.setRequestProperty("User-Agent", "OneConfig-Loader");
+            con.setRequestProperty("User-Agent", "OneConfig-Wrapper");
             InputStream in = con.getInputStream();
             Files.copy(in, location.toPath(), StandardCopyOption.REPLACE_EXISTING);
             in.close();
@@ -123,6 +123,7 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
         try {
             URL url = new URL(site);
             HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
+            con.setRequestProperty("User-Agent", "OneConfig-Wrapper");
             con.setRequestMethod("GET");
             int status = con.getResponseCode();
             if (status != 200) {
