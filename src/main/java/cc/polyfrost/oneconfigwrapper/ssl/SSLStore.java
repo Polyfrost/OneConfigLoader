@@ -1,5 +1,6 @@
 package cc.polyfrost.oneconfigwrapper.ssl;
 
+import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.BufferedInputStream;
@@ -17,7 +18,7 @@ public class SSLStore {
 
     public SSLStore() throws Exception {
         Path keyStorePath = Paths.get(System.getProperty("java.home"), "lib", "security", "cacerts");
-        this.keyStore.load(Files.newInputStream(keyStorePath), null);
+        this.keyStore.load(Files.newInputStream(keyStorePath), (char[])null);
     }
 
     /**
@@ -66,7 +67,7 @@ public class SSLStore {
 
         // Return the SSLContext after init.
         SSLContext sslContext = SSLContext.getInstance("TLS");
-        sslContext.init(null, trustManagerFactory.getTrustManagers(), null);
+        sslContext.init((KeyManager[])null, trustManagerFactory.getTrustManagers(), null);
 
         return sslContext;
     }
