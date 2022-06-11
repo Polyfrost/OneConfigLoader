@@ -203,7 +203,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
     public void injectData(Map<String, Object> data) {
         try {
             if (transformer != null) {
-                clazz.getDeclaredMethod("injectData").invoke(transformer, data);
+                clazz.getDeclaredMethod("injectData", Map.class).invoke(transformer, data);
             }
         } catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
             e.printStackTrace();
