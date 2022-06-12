@@ -91,6 +91,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
         try {
             transformer = ((IFMLLoadingPlugin) Launch.classLoader.findClass("cc.polyfrost.oneconfig.internal.plugin.LoadingPlugin").newInstance());
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+            e.printStackTrace();
             showErrorScreen();
         }
     }
