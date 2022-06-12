@@ -5,6 +5,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.imageio.ImageIO;
 import javax.net.ssl.HttpsURLConnection;
@@ -31,6 +33,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
     private long timeLast = System.currentTimeMillis();
     private float downloadPercent = 0f;
     private final IFMLLoadingPlugin transformer;
+    private static final Logger logger = LogManager.getLogger("OneConfigLoader");
 
     public OneConfigLoader() {
         File oneConfigDir = new File(Launch.minecraftHome, "OneConfig");
@@ -62,7 +65,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
                     String downloadUrl = jsonObject.getAsJsonObject(channel).get("url").getAsString();
 
                     if (!oneConfigFile.exists() || !checksum.equals(getChecksum(oneConfigFile))) {
-                        System.out.println("Updating OneConfig...");
+                        logger.info("Updating OneConfig...");
 
                         File newOneConfigFile = new File(oneConfigDir, "OneConfig-NEW (1.8.9).jar");
                         downloadFile(downloadUrl, newOneConfigFile);
@@ -74,12 +77,12 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
                         if (newOneConfigFile.exists()) {
                             try {
                                 Files.move(newOneConfigFile.toPath(), oneConfigFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                                System.out.println("Updated OneConfig");
+                                logger.info("Updated OneConfig");
                             } catch (IOException ignored) {
                             }
                         } else {
                             if (newOneConfigFile.exists()) newOneConfigFile.delete();
-                            System.out.println("Failed to update OneConfig, trying to continue...");
+                            logger.error("Failed to update OneConfig, trying to continue...");
                         }
                     }
                 }
@@ -127,11 +130,11 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
             con.setRequestProperty("User-Agent", "OneConfig-Loader");
             int length = con.getContentLength();
             if (location.exists()) {
-                System.out.println("Deleting old file...");
+                logger.info("Deleting old file...");
                 location.delete();
             }
             location.createNewFile();
-            System.out.println("Downloading new version of OneConfig... (" + length / 1024f + "KB)");
+            logger.info("Downloading new version of OneConfig... (" + length / 1024f + "KB)");
             Thread downloader = new Thread(() -> {
                 try (InputStream in = con.getInputStream()) {
                     Files.copy(in, location.toPath(), StandardCopyOption.REPLACE_EXISTING);
@@ -145,11 +148,11 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
                 ui.update(downloadPercent);
                 if (System.currentTimeMillis() - timeLast > 1000) {
                     timeLast = System.currentTimeMillis();
-                    System.out.println("Downloaded " + (location.length() / 1024f) + "KB out of " + (length / 1024f) + "KB (" + (downloadPercent * 100) + "%)");
+                    logger.info("Downloaded " + (location.length() / 1024f) + "KB out of " + (length / 1024f) + "KB (" + (downloadPercent * 100) + "%)");
                 }
             }
             ui.dispose();
-            System.out.println("Download finished successfully");
+            logger.info("Download finished successfully");
         } catch (IOException e) {
             ui.dispose();
             e.printStackTrace();
@@ -164,7 +167,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
             con.setRequestMethod("GET");
             int status = con.getResponseCode();
             if (status != 200) {
-                System.out.println("API request failed, status code " + status);
+                logger.error("API request failed, status code " + status);
                 return null;
             }
             try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
@@ -244,7 +247,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
                 inter = Font.createFont(Font.TRUETYPE_FONT, Objects.requireNonNull(getClass().getResourceAsStream("/assets/fonts/Regular.otf"))).deriveFont(3f);
             } catch (Exception e) {
                 e.printStackTrace();
-                System.err.println("Failed to display download UI, continuing anyway");
+                logger.error("Failed to display download UI, continuing anyway");
                 return;
             }
             setIconImage(icon);
