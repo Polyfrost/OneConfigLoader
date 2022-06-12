@@ -10,6 +10,8 @@ import org.apache.logging.log4j.LogManager;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
+import javax.swing.*;
+import java.awt.*;
 import java.io.*;
 import java.lang.reflect.Method;
 import java.net.*;
@@ -23,7 +25,12 @@ import java.util.Map;
 
 @IFMLLoadingPlugin.MCVersion("1.8.9")
 public class OneConfigWrapper implements IFMLLoadingPlugin {
-    private final IFMLLoadingPlugin loader;
+    public static final Color GRAY_900 = new Color(13, 14, 15, 255);
+    public static final Color PRIMARY_500 = new Color(26, 103, 255);
+    public static final Color PRIMARY_500_80 = new Color(26, 103, 204);
+    public static final Color WHITE_80 = new Color(255, 255, 255, 204);
+    public static final Color TRANSPARENT = new Color(0, 0, 0, 0);
+    private IFMLLoadingPlugin loader = null;
 
     public OneConfigWrapper() {
         super();
@@ -68,7 +75,8 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
                             try {
                                 Files.move(newLoaderFile.toPath(), oneConfigLoaderFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
                                 System.out.println("Updated OneConfig loader");
-                            } catch (IOException ignored) {}
+                            } catch (IOException ignored) {
+                            }
                         } else {
                             if (newLoaderFile.exists()) newLoaderFile.delete();
                             System.out.println("Failed to update OneConfig loader, trying to continue...");
@@ -77,7 +85,7 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
                 }
             }
 
-            if (!oneConfigLoaderFile.exists()) throw new IllegalStateException("OneConfig jar doesn't exist");
+            if (!oneConfigLoaderFile.exists()) showErrorScreen();
             addToClasspath(oneConfigLoaderFile);
         }
         try {
@@ -90,7 +98,8 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
                         if (file.isFile()) {
                             Launch.blackboard.put("oneconfig.wrapper.modFile", file);
                         }
-                    } catch (URISyntaxException ignored) {}
+                    } catch (URISyntaxException ignored) {
+                    }
                 } else {
                     LogManager.getLogger().warn("No CodeSource, if this is not a development environment we might run into problems!");
                     LogManager.getLogger().warn(this.getClass().getProtectionDomain());
@@ -100,7 +109,8 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
             }
             loader = ((IFMLLoadingPlugin) Launch.classLoader.findClass("cc.polyfrost.oneconfigloader.OneConfigLoader").newInstance());
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-            throw new RuntimeException(e);
+            e.printStackTrace();
+            showErrorScreen();
         }
     }
 
@@ -208,5 +218,39 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
     @Override
     public String getAccessTransformerClass() {
         return loader == null ? null : loader.getAccessTransformerClass();
+    }
+
+    private void showErrorScreen() {
+        try {
+            UIManager.put("OptionPane.background", GRAY_900);
+            UIManager.put("Panel.background", GRAY_900);
+            UIManager.put("OptionPane.messageForeground", WHITE_80);
+            UIManager.put("Button.background", PRIMARY_500);
+            UIManager.put("Button.select", PRIMARY_500_80);
+            UIManager.put("Button.foreground", WHITE_80);
+            UIManager.put("Button.focus", TRANSPARENT);
+            int response = JOptionPane.showOptionDialog(
+                    null,
+                    "OneConfig has failed to download!\n" +
+                            "Please join our discord server at https://polyfrost.cc/discord\n" +
+                            "for support, or try again later.",
+                    "OneConfig has failed to download!", JOptionPane.OK_CANCEL_OPTION, JOptionPane.ERROR_MESSAGE, null,
+                    new Object[]{"Join Discord", "Close"}, "Join Discord"
+            );
+            if (response == 0) {
+                if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                    Desktop.getDesktop().browse(new URI("https://polyfrost.cc/discord"));
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            try {
+                Method exit = Class.forName("java.lang.Shutdown").getDeclaredMethod("exit", int.class);
+                exit.setAccessible(true);
+                exit.invoke(null, 1);
+            } catch (Exception e) {
+                System.exit(1);
+            }
+        }
     }
 }
