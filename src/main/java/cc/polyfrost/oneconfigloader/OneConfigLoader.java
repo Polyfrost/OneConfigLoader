@@ -20,7 +20,6 @@ import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -30,6 +29,7 @@ import java.util.Objects;
 
 public class OneConfigLoader implements IFMLLoadingPlugin {
     private long timeLast = System.currentTimeMillis();
+    private float downloadPercent = 0f;
     private final IFMLLoadingPlugin transformer;
 
     public OneConfigLoader() {
@@ -125,7 +125,6 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
             URLConnection con = new URL(url).openConnection();
             con.setUseCaches(false);
             con.setRequestProperty("User-Agent", "OneConfig-Loader");
-            InputStream in = con.getInputStream();
             int length = con.getContentLength();
             if(location.exists()) {
                 System.out.println("Deleting old file...");
@@ -133,19 +132,24 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
             }
             location.createNewFile();
             System.out.println("Downloading new version of OneConfig... (" + length / 1024f + "KB)");
-            for(byte[] buffer = new byte[1024]; in.read(buffer) != -1;) {
-                Files.write(location.toPath(), buffer, StandardOpenOption.APPEND);
-                float downloadPercent = (float) location.length() / (float) length;
-                if(downloadPercent > 1f) {
-                    downloadPercent = 1f;
+            Thread downloader = new Thread(() -> {
+                try {
+                    InputStream in = con.getInputStream();
+                    Files.copy(in, location.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    in.close();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
                 }
+            });
+            downloader.start();
+            while (downloadPercent < 1f) {
+                downloadPercent = (float) location.length() / (float) length;
                 ui.update(downloadPercent);
-                if(System.currentTimeMillis() - timeLast > 1000) {
+                if (System.currentTimeMillis() - timeLast > 1000) {
                     timeLast = System.currentTimeMillis();
                     System.out.println("Downloaded " + (location.length() / 1024f) + "KB out of " + (length / 1024f) + "KB (" + (downloadPercent * 100) + "%)");
                 }
             }
-            in.close();
             ui.dispose();
             System.out.println("Download finished successfully");
         } catch (IOException e) {
