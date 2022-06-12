@@ -250,6 +250,8 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
                 logger.error("Failed to display download UI, continuing anyway");
                 return;
             }
+            setAlwaysOnTop(true);
+            setResizable(false);
             setIconImage(icon);
             setSize(300, 100);
             setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
