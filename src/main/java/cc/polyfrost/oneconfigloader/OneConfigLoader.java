@@ -15,10 +15,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.net.URLConnection;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -28,11 +25,18 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.Objects;
 
-
+@IFMLLoadingPlugin.MCVersion("1.8.9")
 public class OneConfigLoader implements IFMLLoadingPlugin {
+    public static final Color GRAY_900 = new Color(13, 14, 15, 255);
+    public static final Color GRAY_700 = new Color(34, 35, 38);
+    public static final Color PRIMARY_500 = new Color(26, 103, 255);
+    public static final Color PRIMARY_500_80 = new Color(26, 103, 204);
+    public static final Color WHITE_80 = new Color(255, 255, 255, 204);
+    public static final Color TRANSPARENT = new Color(0, 0, 0, 0);
+
     private long timeLast = System.currentTimeMillis();
     private float downloadPercent = 0f;
-    private final IFMLLoadingPlugin transformer;
+    private IFMLLoadingPlugin transformer = null;
     private static final Logger logger = LogManager.getLogger("OneConfigLoader");
 
     public OneConfigLoader() {
@@ -81,13 +85,13 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
                 }
             }
 
-            if (!oneConfigFile.exists()) throw new IllegalStateException("OneConfig jar doesn't exist");
+            if (!oneConfigFile.exists()) showErrorScreen();
             addToClasspath(oneConfigFile);
         }
         try {
             transformer = ((IFMLLoadingPlugin) Launch.classLoader.findClass("cc.polyfrost.oneconfig.internal.plugin.LoadingPlugin").newInstance());
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
-            throw new RuntimeException(e);
+            showErrorScreen();
         }
     }
 
@@ -116,7 +120,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
     }
 
     private void downloadFile(String url, File location) {
-        DownloadUI ui = new DownloadUI();
+        Frame ui = new Frame();
         try {
             URLConnection con = new URL(url).openConnection();
             con.setRequestProperty("User-Agent", "OneConfig-Loader");
@@ -219,35 +223,18 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
         return transformer == null ? null : transformer.getAccessTransformerClass();
     }
 
-    private static class DownloadUI extends JFrame {
+    private static class DownloadUI extends JPanel {
         private BufferedImage base;
-        private final Color GRAY_700 = new Color(34, 35, 38);       // Gray 700
-        private final Color WHITE_60 = new Color(1f, 1f, 1f, 0.6f);    // White 60%
-        private final Color PRIMARY_500 = new Color(26, 103, 255);    // Primary 500
-        private Font inter;
         private float progress = 0f;
 
         public DownloadUI() {
-            super("OneConfigLoader");
-            Image icon;
+            super();
             try {
-                base = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/frame.png")));
-                icon = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/icon.png")));
-                inter = Font.createFont(Font.TRUETYPE_FONT, Objects.requireNonNull(getClass().getResourceAsStream("/assets/fonts/Regular.otf"))).deriveFont(3f);
-            } catch (Exception e) {
-                e.printStackTrace();
-                logger.error("Failed to display download UI, continuing anyway");
-                return;
+                base = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/oneconfig-loader/frame.png")));
+            } catch (Exception ignored) {
             }
-            setAlwaysOnTop(true);
-            setResizable(false);
-            setIconImage(icon);
-            setSize(300, 100);
-            setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-            setUndecorated(true);
-            setLocationRelativeTo(null);
             setBackground(new Color(0, 0, 0, 0));
-            setVisible(true);
+            setPreferredSize(new Dimension(300, 100));
         }
 
         @Override
@@ -260,15 +247,77 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
             g2d.fillRoundRect(12, 74, 275, 12, 12, 12);
             g2d.setColor(PRIMARY_500);
             g2d.fillRoundRect(12, 74, (int) (275 * progress), 12, 12, 12);
-            g2d.setFont(inter);
-            g2d.setColor(WHITE_60);
-            g2d.drawString("Downloading... (" + (int) (progress * 100) + "%)", 112, 94);
             g2d.dispose();
         }
 
         public void update(float progress) {
             this.progress = progress;
             repaint();
+        }
+    }
+
+    private static class Frame extends JFrame {
+        private final DownloadUI downloadUI = new DownloadUI();
+
+        public Frame() {
+            super("OneConfig");
+            setAlwaysOnTop(true);
+            setResizable(false);
+            Image icon = null;
+            try {
+                icon = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/oneconfig-loader/icon.png")));
+            } catch (Exception ignored) {
+            }
+            setAlwaysOnTop(true);
+            setResizable(false);
+            setIconImage(icon);
+            setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+            setUndecorated(true);
+            setLocationRelativeTo(null);
+            setBackground(new Color(0, 0, 0, 0));
+            add(downloadUI);
+            pack();
+            setVisible(true);
+        }
+
+        public void update(float progress) {
+            downloadUI.update(progress);
+            repaint();
+        }
+    }
+
+    private void showErrorScreen() {
+        try {
+            Icon icon = new ImageIcon(Objects.requireNonNull(getClass().getResource("/assets/oneconfig-loader/icon.png")));
+            UIManager.put("OptionPane.background", GRAY_900);
+            UIManager.put("Panel.background", GRAY_900);
+            UIManager.put("OptionPane.messageForeground", WHITE_80);
+            UIManager.put("Button.background", PRIMARY_500);
+            UIManager.put("Button.select", PRIMARY_500_80);
+            UIManager.put("Button.foreground", WHITE_80);
+            UIManager.put("Button.focus", TRANSPARENT);
+            int response = JOptionPane.showOptionDialog(
+                    null,
+                    "OneConfig has failed to download!\n" +
+                            "Please join our discord server at https://polyfrost.cc/discord\n" +
+                            "for support, or try again later.",
+                    "OneConfig has failed to download!", JOptionPane.OK_CANCEL_OPTION, JOptionPane.ERROR_MESSAGE, icon,
+                    new Object[]{"Join Discord", "Close"}, "Join Discord"
+            );
+            if (response == 0) {
+                if (Desktop.isDesktopSupported() && Desktop.getDesktop().isSupported(Desktop.Action.BROWSE)) {
+                    Desktop.getDesktop().browse(new URI("https://polyfrost.cc/discord"));
+                }
+            }
+        } catch (Exception ignored) {
+        } finally {
+            try {
+                Method exit = Class.forName("java.lang.Shutdown").getDeclaredMethod("exit", int.class);
+                exit.setAccessible(true);
+                exit.invoke(null, 1);
+            } catch (Exception e) {
+                System.exit(1);
+            }
         }
     }
 }
