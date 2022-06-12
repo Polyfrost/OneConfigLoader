@@ -133,10 +133,8 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
             location.createNewFile();
             System.out.println("Downloading new version of OneConfig... (" + length / 1024f + "KB)");
             Thread downloader = new Thread(() -> {
-                try {
-                    InputStream in = con.getInputStream();
+                try (InputStream in = con.getInputStream()) {
                     Files.copy(in, location.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                    in.close();
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -169,15 +167,15 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
                 System.out.println("API request failed, status code " + status);
                 return null;
             }
-            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-            String inputLine;
-            StringBuilder content = new StringBuilder();
-            while ((inputLine = in.readLine()) != null) {
-                content.append(inputLine);
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+                String inputLine;
+                StringBuilder content = new StringBuilder();
+                while ((inputLine = in.readLine()) != null) {
+                    content.append(inputLine);
+                }
+                JsonParser parser = new JsonParser();
+                return parser.parse(content.toString());
             }
-            in.close();
-            JsonParser parser = new JsonParser();
-            return parser.parse(content.toString());
         } catch (IOException e) {
             e.printStackTrace();
         }
