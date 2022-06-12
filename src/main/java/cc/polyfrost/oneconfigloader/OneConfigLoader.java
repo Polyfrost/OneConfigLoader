@@ -65,16 +65,9 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
                     String downloadUrl = jsonObject.getAsJsonObject(channel).get("url").getAsString();
 
                     if (!oneConfigFile.exists() || !checksum.equals(getChecksum(oneConfigFile))) {
-                        logger.info("Updating OneConfig...");
-
                         File newOneConfigFile = new File(oneConfigDir, "OneConfig-NEW (1.8.9).jar");
                         downloadFile(downloadUrl, newOneConfigFile);
-                        String newChecksum = getChecksum(newOneConfigFile);
-                        if (!checksum.equals(newChecksum)) {
-                            newOneConfigFile.delete();
-                            throw new SecurityException("Checksum mismatch! Expected " + checksum + ", but got " + newChecksum + "!");
-                        }
-                        if (newOneConfigFile.exists()) {
+                        if (newOneConfigFile.exists() && checksum.equals(getChecksum(newOneConfigFile))) {
                             try {
                                 Files.move(newOneConfigFile.toPath(), oneConfigFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
                                 logger.info("Updated OneConfig");
@@ -126,13 +119,9 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
         DownloadUI ui = new DownloadUI();
         try {
             URLConnection con = new URL(url).openConnection();
-            con.setUseCaches(false);
             con.setRequestProperty("User-Agent", "OneConfig-Loader");
             int length = con.getContentLength();
-            if (location.exists()) {
-                logger.info("Deleting old file...");
-                location.delete();
-            }
+            if (location.exists()) location.delete();
             location.createNewFile();
             logger.info("Downloading new version of OneConfig... (" + length / 1024f + "KB)");
             Thread downloader = new Thread(() -> {
