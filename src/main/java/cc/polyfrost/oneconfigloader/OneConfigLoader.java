@@ -5,10 +5,15 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
+import javax.imageio.ImageIO;
 import javax.net.ssl.HttpsURLConnection;
+import javax.swing.*;
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.*;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -21,10 +26,14 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Objects;
 
 
 public class OneConfigLoader implements IFMLLoadingPlugin {
+    private long timeLast = System.currentTimeMillis();
+    private float downloadPercent = 0f;
     private final IFMLLoadingPlugin transformer;
+    private static final Logger logger = LogManager.getLogger("OneConfigLoader");
 
     public OneConfigLoader() {
         File oneConfigDir = new File(Launch.minecraftHome, "OneConfig");
@@ -56,20 +65,24 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
                     String downloadUrl = jsonObject.getAsJsonObject(channel).get("url").getAsString();
 
                     if (!oneConfigFile.exists() || !checksum.equals(getChecksum(oneConfigFile))) {
-                        System.out.println("Updating OneConfig...");
+                        logger.info("Updating OneConfig...");
 
                         File newOneConfigFile = new File(oneConfigDir, "OneConfig-NEW (1.8.9).jar");
                         downloadFile(downloadUrl, newOneConfigFile);
-
-                        if (newOneConfigFile.exists() && checksum.equals(getChecksum(newOneConfigFile))) {
+                        String newChecksum = getChecksum(newOneConfigFile);
+                        if (!checksum.equals(newChecksum)) {
+                            newOneConfigFile.delete();
+                            throw new SecurityException("Checksum mismatch! Expected " + checksum + ", but got " + newChecksum + "!");
+                        }
+                        if (newOneConfigFile.exists()) {
                             try {
                                 Files.move(newOneConfigFile.toPath(), oneConfigFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                                System.out.println("Updated OneConfig");
+                                logger.info("Updated OneConfig");
                             } catch (IOException ignored) {
                             }
                         } else {
                             if (newOneConfigFile.exists()) newOneConfigFile.delete();
-                            System.out.println("Failed to update OneConfig, trying to continue...");
+                            logger.error("Failed to update OneConfig, trying to continue...");
                         }
                     }
                 }
@@ -110,14 +123,38 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
     }
 
     private void downloadFile(String url, File location) {
+        DownloadUI ui = new DownloadUI();
         try {
             URLConnection con = new URL(url).openConnection();
             con.setUseCaches(false);
             con.setRequestProperty("User-Agent", "OneConfig-Loader");
-            InputStream in = con.getInputStream();
-            Files.copy(in, location.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            in.close();
+            int length = con.getContentLength();
+            if (location.exists()) {
+                logger.info("Deleting old file...");
+                location.delete();
+            }
+            location.createNewFile();
+            logger.info("Downloading new version of OneConfig... (" + length / 1024f + "KB)");
+            Thread downloader = new Thread(() -> {
+                try (InputStream in = con.getInputStream()) {
+                    Files.copy(in, location.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            downloader.start();
+            while (downloadPercent < 1f) {
+                downloadPercent = (float) location.length() / (float) length;
+                ui.update(downloadPercent);
+                if (System.currentTimeMillis() - timeLast > 1000) {
+                    timeLast = System.currentTimeMillis();
+                    logger.info("Downloaded " + (location.length() / 1024f) + "KB out of " + (length / 1024f) + "KB (" + (downloadPercent * 100) + "%)");
+                }
+            }
+            ui.dispose();
+            logger.info("Download finished successfully");
         } catch (IOException e) {
+            ui.dispose();
             e.printStackTrace();
         }
     }
@@ -130,18 +167,18 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
             con.setRequestMethod("GET");
             int status = con.getResponseCode();
             if (status != 200) {
-                System.out.println("API request failed, status code " + status);
+                logger.error("API request failed, status code " + status);
                 return null;
             }
-            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-            String inputLine;
-            StringBuilder content = new StringBuilder();
-            while ((inputLine = in.readLine()) != null) {
-                content.append(inputLine);
+            try (BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()))) {
+                String inputLine;
+                StringBuilder content = new StringBuilder();
+                while ((inputLine = in.readLine()) != null) {
+                    content.append(inputLine);
+                }
+                JsonParser parser = new JsonParser();
+                return parser.parse(content.toString());
             }
-            in.close();
-            JsonParser parser = new JsonParser();
-            return parser.parse(content.toString());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -191,5 +228,58 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
     @Override
     public String getAccessTransformerClass() {
         return transformer == null ? null : transformer.getAccessTransformerClass();
+    }
+
+    private static class DownloadUI extends JFrame {
+        private BufferedImage base;
+        private final Color GRAY_700 = new Color(34, 35, 38);       // Gray 700
+        private final Color WHITE_60 = new Color(1f, 1f, 1f, 0.6f);    // White 60%
+        private final Color PRIMARY_500 = new Color(26, 103, 255);    // Primary 500
+        private Font inter;
+        private float progress = 0f;
+
+        public DownloadUI() {
+            super("OneConfigLoader");
+            Image icon;
+            try {
+                base = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/frame.png")));
+                icon = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/icon.png")));
+                inter = Font.createFont(Font.TRUETYPE_FONT, Objects.requireNonNull(getClass().getResourceAsStream("/assets/fonts/Regular.otf"))).deriveFont(3f);
+            } catch (Exception e) {
+                e.printStackTrace();
+                logger.error("Failed to display download UI, continuing anyway");
+                return;
+            }
+            setAlwaysOnTop(true);
+            setResizable(false);
+            setIconImage(icon);
+            setSize(300, 100);
+            setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+            setUndecorated(true);
+            setLocationRelativeTo(null);
+            setBackground(new Color(0, 0, 0, 0));
+            setVisible(true);
+        }
+
+        @Override
+        public void paint(Graphics g) {
+            super.paint(g);
+            Graphics2D g2d = (Graphics2D) g;
+            g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.drawImage(base, null, 0, 0);
+            g2d.setColor(GRAY_700);
+            g2d.fillRoundRect(12, 74, 275, 12, 12, 12);
+            g2d.setColor(PRIMARY_500);
+            g2d.fillRoundRect(12, 74, (int) (275 * progress), 12, 12, 12);
+            g2d.setFont(inter);
+            g2d.setColor(WHITE_60);
+            g2d.drawString("Downloading... (" + (int) (progress * 100) + "%)", 112, 94);
+            g2d.dispose();
+        }
+
+        public void update(float progress) {
+            this.progress = progress;
+            repaint();
+        }
     }
 }
