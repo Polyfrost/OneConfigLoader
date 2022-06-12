@@ -136,16 +136,15 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
             for(byte[] buffer = new byte[1024]; in.read(buffer) != -1;) {
                 Files.write(location.toPath(), buffer, StandardOpenOption.APPEND);
                 float downloadPercent = (float) location.length() / (float) length;
-                ui.update(downloadPercent);
                 if(downloadPercent > 1f) {
                     downloadPercent = 1f;
                 }
+                ui.update(downloadPercent);
                 if(System.currentTimeMillis() - timeLast > 1000) {
                     timeLast = System.currentTimeMillis();
                     System.out.println("Downloaded " + (location.length() / 1024f) + "KB out of " + (length / 1024f) + "KB (" + (downloadPercent * 100) + "%)");
                 }
             }
-            // remove empty bytes from the end of the file
             in.close();
             ui.dispose();
             System.out.println("Download finished successfully");
@@ -263,10 +262,10 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
             g2d.setColor(GRAY_700);
             g2d.fillRoundRect(12, 74, 275, 12, 12, 12);
             g2d.setColor(PRIMARY_500);
-            g2d.fillRoundRect(12, 75, (int) (275 * progress), 12, 12, 12);
+            g2d.fillRoundRect(12, 74, (int) (275 * progress), 12, 12, 12);
             g2d.setFont(inter);
             g2d.setColor(WHITE_60);
-            g2d.drawString("Downloading... (" + (int) (progress * 100) + "%)", 115, 94);
+            g2d.drawString("Downloading... (" + (int) (progress * 100) + "%)", 112, 94);
             g2d.dispose();
         }
 
