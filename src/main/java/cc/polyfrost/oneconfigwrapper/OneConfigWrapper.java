@@ -6,25 +6,24 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
+import org.apache.logging.log4j.LogManager;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import java.io.*;
 import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
-import java.net.URLConnection;
+import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.security.CodeSource;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Map;
 
-@IFMLLoadingPlugin.MCVersion(value = "1.8.9")
+@IFMLLoadingPlugin.MCVersion("1.8.9")
 public class OneConfigWrapper implements IFMLLoadingPlugin {
-    private IFMLLoadingPlugin loader = null;
+    private final IFMLLoadingPlugin loader;
 
     public OneConfigWrapper() {
         super();
@@ -82,6 +81,23 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
             addToClasspath(oneConfigLoaderFile);
         }
         try {
+            try {
+                CodeSource codeSource = this.getClass().getProtectionDomain().getCodeSource();
+                if (codeSource != null) {
+                    URL location = codeSource.getLocation();
+                    try {
+                        File file = new File(location.toURI());
+                        if (file.isFile()) {
+                            Launch.blackboard.put("oneconfig.wrapper.modFile", file);
+                        }
+                    } catch (URISyntaxException ignored) {}
+                } else {
+                    LogManager.getLogger().warn("No CodeSource, if this is not a development environment we might run into problems!");
+                    LogManager.getLogger().warn(this.getClass().getProtectionDomain());
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             loader = ((IFMLLoadingPlugin) Launch.classLoader.findClass("cc.polyfrost.oneconfigloader.OneConfigLoader").newInstance());
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
             throw new RuntimeException(e);
