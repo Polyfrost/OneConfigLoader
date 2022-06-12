@@ -67,7 +67,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
                         File newOneConfigFile = new File(oneConfigDir, "OneConfig-NEW (1.8.9).jar");
                         downloadFile(downloadUrl, newOneConfigFile);
                         String newChecksum = getChecksum(newOneConfigFile);
-                        if(!checksum.equals(newChecksum)) {
+                        if (!checksum.equals(newChecksum)) {
                             newOneConfigFile.delete();
                             throw new SecurityException("Checksum mismatch! Expected " + checksum + ", but got " + newChecksum + "!");
                         }
@@ -126,7 +126,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
             con.setUseCaches(false);
             con.setRequestProperty("User-Agent", "OneConfig-Loader");
             int length = con.getContentLength();
-            if(location.exists()) {
+            if (location.exists()) {
                 System.out.println("Deleting old file...");
                 location.delete();
             }
@@ -234,6 +234,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
         private final Color PRIMARY_500 = new Color(26, 103, 255);    // Primary 500
         private Font inter;
         private float progress = 0f;
+
         public DownloadUI() {
             super("OneConfigLoader");
             Image icon;
