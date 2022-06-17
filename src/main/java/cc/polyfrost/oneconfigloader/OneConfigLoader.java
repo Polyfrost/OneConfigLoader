@@ -3,8 +3,9 @@ package cc.polyfrost.oneconfigloader;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
-import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
+import net.minecraft.launchwrapper.LaunchClassLoader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -22,11 +23,10 @@ import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.Map;
+import java.util.List;
 import java.util.Objects;
 
-@IFMLLoadingPlugin.MCVersion("1.8.9")
-public class OneConfigLoader implements IFMLLoadingPlugin {
+public class OneConfigLoader implements ITweaker {
     public static final Color GRAY_900 = new Color(13, 14, 15, 255);
     public static final Color GRAY_700 = new Color(34, 35, 38);
     public static final Color PRIMARY_500 = new Color(26, 103, 255);
@@ -36,7 +36,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
 
     private long timeLast = System.currentTimeMillis();
     private float downloadPercent = 0f;
-    private IFMLLoadingPlugin transformer = null;
+    private ITweaker transformer = null;
     private static final Logger logger = LogManager.getLogger("OneConfigLoader");
 
     public OneConfigLoader() {
@@ -89,7 +89,7 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
             addToClasspath(oneConfigFile);
         }
         try {
-            transformer = ((IFMLLoadingPlugin) Launch.classLoader.findClass("cc.polyfrost.oneconfig.internal.plugin.LoadingPlugin").newInstance());
+            transformer = ((ITweaker) Launch.classLoader.findClass("cc.polyfrost.oneconfig.internal.plugin.OneConfigTweaker").newInstance());
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
             showErrorScreen();
@@ -199,29 +199,29 @@ public class OneConfigLoader implements IFMLLoadingPlugin {
         return "";
     }
 
+
     @Override
-    public String[] getASMTransformerClass() {
-        return transformer == null ? new String[]{} : transformer.getASMTransformerClass();
+    public void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
+        if (transformer != null) {
+            transformer.acceptOptions(args, gameDir, assetsDir, profile);
+        }
     }
 
     @Override
-    public String getModContainerClass() {
-        return transformer == null ? null : transformer.getModContainerClass();
+    public void injectIntoClassLoader(LaunchClassLoader classLoader) {
+        if (transformer != null) {
+            transformer.injectIntoClassLoader(classLoader);
+        }
     }
 
     @Override
-    public String getSetupClass() {
-        return transformer == null ? null : transformer.getSetupClass();
+    public String getLaunchTarget() {
+        return transformer != null ? transformer.getLaunchTarget() : null;
     }
 
     @Override
-    public void injectData(Map<String, Object> data) {
-        if (transformer != null) transformer.injectData(data);
-    }
-
-    @Override
-    public String getAccessTransformerClass() {
-        return transformer == null ? null : transformer.getAccessTransformerClass();
+    public String[] getLaunchArguments() {
+        return transformer != null ? transformer.getLaunchArguments() : new String[0];
     }
 
     private static class DownloadUI extends JPanel {
