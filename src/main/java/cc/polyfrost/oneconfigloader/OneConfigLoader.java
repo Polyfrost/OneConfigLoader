@@ -202,16 +202,12 @@ public class OneConfigLoader implements ITweaker {
 
     @Override
     public void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
-        if (transformer != null) {
-            transformer.acceptOptions(args, gameDir, assetsDir, profile);
-        }
+        if (transformer != null) transformer.acceptOptions(args, gameDir, assetsDir, profile);
     }
 
     @Override
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {
-        if (transformer != null) {
-            transformer.injectIntoClassLoader(classLoader);
-        }
+        if (transformer != null) transformer.injectIntoClassLoader(classLoader);
     }
 
     @Override
