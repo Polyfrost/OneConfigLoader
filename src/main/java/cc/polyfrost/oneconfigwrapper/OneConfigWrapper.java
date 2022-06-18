@@ -209,31 +209,21 @@ public class OneConfigWrapper implements ITweaker {
 
     @Override
     public void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
-        if (loader != null) {
-            loader.acceptOptions(args, gameDir, assetsDir, profile);
-        }
+        if (loader != null) loader.acceptOptions(args, gameDir, assetsDir, profile);
     }
 
     @Override
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {
-        if (loader != null) {
-            loader.injectIntoClassLoader(classLoader);
-        }
+        if (loader != null) loader.injectIntoClassLoader(classLoader);
     }
 
     @Override
     public String getLaunchTarget() {
-        if (loader != null) {
-            return loader.getLaunchTarget();
-        }
-        return null;
+        return loader != null ? loader.getLaunchTarget() : null;
     }
 
     @Override
     public String[] getLaunchArguments() {
-        if (loader != null) {
-            return loader.getLaunchArguments();
-        }
-        return new String[0];
+        return loader != null ? loader.getLaunchArguments() : new String[0];
     }
 }
