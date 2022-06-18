@@ -4,9 +4,9 @@ import cc.polyfrost.oneconfigwrapper.ssl.SSLStore;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
-import net.minecraftforge.fml.relauncher.IFMLLoadingPlugin;
-import org.apache.logging.log4j.LogManager;
+import net.minecraft.launchwrapper.LaunchClassLoader;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -17,98 +17,76 @@ import java.lang.reflect.Method;
 import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.security.CodeSource;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.Map;
+import java.util.List;
 
-@IFMLLoadingPlugin.MCVersion("1.8.9")
-public class OneConfigWrapper implements IFMLLoadingPlugin {
+public class OneConfigWrapper implements ITweaker {
     public static final Color GRAY_900 = new Color(13, 14, 15, 255);
     public static final Color PRIMARY_500 = new Color(26, 103, 255);
     public static final Color PRIMARY_500_80 = new Color(26, 103, 204);
     public static final Color WHITE_80 = new Color(255, 255, 255, 204);
     public static final Color TRANSPARENT = new Color(0, 0, 0, 0);
-    private IFMLLoadingPlugin loader = null;
+    private ITweaker loader = null;
 
     public OneConfigWrapper() {
-        super();
-
-        try {
-            SSLStore sslStore = new SSLStore();
-            System.out.println("Attempting to load Polyfrost certificate.");
-            sslStore = sslStore.load("/ssl/polyfrost.der");
-            SSLContext context = sslStore.finish();
-            SSLContext.setDefault(context);
-            HttpsURLConnection.setDefaultSSLSocketFactory(context.getSocketFactory());
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("Failed to add Polyfrost certificate to keystore.");
-        }
-
-        File oneConfigDir = new File(Launch.minecraftHome, "OneConfig");
-        if (!oneConfigDir.exists() && !oneConfigDir.mkdir())
-            throw new IllegalStateException("Could not create OneConfig dir!");
-
-        File oneConfigLoaderFile = new File(oneConfigDir, "OneConfig-Loader (1.8.9).jar");
-
-        if (!isInitialized(oneConfigLoaderFile)) {
-            JsonElement json = getRequest("https://api.polyfrost.cc/oneconfig/1.8.9-forge");
-
-            if (json != null && json.isJsonObject()) {
-                JsonObject jsonObject = json.getAsJsonObject();
-
-                if (jsonObject.has("loader") && jsonObject.getAsJsonObject("loader").has("url")
-                        && jsonObject.getAsJsonObject("loader").has("sha256")) {
-
-                    String checksum = jsonObject.getAsJsonObject("loader").get("sha256").getAsString();
-                    String downloadUrl = jsonObject.getAsJsonObject("loader").get("url").getAsString();
-
-                    if (!oneConfigLoaderFile.exists() || !checksum.equals(getChecksum(oneConfigLoaderFile))) {
-                        System.out.println("Updating OneConfig Loader...");
-                        File newLoaderFile = new File(oneConfigDir, "OneConfig-Loader-NEW (1.8.9).jar");
-
-                        downloadFile(downloadUrl, newLoaderFile);
-
-                        if (newLoaderFile.exists() && checksum.equals(getChecksum(newLoaderFile))) {
-                            try {
-                                Files.move(newLoaderFile.toPath(), oneConfigLoaderFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                                System.out.println("Updated OneConfig loader");
-                            } catch (IOException ignored) {
-                            }
-                        } else {
-                            if (newLoaderFile.exists()) newLoaderFile.delete();
-                            System.out.println("Failed to update OneConfig loader, trying to continue...");
-                        }
-                    }
-                }
-            }
-
-            if (!oneConfigLoaderFile.exists()) showErrorScreen();
-            addToClasspath(oneConfigLoaderFile);
-        }
         try {
             try {
-                CodeSource codeSource = this.getClass().getProtectionDomain().getCodeSource();
-                if (codeSource != null) {
-                    URL location = codeSource.getLocation();
-                    try {
-                        File file = new File(location.toURI());
-                        if (file.isFile()) {
-                            Launch.blackboard.put("oneconfig.wrapper.modFile", file);
-                        }
-                    } catch (URISyntaxException ignored) {
-                    }
-                } else {
-                    LogManager.getLogger().warn("No CodeSource, if this is not a development environment we might run into problems!");
-                    LogManager.getLogger().warn(this.getClass().getProtectionDomain());
-                }
+                SSLStore sslStore = new SSLStore();
+                System.out.println("Attempting to load Polyfrost certificate.");
+                sslStore = sslStore.load("/ssl/polyfrost.der");
+                SSLContext context = sslStore.finish();
+                SSLContext.setDefault(context);
+                HttpsURLConnection.setDefaultSSLSocketFactory(context.getSocketFactory());
             } catch (Exception e) {
                 e.printStackTrace();
+                System.out.println("Failed to add Polyfrost certificate to keystore.");
             }
-            loader = ((IFMLLoadingPlugin) Launch.classLoader.findClass("cc.polyfrost.oneconfigloader.OneConfigLoader").newInstance());
-        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
+
+            File oneConfigDir = new File(Launch.minecraftHome, "OneConfig");
+            if (!oneConfigDir.exists() && !oneConfigDir.mkdir())
+                throw new IllegalStateException("Could not create OneConfig dir!");
+
+            File oneConfigLoaderFile = new File(oneConfigDir, "OneConfig-Loader (1.8.9).jar");
+
+            if (!isInitialized(oneConfigLoaderFile)) {
+                JsonElement json = getRequest("https://api.polyfrost.cc/oneconfig/1.8.9-forge");
+
+                if (json != null && json.isJsonObject()) {
+                    JsonObject jsonObject = json.getAsJsonObject();
+
+                    if (jsonObject.has("loader") && jsonObject.getAsJsonObject("loader").has("url")
+                            && jsonObject.getAsJsonObject("loader").has("sha256")) {
+
+                        String checksum = jsonObject.getAsJsonObject("loader").get("sha256").getAsString();
+                        String downloadUrl = jsonObject.getAsJsonObject("loader").get("url").getAsString();
+
+                        if (!oneConfigLoaderFile.exists() || !checksum.equals(getChecksum(oneConfigLoaderFile))) {
+                            System.out.println("Updating OneConfig Loader...");
+                            File newLoaderFile = new File(oneConfigDir, "OneConfig-Loader-NEW (1.8.9).jar");
+
+                            downloadFile(downloadUrl, newLoaderFile);
+
+                            if (newLoaderFile.exists() && checksum.equals(getChecksum(newLoaderFile))) {
+                                try {
+                                    Files.move(newLoaderFile.toPath(), oneConfigLoaderFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                                    System.out.println("Updated OneConfig loader");
+                                } catch (IOException ignored) {
+                                }
+                            } else {
+                                if (newLoaderFile.exists()) newLoaderFile.delete();
+                                System.out.println("Failed to update OneConfig loader, trying to continue...");
+                            }
+                        }
+                    }
+                }
+
+                if (!oneConfigLoaderFile.exists()) showErrorScreen();
+                addToClasspath(oneConfigLoaderFile);
+            }
+            loader = ((ITweaker) Launch.classLoader.findClass("cc.polyfrost.oneconfigloader.OneConfigLoader").newInstance());
+        } catch (Exception e) {
             e.printStackTrace();
             showErrorScreen();
         }
@@ -195,31 +173,6 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
         return "";
     }
 
-    @Override
-    public String[] getASMTransformerClass() {
-        return loader == null ? null : loader.getASMTransformerClass();
-    }
-
-    @Override
-    public String getModContainerClass() {
-        return loader == null ? null : loader.getModContainerClass();
-    }
-
-    @Override
-    public String getSetupClass() {
-        return loader == null ? null : loader.getSetupClass();
-    }
-
-    @Override
-    public void injectData(Map<String, Object> data) {
-        if (loader != null) loader.injectData(data);
-    }
-
-    @Override
-    public String getAccessTransformerClass() {
-        return loader == null ? null : loader.getAccessTransformerClass();
-    }
-
     private void showErrorScreen() {
         try {
             UIManager.put("OptionPane.background", GRAY_900);
@@ -252,5 +205,35 @@ public class OneConfigWrapper implements IFMLLoadingPlugin {
                 System.exit(1);
             }
         }
+    }
+
+    @Override
+    public void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
+        if (loader != null) {
+            loader.acceptOptions(args, gameDir, assetsDir, profile);
+        }
+    }
+
+    @Override
+    public void injectIntoClassLoader(LaunchClassLoader classLoader) {
+        if (loader != null) {
+            loader.injectIntoClassLoader(classLoader);
+        }
+    }
+
+    @Override
+    public String getLaunchTarget() {
+        if (loader != null) {
+            return loader.getLaunchTarget();
+        }
+        return null;
+    }
+
+    @Override
+    public String[] getLaunchArguments() {
+        if (loader != null) {
+            return loader.getLaunchArguments();
+        }
+        return new String[0];
     }
 }

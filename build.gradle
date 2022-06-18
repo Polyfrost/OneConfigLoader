@@ -7,7 +7,7 @@ plugins {
     id "java"
 }
 
-version = "1.0.0-alpha5"
+version = "1.0.0-alpha6"
 group = "cc.polyfrost"
 archivesBaseName = rootProject.name
 
@@ -19,7 +19,7 @@ minecraft {
     runDir = "run"
     mappings = "stable_22"
     makeObfSourceJar = false
-    clientJvmArgs += "-Dfml.coreMods.load=cc.polyfrost.oneconfigwrapper.OneConfigWrapper"
+    clientRunArgs += "--tweakClass cc.polyfrost.oneconfigwrapper.OneConfigWrapper"
 }
 
 configurations {
@@ -42,10 +42,9 @@ shadowJar {
 jar {
     manifest.attributes(
             "ModSide": "CLIENT",
-            "TweakOrder": 0,
+            "TweakOrder": "0",
             "ForceLoadAsMod": true,
-            "FMLCorePlugin": "cc.polyfrost.oneconfigwrapper.OneConfigWrapper",
-            "FMLCorePluginContainsFMLMod": "yes",
+            'TweakClass': 'cc.woverflow.onecore.tweaker.OneCoreTweaker'
     )
 }
 
