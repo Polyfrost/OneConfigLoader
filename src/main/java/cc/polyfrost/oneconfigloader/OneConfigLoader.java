@@ -89,7 +89,7 @@ public class OneConfigLoader implements ITweaker {
             addToClasspath(oneConfigFile);
         }
         try {
-            transformer = ((ITweaker) Launch.classLoader.findClass("cc.polyfrost.oneconfig.internal.plugin.OneConfigTweaker").newInstance());
+            transformer = ((ITweaker) Launch.classLoader.findClass("cc.polyfrost.oneconfig.internal.plugin.asm.OneConfigTweaker").newInstance());
         } catch (ClassNotFoundException | InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
             showErrorScreen();
