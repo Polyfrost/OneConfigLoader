@@ -7,6 +7,7 @@ import com.google.gson.JsonParser;
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
+import net.minecraftforge.common.ForgeVersion;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -44,14 +45,14 @@ public class OneConfigWrapper implements ITweaker {
                 System.out.println("Failed to add Polyfrost certificate to keystore.");
             }
 
-            File oneConfigDir = new File(Launch.minecraftHome, "OneConfig");
-            if (!oneConfigDir.exists() && !oneConfigDir.mkdir())
+            File oneConfigDir = new File(new File(Launch.minecraftHome, "OneConfig"), "launchwrapper");
+            if (!oneConfigDir.exists() && !oneConfigDir.mkdirs())
                 throw new IllegalStateException("Could not create OneConfig dir!");
 
-            File oneConfigLoaderFile = new File(oneConfigDir, "OneConfig-Loader (1.8.9).jar");
+            File oneConfigLoaderFile = new File(oneConfigDir, "OneConfig-Loader.jar");
 
             if (!isInitialized(oneConfigLoaderFile)) {
-                JsonElement json = getRequest("https://api.polyfrost.cc/oneconfig/1.8.9-forge");
+                JsonElement json = getRequest("https://api.polyfrost.cc/oneconfig/" + ForgeVersion.mcVersion + "-forge");
 
                 if (json != null && json.isJsonObject()) {
                     JsonObject jsonObject = json.getAsJsonObject();
@@ -64,7 +65,7 @@ public class OneConfigWrapper implements ITweaker {
 
                         if (!oneConfigLoaderFile.exists() || !checksum.equals(getChecksum(oneConfigLoaderFile))) {
                             System.out.println("Updating OneConfig Loader...");
-                            File newLoaderFile = new File(oneConfigDir, "OneConfig-Loader-NEW (1.8.9).jar");
+                            File newLoaderFile = new File(oneConfigDir, "OneConfig-Loader-NEW.jar");
 
                             downloadFile(downloadUrl, newLoaderFile);
 
