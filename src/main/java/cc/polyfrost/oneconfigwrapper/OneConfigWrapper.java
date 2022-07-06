@@ -52,7 +52,15 @@ public class OneConfigWrapper implements ITweaker {
             File oneConfigLoaderFile = new File(oneConfigDir, "OneConfig-Loader.jar");
 
             if (!isInitialized(oneConfigLoaderFile)) {
-                JsonElement json = getRequest("https://api.polyfrost.cc/oneconfig/" + ForgeVersion.mcVersion + "-forge");
+                Object mcVersion = "1.8.9";
+                try {
+                    mcVersion = ForgeVersion.class.getDeclaredField("mcVersion").get(null);
+                    System.out.println("OneConfig has detected the version " + mcVersion + ". If this is false, report this at https://inv.wtf/polyfrost");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    System.out.println("Getting the Minecraft version failed, defaulting to 1.8.9. Please report this to https://inv.wtf/polyfrost");
+                }
+                JsonElement json = getRequest("https://api.polyfrost.cc/oneconfig/" + mcVersion + "-forge");
 
                 if (json != null && json.isJsonObject()) {
                     JsonObject jsonObject = json.getAsJsonObject();
