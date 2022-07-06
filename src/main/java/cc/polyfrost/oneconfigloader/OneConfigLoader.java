@@ -6,6 +6,7 @@ import com.google.gson.JsonParser;
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
+import net.minecraftforge.common.ForgeVersion;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -24,6 +25,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 
 public class OneConfigLoader implements ITweaker {
@@ -54,10 +56,19 @@ public class OneConfigLoader implements ITweaker {
         if (!oneConfigDir.exists() && !oneConfigDir.mkdir())
             throw new IllegalStateException("Could not create OneConfig dir!");
 
-        File oneConfigFile = new File(oneConfigDir, "OneConfig (1.8.9).jar");
+        Object mcVersion = "1.8.9";
+        try {
+            mcVersion = ForgeVersion.class.getDeclaredField("mcVersion").get(null);
+            System.out.println("OneConfig has detected the version " + mcVersion + ". If this is false, report this at https://inv.wtf/polyfrost");
+        } catch (Exception e) {
+            e.printStackTrace();
+            System.out.println("Getting the Minecraft version failed, defaulting to 1.8.9. Please report this to https://inv.wtf/polyfrost");
+        }
+
+        File oneConfigFile = new File(oneConfigDir, "OneConfig (" + mcVersion + "-forge" + ").jar");
 
         if (!isInitialized(oneConfigFile)) {
-            JsonElement json = update ? getRequest("https://api.polyfrost.cc/oneconfig/1.8.9-forge") : null;
+            JsonElement json = update ? getRequest("https://api.polyfrost.cc/oneconfig/" + mcVersion + "-forge") : null;
 
             if (json != null && json.isJsonObject()) {
                 JsonObject jsonObject = json.getAsJsonObject();
@@ -69,7 +80,7 @@ public class OneConfigLoader implements ITweaker {
                     String downloadUrl = jsonObject.getAsJsonObject(channel).get("url").getAsString();
 
                     if (!oneConfigFile.exists() || !checksum.equals(getChecksum(oneConfigFile))) {
-                        File newOneConfigFile = new File(oneConfigDir, "OneConfig-NEW (1.8.9).jar");
+                        File newOneConfigFile = new File(oneConfigDir, "OneConfig-NEW (" + mcVersion + "-forge" + ").jar");
                         downloadFile(downloadUrl, newOneConfigFile);
                         if (newOneConfigFile.exists() && checksum.equals(getChecksum(newOneConfigFile))) {
                             try {
