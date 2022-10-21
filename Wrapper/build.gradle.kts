@@ -20,7 +20,7 @@ tasks.withType(Jar::class) {
 publishing {
     publications {
         create<MavenPublication>("wrapper") {
-            artifactId = name
+            artifactId = project.name
             from(components["java"])
         }
     }

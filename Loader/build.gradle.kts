@@ -10,8 +10,8 @@ loom {
 
 publishing {
     publications {
-        create<MavenPublication>("wrapper") {
-            artifactId = name
+        create<MavenPublication>("loader") {
+            artifactId = project.name
             from(components["java"])
         }
     }
