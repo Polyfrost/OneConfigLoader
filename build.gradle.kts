@@ -57,6 +57,7 @@ subprojects {
     }
 
     configure<JavaPluginExtension> {
+        withSourcesJar()
         toolchain.languageVersion.set(JavaLanguageVersion.of(8))
     }
     configure<LoomGradleExtensionAPI> {

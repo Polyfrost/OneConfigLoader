@@ -12,7 +12,14 @@ publishing {
     publications {
         create<MavenPublication>("loader") {
             artifactId = project.name
-            from(components["java"])
+            group = project.group
+            version = project.version.toString()
+            artifacts {
+                artifact(tasks["shadowJar"])
+                artifact(tasks["sourcesJar"]) {
+                    classifier = "sources"
+                }
+            }
         }
     }
 }
