@@ -1,9 +1,7 @@
-version = "1.0.0-alpha10"
-
 loom {
     launchConfigs {
         "client" {
-            arg("--tweakClass", "cc.polyfrost.oneconfigwrapper.OneConfigLoader")
+            arg("--tweakClass", "cc.polyfrost.oneconfig.loader.OneConfigLoader")
         }
     }
 }

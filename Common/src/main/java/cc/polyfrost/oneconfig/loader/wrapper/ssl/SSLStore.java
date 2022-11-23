@@ -1,4 +1,4 @@
-package cc.polyfrost.oneconfigwrapper.ssl;
+package cc.polyfrost.oneconfig.loader.wrapper.ssl;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
