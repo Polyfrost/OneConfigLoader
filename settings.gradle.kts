@@ -9,8 +9,14 @@ rootProject.name = "OneConfigStages"
 include("Common")
 project(":Common").name = "oneconfig-common-loader"
 
-include("Wrapper")
-project(":Wrapper").name = "oneconfig-wrapper-launchwrapper"
+include("Wrapper-Launchwrapper")
+project(":Wrapper-Launchwrapper").name = "oneconfig-wrapper-launchwrapper"
 
-include("Loader")
-project(":Loader").name = "oneconfig-loader-launchwrapper"
+include("Loader-Launchwrapper")
+project(":Loader-Launchwrapper").name = "oneconfig-loader-launchwrapper"
+
+include("Wrapper-Prelaunch")
+project(":Wrapper-Prelaunch").name = "oneconfig-wrapper-prelaunch"
+
+include("Loader-Prelaunch")
+project(":Loader-Prelaunch").name = "oneconfig-loader-prelaunch"

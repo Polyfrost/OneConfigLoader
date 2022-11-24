@@ -2,27 +2,29 @@ package cc.polyfrost.oneconfig.loader;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
-import net.minecraft.launchwrapper.ITweaker;
-import net.minecraft.launchwrapper.Launch;
-import net.minecraft.launchwrapper.LaunchClassLoader;
-import net.minecraftforge.common.ForgeVersion;
+import net.fabricmc.loader.api.FabricLoader;
+import net.fabricmc.loader.api.ModContainer;
+import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint;
+import net.fabricmc.loader.impl.ModContainerImpl;
+import net.fabricmc.loader.impl.discovery.ClasspathModCandidateFinder;
+import net.fabricmc.loader.impl.discovery.ModCandidate;
+import net.fabricmc.loader.impl.launch.FabricLauncherBase;
+import net.fabricmc.loader.impl.metadata.LoaderModMetadata;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.InputStreamReader;
 import java.lang.reflect.Method;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.Arrays;
+import java.nio.file.Path;
+import java.util.Collection;
 import java.util.List;
 
-public class OneConfigLoader extends OneConfigLoaderBase implements ITweaker {
+public class OneConfigLoader extends OneConfigLoaderBase implements PreLaunchEntrypoint {
     private boolean update;
     private String channel;
-    private ITweaker loader = null;
+    private PreLaunchEntrypoint loader = null;
     @Override
     protected LoaderInfo provideLoaderInfo() {
         boolean update = true;
@@ -36,14 +38,13 @@ public class OneConfigLoader extends OneConfigLoaderBase implements ITweaker {
         this.update = update;
         this.channel = channel;
 
-        String mcVersion = "1.8.9";
-        try {
-            mcVersion = ((String) ForgeVersion.class.getDeclaredField("mcVersion").get(null));
-        } catch (Exception e) {
-            e.printStackTrace();
-            System.out.println("Getting the Minecraft version failed, defaulting to 1.8.9. Please report this to https://inv.wtf/polyfrost");
-        }
-        return new LoaderInfo("Jar", mcVersion, "forge", "launchwrapper");
+        String mcVersion = FabricLoader.getInstance().getModContainer("minecraft").map(it -> it.getMetadata().getVersion().getFriendlyString()).orElseThrow(() -> new RuntimeException("Could not find Minecraft version"));
+        return new LoaderInfo("Jar", mcVersion, "fabric", "prelaunch");
+    }
+
+    @Override
+    protected boolean showDownloadUI() {
+        return false; //todo
     }
 
     @Override
@@ -77,57 +78,42 @@ public class OneConfigLoader extends OneConfigLoaderBase implements ITweaker {
     }
 
     @Override
-    protected void addToClasspath(File file) {
+    protected void addToClasspath(File file) { //todo
         try {
-            URL url = file.toURI().toURL();
-            Launch.classLoader.addURL(url);
-            ClassLoader classLoader = Launch.classLoader.getClass().getClassLoader();
-            Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-            method.setAccessible(true);
-            method.invoke(classLoader, url);
+            FabricLauncherBase.getLauncher().addToClassPath(file.toPath());
+            ModCandidate container;
+            try {
+                Method method = ModCandidate.class.getDeclaredMethod("createPlain", List.class, LoaderModMetadata.class, boolean.class, Collection.class);
+                method.setAccessible(true);
+            } catch (Exception e) {
+                Method method = ModCandidate.class.getDeclaredMethod("createPlain", Path.class, LoaderModMetadata.class, boolean.class, Collection.class);
+                method.setAccessible(true);
+            }
+            ModContainerImpl modContainerImpl = new ModContainerImpl();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
     @Override
-    protected boolean isInitialized(File file) {
-        try {
-            URL url = file.toURI().toURL();
-            return Arrays.asList(((URLClassLoader) Launch.classLoader.getClass().getClassLoader()).getURLs()).contains(url);
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
-        return false;
+    protected boolean isInitialized(File file, String clazz) {
+        return FabricLauncherBase.getLauncher().isClassLoaded(clazz);
     }
 
     @Override
     protected boolean getNextInstance() {
         try {
-            loader = ((ITweaker) Launch.classLoader.findClass("cc.polyfrost.oneconfig.internal.plugin.asm.OneConfigTweaker").newInstance());
+            loader = (PreLaunchEntrypoint) FabricLauncherBase.getClass("cc.polyfrost.oneconfig.internal.plugin.OneConfigPreLaunch").newInstance();
+            return true;
         } catch (Exception e) {
             e.printStackTrace();
+            return false;
         }
-        return loader != null;
     }
-
     @Override
-    public void acceptOptions(List<String> args, File gameDir, File assetsDir, String profile) {
-        if (loader != null) loader.acceptOptions(args, gameDir, assetsDir, profile);
-    }
-
-    @Override
-    public void injectIntoClassLoader(LaunchClassLoader classLoader) {
-        if (loader != null) loader.injectIntoClassLoader(classLoader);
-    }
-
-    @Override
-    public String getLaunchTarget() {
-        return loader != null ? loader.getLaunchTarget() : null;
-    }
-
-    @Override
-    public String[] getLaunchArguments() {
-        return loader != null ? loader.getLaunchArguments() : new String[0];
+    public void onPreLaunch() {
+        if (loader != null) {
+            loader.onPreLaunch();
+        }
     }
 }

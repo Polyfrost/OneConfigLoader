@@ -1,0 +1,30 @@
+{
+    "schemaVersion": 1,
+    "id": "oneconfigwrapper",
+    "name": "OneConfig Wrapper",
+    "version": "${version}",
+    "description": "OneConfig",
+    "authors": [
+        "Polyfrost"
+    ],
+    "contact": {
+        "homepage": "https://polyfrost.cc",
+        "sources": "https://github.com/Polyfrost/OneConfig",
+        "issues": "https://inv.wtf/polyfrost"
+    },
+    "license": "LGPL-3.0",
+    "environment": "client",
+    "entrypoints": {
+        "preLaunch": [
+            "cc.polyfrost.oneconfig.loader.wrapper.OneConfigWrapper"
+        ]
+    },
+    "depends": {
+        "fabricloader": ">=0.12.0"
+    },
+    "custom": {
+        "modmenu": {
+            "badges": [ "library" ]
+        }
+    }
+}

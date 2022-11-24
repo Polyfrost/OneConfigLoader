@@ -11,9 +11,9 @@ plugins {
 allprojects {
     apply(plugin = "maven-publish")
     group = "cc.polyfrost"
-    version = "1.0.0-beta1"
+    version = "1.0.0-alpha9"
     repositories {
-        mavenCentral()
+        maven("https://repo.polyfrost.cc/releases")
     }
 
     configure<PublishingExtension> {
@@ -56,8 +56,9 @@ subprojects {
         apply(plugin = "cc.polyfrost.loom")
     }
 
-    val include: Configuration by configurations.creating {
-        configurations.named("implementation").get().extendsFrom(this)
+    val shade: Configuration by configurations.creating {
+        configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME) { extendsFrom(this@creating) }
+        configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME) { extendsFrom(this@creating) }
     }
 
     configure<JavaPluginExtension> {
@@ -67,16 +68,25 @@ subprojects {
 
     if (!common) {
         configure<LoomGradleExtensionAPI> {
-            forge {
-                pack200Provider.set(dev.architectury.pack200.java.Pack200Adapter())
+            if (project.name.contains("prelaunch")) {
+                intermediaryUrl.set("https://maven.legacyfabric.net/net/legacyfabric/intermediary/%1\$s/intermediary-%1\$s-v2.jar")
+            } else {
+                forge {
+                    pack200Provider.set(dev.architectury.pack200.java.Pack200Adapter())
+                }
             }
         }
 
         dependencies {
             "minecraft"("com.mojang:minecraft:1.8.9")
-            "mappings"("de.oceanlabs.mcp:mcp_stable:22-1.8.9")
-            "forge"("net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9")
-            "implementation"(project(":oneconfig-common-loader"))
+            if (project.name.contains("launchwrapper")) {
+                "mappings"("de.oceanlabs.mcp:mcp_stable:22-1.8.9")
+                "forge"("net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9")
+            } else {
+                "mappings"("net.legacyfabric:yarn:1.8.9+build.385:v2")
+                "modImplementation"("net.fabricmc:fabric-loader:0.14.10")
+            }
+            shade(project(":oneconfig-common-loader"))
         }
     }
 
@@ -93,7 +103,7 @@ subprojects {
         val shadowJar by tasks.named<ShadowJar>("shadowJar") {
             archiveBaseName.set(project.name)
             archiveClassifier.set("")
-            configurations = listOf(include)
+            configurations = listOf(shade)
         }
 
         val remapJar by tasks.named<RemapJarTask>("remapJar") {
@@ -102,6 +112,15 @@ subprojects {
         }
         tasks.named("assemble") {
             dependsOn(remapJar)
+        }
+        tasks.withType<ProcessResources> {
+            filesMatching(listOf("fabric.mod.json")) {
+                expand(
+                    mapOf(
+                        "version" to project.version
+                    )
+                )
+            }
         }
     }
 }

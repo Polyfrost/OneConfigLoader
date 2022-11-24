@@ -25,37 +25,44 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
 
     @Override
     protected void downloadFile(String url, File location) {
-
-        Frame ui = new Frame();
-        try {
-            URLConnection con = new URL(url).openConnection();
-            con.setRequestProperty("User-Agent", "OneConfig-Loader");
-            int length = con.getContentLength();
-            if (location.exists()) location.delete();
-            location.createNewFile();
-            logger.info("Downloading new version of OneConfig... (" + length / 1024f + "KB)");
-            Thread downloader = new Thread(() -> {
-                try (InputStream in = con.getInputStream()) {
-                    Files.copy(in, location.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+        if (showDownloadUI()) {
+            Frame ui = new Frame();
+            try {
+                URLConnection con = new URL(url).openConnection();
+                con.setRequestProperty("User-Agent", "OneConfig-Loader");
+                int length = con.getContentLength();
+                if (location.exists()) location.delete();
+                location.createNewFile();
+                logger.info("Downloading new version of OneConfig... (" + length / 1024f + "KB)");
+                Thread downloader = new Thread(() -> {
+                    try (InputStream in = con.getInputStream()) {
+                        Files.copy(in, location.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                });
+                downloader.start();
+                while (downloadPercent < 1f) {
+                    downloadPercent = (float) location.length() / (float) length;
+                    ui.update(downloadPercent);
+                    if (System.currentTimeMillis() - timeLast > 1000) {
+                        timeLast = System.currentTimeMillis();
+                        logger.info("Downloaded " + (location.length() / 1024f) + "KB out of " + (length / 1024f) + "KB (" + (downloadPercent * 100) + "%)");
+                    }
                 }
-            });
-            downloader.start();
-            while (downloadPercent < 1f) {
-                downloadPercent = (float) location.length() / (float) length;
-                ui.update(downloadPercent);
-                if (System.currentTimeMillis() - timeLast > 1000) {
-                    timeLast = System.currentTimeMillis();
-                    logger.info("Downloaded " + (location.length() / 1024f) + "KB out of " + (length / 1024f) + "KB (" + (downloadPercent * 100) + "%)");
-                }
+                ui.dispose();
+                logger.info("Download finished successfully");
+            } catch (IOException e) {
+                ui.dispose();
+                e.printStackTrace();
             }
-            ui.dispose();
-            logger.info("Download finished successfully");
-        } catch (IOException e) {
-            ui.dispose();
-            e.printStackTrace();
+        } else {
+            super.downloadFile(url, location);
         }
+    }
+
+    protected boolean showDownloadUI() {
+        return true;
     }
 
     private static class DownloadUI extends JPanel {

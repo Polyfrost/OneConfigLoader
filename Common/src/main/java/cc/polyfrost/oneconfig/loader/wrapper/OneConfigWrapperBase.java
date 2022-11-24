@@ -11,6 +11,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.*;
 import java.lang.reflect.Method;
+import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
@@ -38,7 +39,7 @@ public abstract class OneConfigWrapperBase {
 
             File oneconfigFile = provideFile(loaderInfo);
 
-            if (!isInitialized(oneconfigFile) && shouldUpdate()) {
+            if (!isInitialized(oneconfigFile, "cc.polyfrost.oneconfig.internal.OneConfig") && shouldUpdate()) {
                 JsonElement json = getRequest("https://api.polyfrost.cc/oneconfig/" + loaderInfo.mcVersion + "-" + loaderInfo.modLoader);
                 if (json != null && json.isJsonObject()) {
                     JsonObject jsonObject = json.getAsJsonObject();
@@ -118,7 +119,7 @@ public abstract class OneConfigWrapperBase {
 
     protected abstract void addToClasspath(File file);
 
-    protected abstract boolean isInitialized(File file);
+    protected abstract boolean isInitialized(File file, String clazz);
 
     protected abstract boolean getNextInstance();
 
@@ -139,7 +140,7 @@ public abstract class OneConfigWrapperBase {
     protected static JsonElement getRequest(String site) {
         try {
             URL url = new URL(site);
-            HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
+            HttpURLConnection con = (HttpURLConnection) url.openConnection();
             con.setRequestProperty("User-Agent", "OneConfig-Loader");
             con.setRequestMethod("GET");
             con.setConnectTimeout(15000);

@@ -1,14 +1,14 @@
 loom {
     launchConfigs {
         "client" {
-            arg("--tweakClass", "cc.polyfrost.oneconfig.loader.OneConfigLoader")
+            arg("--tweakClass", "cc.polyfrost.oneconfig.loader.wrapper.OneConfigWrapper")
         }
     }
 }
 
 publishing {
     publications {
-        create<MavenPublication>("loader") {
+        create<MavenPublication>("wrapper-launchwrapper") {
             artifactId = project.name
             group = project.group
             version = project.version.toString()
