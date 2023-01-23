@@ -23,10 +23,10 @@ version, by first downloading it, and then delegating loading to `cc.polyfrost.o
 
 ## Stage 1: Loader
 
-The Loader is also a tweaker class, although this one is loaded by the wrapper, and should not be loaded by the FML
+~~The Loader is also a tweaker class, although this one is loaded by the wrapper, and should not be loaded by the FML
 directly. In theory a version specific loader may exist and be loaded by the wrapper, but currently both 1.8.9 and
 1.12.2 use the same loader. The loader then downloads the version specific OneConfig jar and
-loads `cc.polyfrost.oneconfig.internal.plugin.asm.OneConfigTweaker` and delegates to that tweaker.
+loads `cc.polyfrost.oneconfig.internal.plugin.asm.OneConfigTweaker` and delegates to that tweaker.~~ to be rewritten
 
 **Note**: For retro-compatibility reasons, the **Loader** also contains the legacy 
 `cc.polyfrost.oneconfigloader.OneConfigLoader` and `cc.polyfrost.oneconfig.loader.OneConfigLoader` classes, which
