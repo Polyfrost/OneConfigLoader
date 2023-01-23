@@ -3,14 +3,18 @@
 This repository contains the source code for early loading of [OneConfig].
 
 This below documentation is not intended for end users or consuming developers of OneConfig.
-Check out the [PolyFrost DocuMentation] instead.
+Check out the [Polyfrost Documentation] instead.
 
 ## Stage 0: Wrapper
 
-The Wrapper is the first entrypoint for OneConfig and is called as a tweaker class by the FML.
-This causes the Wrapper to also be a standalone mod for downloading OneConfig, if that was needed.
-The Wrapper checks the loaded forge version and attempts to load the loader corresponding to that version,
-by first downloading it, and then delegating to `cc.polyfrost.oneconfigloader.OneConfigLoader`.
+The **Wrapper** is the first entrypoint for OneConfig and is called as a tweaker class by [LaunchWrapper] on 
+`cc.polyfrost.oneconfig.loader.wrapper.OneConfigWrapper`.
+
+This causes it to also be a standalone mod for downloading OneConfig, however you should prefer using 
+[OneConfig Bootstrap] for that purpose.
+
+The **Wrapper** checks the loaded MinecraftForge version and attempts to load the **Loader** corresponding to that 
+version, by first downloading it, and then delegating loading to `cc.polyfrost.oneconfigloader.OneConfigLoader`.
 
 ## Stage 1: Loader
 
@@ -21,10 +25,12 @@ loads `cc.polyfrost.oneconfig.internal.plugin.asm.OneConfigTweaker` and delegate
 
 ## API
 
-The API hosts download URLs and hashes of downloaded files at 
-
+The API hosts download URLs and hashes of downloaded files at:
  - https://api.polyfrost.cc/oneconfig/1.8.9-forge
  - https://api.polyfrost.cc/oneconfig/1.12.2-forge
 
-[PolyFrost DocuMentation]: https://docs.polyfrost.cc/
+[Polyfrost Documentation]: https://docs.polyfrost.cc/
 [OneConfig]: https://github.com/Polyfrost/OneConfig
+
+[LaunchWrapper]: https://github.com/Mojang/legacy-launcher
+[OneConfig Bootstrap]: https://github.com/Polyfrost/OneConfig-Bootstrap

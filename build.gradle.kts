@@ -10,8 +10,10 @@ plugins {
 
 allprojects {
     apply(plugin = "maven-publish")
+
     group = "cc.polyfrost"
-    version = "1.0.0-beta1"
+    version = "1.0.0-beta2"
+
     repositories {
         mavenCentral()
     }
@@ -48,7 +50,7 @@ allprojects {
 }
 
 subprojects {
-    apply(plugin = "java")
+    apply(plugin = "java-library")
     apply(plugin = "idea")
     apply(plugin = "com.github.johnrengelman.shadow")
     val common = project.name == "oneconfig-common-loader"
@@ -76,7 +78,7 @@ subprojects {
             "minecraft"("com.mojang:minecraft:1.8.9")
             "mappings"("de.oceanlabs.mcp:mcp_stable:22-1.8.9")
             "forge"("net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9")
-            "implementation"(project(":oneconfig-common-loader"))
+            "api"(project(":common"))
         }
     }
 
@@ -100,6 +102,7 @@ subprojects {
             from(shadowJar)
             input.set(shadowJar.archiveFile)
         }
+
         tasks.named("assemble") {
             dependsOn(remapJar)
         }

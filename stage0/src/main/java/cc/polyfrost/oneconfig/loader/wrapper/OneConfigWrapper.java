@@ -28,6 +28,7 @@ public class OneConfigWrapper extends OneConfigWrapperBase implements ITweaker {
         try {
             mcVersion = ((String) ForgeVersion.class.getDeclaredField("mcVersion").get(null));
         } catch (Exception e) {
+            System.out.println("Detecting MC version failed, please report this to ");
             e.printStackTrace();
             System.out.println("Getting the Minecraft version failed, defaulting to 1.8.9. Please report this to https://inv.wtf/polyfrost");
         }
@@ -73,7 +74,7 @@ public class OneConfigWrapper extends OneConfigWrapperBase implements ITweaker {
     @Override
     protected boolean getNextInstance() {
         try {
-            loader = ((ITweaker) Launch.classLoader.findClass("cc.polyfrost.oneconfig.loader.OneConfigLoader").newInstance());
+            loader = ((ITweaker) Launch.classLoader.findClass("cc.polyfrost.oneconfig.loader.OneConfigLoader").getConstructor().newInstance());
         } catch (Exception e) {
             e.printStackTrace();
         }

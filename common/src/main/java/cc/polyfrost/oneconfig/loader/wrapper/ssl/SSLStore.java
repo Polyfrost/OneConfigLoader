@@ -8,6 +8,7 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
@@ -18,7 +19,7 @@ public class SSLStore {
 
     public SSLStore() throws Exception {
         Path keyStorePath = Paths.get(System.getProperty("java.home"), "lib", "security", "cacerts");
-        this.keyStore.load(Files.newInputStream(keyStorePath), (char[])null);
+        this.keyStore.load(Files.newInputStream(keyStorePath), null);
     }
 
     /**
@@ -29,6 +30,9 @@ public class SSLStore {
      */
     public SSLStore load(String sslFile) throws Exception {
         InputStream certificateResource = SSLStore.class.getResourceAsStream(sslFile);
+        if (certificateResource == null) {
+            throw new Exception("Could not find SSL certificate: " + sslFile);
+        }
         Throwable sslThrowable = null;
 
         // Try to gen and load the certificate
@@ -37,9 +41,9 @@ public class SSLStore {
             Certificate generatedCertificate = this.certificateFactory.generateCertificate(certStream);
 
             this.keyStore.setCertificateEntry(sslFile, generatedCertificate);
-        } catch (Throwable sslException) {
-            sslThrowable = sslException;
-            throw sslException;
+        } catch (GeneralSecurityException generalSecurityException) {
+            sslThrowable = generalSecurityException;
+            throw generalSecurityException;
         } finally {
             if (certificateResource != null) {
                 try {

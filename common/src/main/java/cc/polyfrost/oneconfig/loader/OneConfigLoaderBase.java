@@ -15,23 +15,25 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.Objects;
 
 public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
-
     private long timeLast = System.currentTimeMillis();
     private float downloadPercent = 0f;
     private static final Logger logger = LogManager.getLogger("OneConfigLoader");
 
     @Override
     protected void downloadFile(String url, File location) {
-
         Frame ui = new Frame();
         try {
             URLConnection con = new URL(url).openConnection();
             con.setRequestProperty("User-Agent", "OneConfig-Loader");
             int length = con.getContentLength();
-            if (location.exists()) location.delete();
+            if (location.exists() && !location.delete()) {
+                throw new IOException("Failed to delete old version of OneConfig");
+            }
+            //noinspection ResultOfMethodCallIgnored
             location.createNewFile();
             logger.info("Downloading new version of OneConfig... (" + length / 1024f + "KB)");
             Thread downloader = new Thread(() -> {
