@@ -27,6 +27,10 @@ sourceSets {
     createConfigured("prelaunch")
 }
 
+dependencies {
+    implementation("cpw.mods:modlauncher:8.0.9")
+}
+
 publishing {
     publications {
         create<MavenPublication>("wrapper") {

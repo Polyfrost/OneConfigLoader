@@ -16,6 +16,7 @@ allprojects {
 
     repositories {
         mavenCentral()
+        maven("https://repo.polyfrost.cc/releases")
     }
 
     configure<PublishingExtension> {

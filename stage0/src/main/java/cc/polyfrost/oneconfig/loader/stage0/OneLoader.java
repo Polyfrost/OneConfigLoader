@@ -1,5 +1,6 @@
-package cc.polyfrost.oneconfig.loader.wrapper;
+package cc.polyfrost.oneconfig.loader.stage0;
 
+import cc.polyfrost.oneconfig.loader.wrapper.OneConfigWrapperBase;
 import com.google.gson.JsonObject;
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.Launch;
@@ -14,7 +15,7 @@ import java.net.URLClassLoader;
 import java.util.Arrays;
 import java.util.List;
 
-public class OneConfigWrapper extends OneConfigWrapperBase implements ITweaker {
+public class OneLoader extends OneConfigWrapperBase implements ITweaker {
     private ITweaker loader = null;
 
     @Override

@@ -1,4 +1,4 @@
-package cc.polyfrost.oneconfig.loader.wrapper;
+package cc.polyfrost.oneconfig.loader.stage0;
 
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.LaunchClassLoader;
