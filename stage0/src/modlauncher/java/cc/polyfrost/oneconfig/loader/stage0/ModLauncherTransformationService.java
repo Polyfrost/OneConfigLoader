@@ -4,22 +4,20 @@ import cpw.mods.modlauncher.api.IEnvironment;
 import cpw.mods.modlauncher.api.ITransformationService;
 import cpw.mods.modlauncher.api.ITransformer;
 import cpw.mods.modlauncher.api.IncompatibleEnvironmentException;
-import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.ParametersAreNonnullByDefault;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 /**
- * A transformation service provided by oneconfig-loader/stage0.
+ * A ModLauncher transformation service provided by oneconfig-loader/stage0.
  *
  * @author xtrm
  */
-@ParametersAreNonnullByDefault
-public class ModLoaderTransformationService implements ITransformationService {
+@SuppressWarnings("NullableProblems")
+public class ModLauncherTransformationService implements ITransformationService {
     @Override
-    public @NotNull String name() {
+    public String name() {
         return "oneconfig-loader";
     }
 
@@ -39,7 +37,6 @@ public class ModLoaderTransformationService implements ITransformationService {
     }
 
     @SuppressWarnings({"rawtypes"})
-    @NotNull
     @Override
     public List<ITransformer> transformers() {
         return new ArrayList<>();

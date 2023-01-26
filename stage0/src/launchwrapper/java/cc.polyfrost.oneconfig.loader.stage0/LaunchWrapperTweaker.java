@@ -7,8 +7,8 @@ import java.io.File;
 import java.util.List;
 
 /**
- * A {@link net.minecraft.launchwrapper.Launch LaunchWrapper} tweaker for
- * OneConfig Loader's Wrapper.
+ * A {@link net.minecraft.launchwrapper.Launch LaunchWrapper}
+ * {@link ITweaker Tweaker} for OneConfig Loader.
  *
  * @author xtrm
  */

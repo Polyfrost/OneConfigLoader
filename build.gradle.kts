@@ -1,18 +1,17 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
-import net.fabricmc.loom.api.LoomGradleExtensionAPI
-import net.fabricmc.loom.task.RemapJarTask
 
 plugins {
-    id("cc.polyfrost.loom") version "0.10.0.+" apply false
     id("com.github.johnrengelman.shadow") version "7.1.2" apply false
-    id("dev.architectury.architectury-pack200") version "0.1.3"
+    id("io.freefair.lombok") version "6.1.0" apply false
 }
+
+group = "cc.polyfrost"
+version = "1.1.0-alpha.1"
 
 allprojects {
     apply(plugin = "maven-publish")
 
-    group = "cc.polyfrost"
-    version = "1.0.0-beta2"
+    version = rootProject.version
 
     repositories {
         mavenCentral()
@@ -47,66 +46,101 @@ allprojects {
             }
         }
     }
-
 }
 
 subprojects {
     apply(plugin = "java-library")
     apply(plugin = "idea")
     apply(plugin = "com.github.johnrengelman.shadow")
-    val common = project.name == "oneconfig-common-loader"
-    if (!common) {
-        apply(plugin = "cc.polyfrost.loom")
-    }
+    apply(plugin = "io.freefair.lombok")
 
+    group = "${rootProject.group}.oneconfig"
+
+    val isCommon = (project.name.contains("common"))
+
+    val compileOnly by configurations
     val include: Configuration by configurations.creating {
-        configurations.named("implementation").get().extendsFrom(this)
+        compileOnly.extendsFrom(this)
     }
 
     configure<JavaPluginExtension> {
         withSourcesJar()
-        toolchain.languageVersion.set(JavaLanguageVersion.of(8))
+        toolchain {
+            languageVersion.set(JavaLanguageVersion.of(8))
+        }
     }
 
-    if (!common) {
-        configure<LoomGradleExtensionAPI> {
-            forge {
-                pack200Provider.set(dev.architectury.pack200.java.Pack200Adapter())
+    dependencies {
+        compileOnly("org.jetbrains:annotations:20.1.0")
+    }
+
+    if (!isCommon) {
+        val platforms = mapOf(
+            "launchwrapper" to "net.minecraft:launchwrapper:1.12",
+            "modlauncher" to "cpw.mods:modlauncher:8.0.9",
+            "prelaunch" to "net.fabricmc:fabric-loader:0.11.6"
+        )
+
+        val sourceSets = extensions.getByName<SourceSetContainer>("sourceSets")
+
+        sourceSets {
+            val main by this
+
+            fun createConfigured(name: String, block: SourceSet.() -> Unit = {}) {
+                create(name) {
+                    compileClasspath += main.compileClasspath + main.output
+                    runtimeClasspath += main.runtimeClasspath + main.output
+                    block()
+                }
             }
+
+            platforms.keys.forEach(::createConfigured)
         }
 
         dependencies {
-            "minecraft"("com.mojang:minecraft:1.8.9")
-            "mappings"("de.oceanlabs.mcp:mcp_stable:22-1.8.9")
-            "forge"("net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9")
-            "api"(project(":common"))
-        }
-    }
+            platforms.forEach { (name, dep) ->
+                "${name}CompileOnly"(dep)
+            }
 
-    tasks.withType(JavaCompile::class) {
-        options.encoding = "UTF-8"
-    }
-
-    if (!common) {
-        tasks.withType(Jar::class) {
-            archiveBaseName.set(project.name)
-            archiveClassifier.set("obf")
+            include(project(":loader-common")) {
+                isTransitive = false
+            }
         }
 
-        val shadowJar by tasks.named<ShadowJar>("shadowJar") {
-            archiveBaseName.set(project.name)
-            archiveClassifier.set("")
-            configurations = listOf(include)
+        tasks {
+            withType(JavaCompile::class) {
+                options.encoding = "UTF-8"
+            }
+
+            val shadowJar by named<ShadowJar>("shadowJar") {
+                archiveBaseName.set(project.name)
+                archiveClassifier.set("")
+                from(sourceSets["main"].output)
+                platforms.keys.forEach {
+                    from(sourceSets[it].output)
+                }
+                configurations = listOf(include)
+            }
+
+            val build by this
+            build.dependsOn(shadowJar)
         }
 
-        val remapJar by tasks.named<RemapJarTask>("remapJar") {
-            from(shadowJar)
-            input.set(shadowJar.archiveFile)
-        }
-
-        tasks.named("assemble") {
-            dependsOn(remapJar)
-        }
+//        publishing {
+//            publications {
+//                create<MavenPublication>("wrapper") {
+//                    artifactId = project.name
+//                    group = project.group
+//                    version = project.version.toString()
+//
+//                    artifacts {
+//                        artifact(tasks["shadowJar"])
+//                        artifact(tasks["sourcesJar"]) {
+//                            classifier = "sources"
+//                        }
+//                    }
+//                }
+//            }
     }
 }
 
