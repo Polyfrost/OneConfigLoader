@@ -123,17 +123,6 @@ public class ErrorHandler {
         JDialog dialog = pane.createDialog(frame, title);
         dialog.setVisible(true);
         dialog.dispose();
-
-//        JOptionPane.showOptionDialog(
-//                frame,
-//                message,
-//                title,
-//                JOptionPane.DEFAULT_OPTION,
-//                JOptionPane.ERROR_MESSAGE,
-//                icon,
-//                new JButton[]{discord, close},
-//                discord
-//        );
     }
 
     /**
