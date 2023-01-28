@@ -18,6 +18,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Objects;
 
 public abstract class OneConfigWrapperBase {
     public static final Color GRAY_900 = new Color(13, 14, 15, 255);
@@ -192,6 +193,12 @@ public abstract class OneConfigWrapperBase {
 
     protected void showErrorScreen(String title, String message) {
         try {
+            Icon icon = null;
+            try {
+                icon = new ImageIcon(Objects.requireNonNull(getClass().getResource("/assets/oneconfig-loader/oneconfig-icon.png")));
+            } catch (Exception ignored) {
+
+            }
             UIManager.put("OptionPane.background", GRAY_900);
             UIManager.put("Panel.background", GRAY_900);
             UIManager.put("OptionPane.messageForeground", WHITE_80);
@@ -201,10 +208,8 @@ public abstract class OneConfigWrapperBase {
             UIManager.put("Button.focus", TRANSPARENT);
             int response = JOptionPane.showOptionDialog(
                     null,
-                    "OneConfig has failed to download!\n" +
-                            "Please join our discord server at https://polyfrost.cc/discord\n" +
-                            "for support, or try again later.",
-                    "OneConfig has failed to download!", JOptionPane.OK_CANCEL_OPTION, JOptionPane.ERROR_MESSAGE, null,
+                    message,
+                    title, JOptionPane.OK_CANCEL_OPTION, JOptionPane.ERROR_MESSAGE, icon,
                     new Object[]{"Join Discord", "Close"}, "Join Discord"
             );
             if (response == 0) {

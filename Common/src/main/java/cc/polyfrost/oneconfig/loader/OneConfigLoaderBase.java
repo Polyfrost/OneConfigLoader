@@ -11,6 +11,8 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
@@ -59,17 +61,17 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
     }
 
     private static class DownloadUI extends JPanel {
-        private BufferedImage base;
+        private BufferedImage logo;
         private float progress = 0f;
 
         public DownloadUI() {
             super();
             try {
-                base = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/oneconfig-loader/frame.png")));
+                logo = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/oneconfig-loader/oneconfig.png")));
             } catch (Exception ignored) {
             }
             setBackground(new Color(0, 0, 0, 0));
-            setPreferredSize(new Dimension(300, 100));
+            setPreferredSize(new Dimension(400, 150));
         }
 
         @Override
@@ -77,11 +79,23 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
             super.paint(g);
             Graphics2D g2d = (Graphics2D) g;
             g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2d.drawImage(base, null, 0, 0);
+            g2d.setColor(GRAY_900);
+            g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
+            g2d.drawImage(logo, 60, 32, 280, 33, null);
             g2d.setColor(GRAY_700);
-            g2d.fillRoundRect(12, 74, 275, 12, 12, 12);
+            g2d.fillRoundRect(24, 150 - 16 - 8, 352, 8, 6, 6);
             g2d.setColor(PRIMARY_500);
-            g2d.fillRoundRect(12, 74, (int) (275 * progress), 12, 12, 12);
+            g2d.fillRoundRect(24, 150 - 16 - 8, (int) (352 * progress), 8, 6, 6);
+            g2d.setColor(Color.WHITE);
+            try {
+                g2d.setFont(Font.createFont(Font.TRUETYPE_FONT, Objects.requireNonNull(getClass().getResourceAsStream("/assets/oneconfig-loader/Regular.otf"))).deriveFont(13f));
+            } catch (FontFormatException | IOException e) {
+                e.printStackTrace();
+                g2d.setFont(new Font("Arial", Font.PLAIN, 13));
+            }
+            g2d.drawString("Downloading OneConfig...", 24, 150 - 16 - 8 - 8);
+            String percent = new BigDecimal(progress * 100f).setScale(2, RoundingMode.HALF_UP).doubleValue() + "%";
+            g2d.drawString(percent, 400 - 24 - g2d.getFontMetrics().stringWidth(percent), 150 - 16 - 8 - 8);
             g2d.dispose();
         }
 
@@ -100,7 +114,7 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
             setResizable(false);
             Image icon = null;
             try {
-                icon = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/oneconfig-loader/icon.png")));
+                icon = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/oneconfig-loader/oneconfig-icon.png")));
             } catch (Exception ignored) {
             }
             setAlwaysOnTop(true);
