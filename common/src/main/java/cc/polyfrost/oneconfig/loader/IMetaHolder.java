@@ -7,23 +7,9 @@ package cc.polyfrost.oneconfig.loader;
  */
 public interface IMetaHolder {
     /**
-     * Returns the loader's name.
-     *
-     * @return the loader's name
-     */
-    String getName();
-
-    /**
-     * Returns the loader's version.
-     *
-     * @return the loader's version
-     */
-    String getVersion();
-
-    /**
      * Creates a {@link IMetaHolder} instance from the given params.
      *
-     * @param name the loader's name
+     * @param name    the loader's name
      * @param version the loader's version
      * @return a new {@link IMetaHolder} instance
      */
@@ -40,4 +26,18 @@ public interface IMetaHolder {
             }
         };
     }
+
+    /**
+     * Returns the loader's name.
+     *
+     * @return the loader's name
+     */
+    String getName();
+
+    /**
+     * Returns the loader's version.
+     *
+     * @return the loader's version
+     */
+    String getVersion();
 }

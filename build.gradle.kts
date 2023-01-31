@@ -5,8 +5,8 @@ plugins {
     id("io.freefair.lombok") version "6.1.0" apply false
 }
 
-group = "cc.polyfrost"
-version = "1.1.0-alpha.1"
+group = "cc.polyfrost.oneconfig"
+version = "1.1.0-alpha.2"
 
 allprojects {
     apply(plugin = "maven-publish")
@@ -54,14 +54,14 @@ subprojects {
     apply(plugin = "com.github.johnrengelman.shadow")
     apply(plugin = "io.freefair.lombok")
 
-    group = "${rootProject.group}.oneconfig"
-
     val isCommon = (project.name.contains("common"))
 
     val compileOnly by configurations
     val include: Configuration by configurations.creating {
         compileOnly.extendsFrom(this)
     }
+
+    val sourceSets = extensions.getByName<SourceSetContainer>("sourceSets")
 
     configure<JavaPluginExtension> {
         withSourcesJar()
@@ -81,20 +81,16 @@ subprojects {
             "prelaunch" to "net.fabricmc:fabric-loader:0.11.6"
         )
 
-        val sourceSets = extensions.getByName<SourceSetContainer>("sourceSets")
-
-        sourceSets {
-            val main by this
-
-            fun createConfigured(name: String, block: SourceSet.() -> Unit = {}) {
+        val main by sourceSets
+        val platformSets = sourceSets.run {
+            fun createConfigured(name: String, block: SourceSet.() -> Unit = {}): SourceSet =
                 create(name) {
                     compileClasspath += main.compileClasspath + main.output
                     runtimeClasspath += main.runtimeClasspath + main.output
                     block()
                 }
-            }
 
-            platforms.keys.forEach(::createConfigured)
+            platforms.keys.map(::createConfigured)
         }
 
         dependencies {
@@ -102,46 +98,108 @@ subprojects {
                 "${name}CompileOnly"(dep)
             }
 
-            include(project(":loader-common")) {
+            include(project(":common")) {
                 isTransitive = false
             }
         }
 
         tasks {
+            val jar = named<Jar>("jar") {
+                manifest.attributes += mapOf(
+                    "Specification-Title" to "OneConfig Loader",
+                    "Specification-Vendor" to "Polyfrost",
+                    "Specification-Version" to "2.0.0",
+                    "Implementation-Title" to "loader-${project.name}",
+                    "Implementation-Vendor" to project.group,
+                    "Implementation-Version" to project.version
+                )
+            }
+
+            named<Jar>(main.sourcesJarTaskName) {
+                platformSets.forEach { set ->
+                    from(set.allSource)
+                }
+            }
+
+            platformSets.forEach { set ->
+                create(set.jarTaskName, ShadowJar::class) {
+                    archiveBaseName.set(project.name)
+                    archiveClassifier.set(set.name)
+
+                    from(set.output)
+                    from(main.output)
+
+                    manifest.inheritFrom(jar.get().manifest)
+                    configurations = listOf(include)
+                }
+            }
+
             withType(JavaCompile::class) {
                 options.encoding = "UTF-8"
             }
 
-            val shadowJar by named<ShadowJar>("shadowJar") {
+            named<ShadowJar>("shadowJar") {
                 archiveBaseName.set(project.name)
                 archiveClassifier.set("")
-                from(sourceSets["main"].output)
-                platforms.keys.forEach {
-                    from(sourceSets[it].output)
+
+                from(main.output)
+                platformSets.forEach {
+                    from(it.output)
                 }
+
+                manifest.inheritFrom(jar.get().manifest)
                 configurations = listOf(include)
             }
+        }
+    } else {
+        tasks {
+            named<ShadowJar>("shadowJar") {
+                archiveBaseName.set(project.name)
+                archiveClassifier.set("")
+                configurations = listOf(include)
+                from(sourceSets["main"].output)
+            }
+        }
+    }
 
-            val build by this
-            build.dependsOn(shadowJar)
+    tasks {
+        named("jar") {
+            enabled = false
         }
 
-//        publishing {
-//            publications {
-//                create<MavenPublication>("wrapper") {
-//                    artifactId = project.name
-//                    group = project.group
-//                    version = project.version.toString()
-//
-//                    artifacts {
-//                        artifact(tasks["shadowJar"])
-//                        artifact(tasks["sourcesJar"]) {
-//                            classifier = "sources"
-//                        }
-//                    }
-//                }
-//            }
+        val build by this
+        withType(ShadowJar::class) {
+            build.finalizedBy(this)
+        }
     }
 }
 
+configure<PublishingExtension> {
+    publications {
+        create<MavenPublication>(project.name) {
+            artifactId = this.name
+            group = project.group
+            version = project.version.toString()
 
+            artifacts {
+                subprojects.forEach { proj ->
+                    proj.tasks.withType(ShadowJar::class) {
+                        artifact(this) {
+                            classifier = project.name +
+                                    if (classifier.isNullOrBlank()) ""
+                                    else "-$classifier"
+                        }
+                    }
+                    proj.tasks.withType(Jar::class) {
+                        if (this is ShadowJar) return@withType
+                        artifact(this) {
+                            classifier = project.name +
+                                    if (classifier.isNullOrBlank()) ""
+                                    else "-$classifier"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -28,6 +28,22 @@ public class ErrorHandler {
     private static final Color WHITE_80 = new Color(255, 255, 255, 204);
     private static final Color TRANSPARENT = new Color(0, 0, 0, 0);
 
+    static {
+        try {
+            // Try and default to Metal UI
+            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+        } catch (Throwable ignored) {
+        }
+
+        UIManager.put("OptionPane.background", GRAY_900);
+        UIManager.put("Panel.background", GRAY_900);
+        UIManager.put("OptionPane.messageForeground", WHITE_80);
+        UIManager.put("Button.background", PRIMARY_500);
+        UIManager.put("Button.select", PRIMARY_500_80);
+        UIManager.put("Button.foreground", WHITE_80);
+        UIManager.put("Button.focus", TRANSPARENT);
+    }
+
     private ErrorHandler() {
         throw new IllegalStateException("This class cannot be instantiated.");
     }
@@ -99,14 +115,7 @@ public class ErrorHandler {
             }
         });
 
-        JOptionPane pane = new JOptionPane(
-                message,
-                JOptionPane.ERROR_MESSAGE,
-                JOptionPane.DEFAULT_OPTION,
-                icon,
-                new JButton[]{discord, close},
-                discord
-        );
+        JOptionPane pane = new JOptionPane(message, JOptionPane.ERROR_MESSAGE, JOptionPane.DEFAULT_OPTION, icon, new JButton[]{discord, close}, discord);
         pane.setInitialValue(discord);
         pane.setComponentOrientation(frame.getComponentOrientation());
         for (Component component : pane.getComponents()) {
@@ -172,21 +181,5 @@ public class ErrorHandler {
     public static void main(String... args) {
         IMetaHolder dummyMeta = IMetaHolder.of("DummyLoader", "0.0.0");
         displayError(dummyMeta, "This is a test error message.\nVery cool, right?");
-    }
-
-    static {
-        try {
-            // Try and default to Metal UI
-            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
-        } catch (Throwable ignored) {
-        }
-
-        UIManager.put("OptionPane.background", GRAY_900);
-        UIManager.put("Panel.background", GRAY_900);
-        UIManager.put("OptionPane.messageForeground", WHITE_80);
-        UIManager.put("Button.background", PRIMARY_500);
-        UIManager.put("Button.select", PRIMARY_500_80);
-        UIManager.put("Button.foreground", WHITE_80);
-        UIManager.put("Button.focus", TRANSPARENT);
     }
 }

@@ -4,13 +4,8 @@ pluginManagement {
     }
 }
 
-rootProject.name = "oneconfig-loader"
+rootProject.name = "loader"
 
 arrayOf("common", "stage0", "stage1").forEach { name ->
     include(name)
-
-    // Add loader- prefix to all subprojects
-    if (!name.startsWith("loader-")) {
-        project(":$name").name = "loader-$name"
-    }
 }

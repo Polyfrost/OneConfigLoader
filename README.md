@@ -5,20 +5,32 @@ This repository contains the source code for early loading of [OneConfig].
 This below documentation is not intended for end users or consuming developers of OneConfig, check out the
 [Polyfrost Documentation] instead.
 
+## Overview
+
+### Design principles:
+- No hardcoding
+  - If a class entrypoint is needed, it should be specified in either the Jar's Manifest or a resource file (ex. `loader.json`).
+    -  This allows for easier versioning and compatibility, notably future API changes.
+- Minimal platform-specific code
+  - Platform-relative code should be kept to a minimum, and should be isolated to the `stage0` bundle; everything else should be platform-agnostic.
+- No extra-downloading
+  - If a file is needed, it should belong in a local shared cache on the computer.
+
 ## Stage 0: Wrapper
 
 The **Wrapper** is the first entrypoint for OneConfig and is called depending on the platform as:
-- an `ITweaker` class by [LaunchWrapper] 
-- an `ITransformationService` by [ModLauncher]
-- a `PreLaunchEntrypoint` by [Fabric Loader]
 
-This first entrypoint delegates further loading to the platform-agnostic 
+- an `ITweaker` for [LaunchWrapper]
+- an `ITransformationService` for [ModLauncher]
+- a `PreLaunchEntrypoint` for [Fabric Loader]
+
+This first entrypoint delegates further loading to the platform-agnostic
 `cc.polyfrost.oneconfig.loader.stage0.Stage0Loader` class.
 
-This causes the **Wrapper** to also be a "standalone mod" for downloading OneConfig, however you should prefer using 
+This causes the **Wrapper** to also be a "standalone mod" for downloading OneConfig, however you should prefer using
 [OneConfig Bootstrap] for that purpose.
 
-The **Wrapper** checks the loaded mod loader version and attempts to load the **Loader** corresponding to that 
+The **Wrapper** checks the loaded mod loader version and attempts to load the **Loader** corresponding to that
 version, by first downloading it, and then delegating loading to `cc.polyfrost.oneconfig.loader.stage1.Stage1Loader`.
 
 ## Stage 1: Loader
@@ -28,20 +40,25 @@ directly. In theory a version specific loader may exist and be loaded by the wra
 1.12.2 use the same loader. The loader then downloads the version specific OneConfig jar and
 loads `cc.polyfrost.oneconfig.internal.plugin.asm.OneConfigTweaker` and delegates to that tweaker.~~ to be rewritten
 
-**Note**: For retro-compatibility reasons, the **Loader** also contains the legacy 
+**Note**: For retro-compatibility reasons, the **Loader** also contains the legacy
 `cc.polyfrost.oneconfigloader.OneConfigLoader` and `cc.polyfrost.oneconfig.loader.OneConfigLoader` classes, which
 are loaded by older versions of the stage 0 **Wrapper**, but should not be used otherwise.
 
 ## API
 
 The API hosts download URLs and hashes of downloaded files at:
- - https://api.polyfrost.cc/oneconfig/1.8.9-forge
- - https://api.polyfrost.cc/oneconfig/1.12.2-forge
+
+- https://api.polyfrost.cc/oneconfig/1.8.9-forge
+- https://api.polyfrost.cc/oneconfig/1.12.2-forge
 
 [Polyfrost Documentation]: https://docs.polyfrost.cc/
+
 [OneConfig]: https://github.com/Polyfrost/OneConfig
 
 [LaunchWrapper]: https://github.com/Mojang/legacy-launcher
+
 [ModLauncher]: https://github.com/McModLauncher/modlauncher
+
 [Fabric Loader]: https://github.com/FabricMC/fabric-loader
+
 [OneConfig Bootstrap]: https://github.com/Polyfrost/OneConfig-Bootstrap
