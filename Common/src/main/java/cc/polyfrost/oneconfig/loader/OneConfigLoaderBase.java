@@ -1,6 +1,6 @@
 package cc.polyfrost.oneconfig.loader;
 
-import cc.polyfrost.oneconfig.loader.wrapper.OneConfigWrapperBase;
+import cc.polyfrost.oneconfig.loader.stage0.OneConfigWrapperBase;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 

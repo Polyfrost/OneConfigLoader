@@ -1,6 +1,6 @@
-package cc.polyfrost.oneconfig.loader.wrapper;
+package cc.polyfrost.oneconfig.loader.stage0;
 
-import cc.polyfrost.oneconfig.loader.wrapper.ssl.SSLStore;
+import cc.polyfrost.oneconfig.loader.stage0.ssl.SSLStore;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
