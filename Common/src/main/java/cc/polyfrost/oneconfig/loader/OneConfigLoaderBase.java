@@ -28,7 +28,12 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
     @Override
     protected void downloadFile(String url, File location) {
 
-        Frame ui = new Frame();
+        Frame ui = null;
+        try {
+            ui = new Frame();
+        } catch (Exception e) {
+            logger.error("Continuing without GUI", e);
+        }
         try {
             URLConnection con = new URL(url).openConnection();
             con.setRequestProperty("User-Agent", "OneConfig-Loader");
@@ -46,17 +51,21 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
             downloader.start();
             while (downloadPercent < 1f) {
                 downloadPercent = (float) location.length() / (float) length;
-                ui.update(downloadPercent);
+                if (ui != null) {
+                    ui.update(downloadPercent);
+                }
                 if (System.currentTimeMillis() - timeLast > 1000) {
                     timeLast = System.currentTimeMillis();
                     logger.info("Downloaded " + (location.length() / 1024f) + "KB out of " + (length / 1024f) + "KB (" + (downloadPercent * 100) + "%)");
                 }
             }
-            ui.dispose();
             logger.info("Download finished successfully");
         } catch (IOException e) {
-            ui.dispose();
-            e.printStackTrace();
+            throw new RuntimeException(e);
+        } finally {
+            if (ui != null) {
+                ui.dispose();
+            }
         }
     }
 
