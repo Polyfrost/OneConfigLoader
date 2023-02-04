@@ -7,7 +7,10 @@ pluginManagement {
 rootProject.name = "OneConfigStages"
 
 include("Common")
-project(":Common").name = "oneconfig-common-loader"
+project(":Common").name = "oneconfig-common"
+
+include("Common-Loader")
+project(":Common-Loader").name = "oneconfig-common-loader"
 
 include("Wrapper")
 project(":Wrapper").name = "oneconfig-wrapper-launchwrapper"

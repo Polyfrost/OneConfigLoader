@@ -11,7 +11,7 @@ plugins {
 allprojects {
     apply(plugin = "maven-publish")
     group = "cc.polyfrost"
-    version = "1.0.0-beta2"
+    version = "1.0.0-beta4"
     repositories {
         mavenCentral()
     }
@@ -51,7 +51,8 @@ subprojects {
     apply(plugin = "java")
     apply(plugin = "idea")
     apply(plugin = "com.github.johnrengelman.shadow")
-    val common = project.name == "oneconfig-common-loader"
+    val common = project.name.contains("common")
+    val loader = project.name.contains("loader")
     if (!common) {
         apply(plugin = "cc.polyfrost.loom")
     }
@@ -77,7 +78,17 @@ subprojects {
             "minecraft"("com.mojang:minecraft:1.8.9")
             "mappings"("de.oceanlabs.mcp:mcp_stable:22-1.8.9")
             "forge"("net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9")
-            include(project(":oneconfig-common-loader"))
+            include(project(":oneconfig-common"))
+        }
+    }
+
+    if (loader) {
+        dependencies {
+            if (common) {
+                include(project(":oneconfig-common"))
+            } else {
+                include(project(":oneconfig-common-loader"))
+            }
         }
     }
 
