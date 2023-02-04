@@ -13,7 +13,7 @@ publishing {
             group = project.group
             version = project.version.toString()
             artifacts {
-                artifact(tasks["shadowJar"])
+                artifact(tasks["remapJar"])
                 artifact(tasks["sourcesJar"]) {
                     classifier = "sources"
                 }

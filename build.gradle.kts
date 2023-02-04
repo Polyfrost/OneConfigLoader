@@ -11,7 +11,7 @@ plugins {
 allprojects {
     apply(plugin = "maven-publish")
     group = "cc.polyfrost"
-    version = "1.0.0-beta1"
+    version = "1.0.0-beta2"
     repositories {
         mavenCentral()
     }
@@ -57,7 +57,8 @@ subprojects {
     }
 
     val include: Configuration by configurations.creating {
-        configurations.named("implementation").get().extendsFrom(this)
+        configurations.named("compileOnly").get().extendsFrom(this)
+        configurations.named("runtimeOnly").get().extendsFrom(this)
     }
 
     configure<JavaPluginExtension> {
@@ -76,7 +77,7 @@ subprojects {
             "minecraft"("com.mojang:minecraft:1.8.9")
             "mappings"("de.oceanlabs.mcp:mcp_stable:22-1.8.9")
             "forge"("net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9")
-            "implementation"(project(":oneconfig-common-loader"))
+            include(project(":oneconfig-common-loader"))
         }
     }
 
@@ -85,23 +86,24 @@ subprojects {
     }
 
     if (!common) {
-        tasks.withType(Jar::class) {
-            archiveBaseName.set(project.name)
-            archiveClassifier.set("obf")
-        }
-
-        val shadowJar by tasks.named<ShadowJar>("shadowJar") {
-            archiveBaseName.set(project.name)
-            archiveClassifier.set("")
-            configurations = listOf(include)
-        }
-
-        val remapJar by tasks.named<RemapJarTask>("remapJar") {
-            from(shadowJar)
-            input.set(shadowJar.archiveFile)
-        }
-        tasks.named("assemble") {
-            dependsOn(remapJar)
+        tasks {
+            withType(Jar::class) {
+                archiveBaseName.set(project.name)
+            }
+            val shadowJar by named<ShadowJar>("shadowJar") {
+                archiveClassifier.set("dev")
+                configurations = listOf(include)
+                duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+            }
+            named<RemapJarTask>("remapJar") {
+                input.set(shadowJar.archiveFile)
+                archiveClassifier.set("")
+            }
+            named<Jar>("jar") {
+                dependsOn(shadowJar)
+                archiveClassifier.set("")
+                enabled = false
+            }
         }
     }
 }
