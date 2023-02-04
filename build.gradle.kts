@@ -11,7 +11,7 @@ plugins {
 allprojects {
     apply(plugin = "maven-publish")
     group = "cc.polyfrost"
-    version = "1.0.0-beta5"
+    version = "1.0.0-beta6"
     repositories {
         mavenCentral()
     }
@@ -85,7 +85,7 @@ subprojects {
     if (loader) {
         dependencies {
             if (common) {
-                include(project(":oneconfig-common"))
+                "compileClasspath"(project(":oneconfig-common"))
             } else {
                 include(project(":oneconfig-common-loader"))
             }
