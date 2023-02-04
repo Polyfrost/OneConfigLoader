@@ -11,12 +11,11 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.text.DecimalFormat;
 import java.util.Objects;
 
 public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
@@ -27,7 +26,6 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
 
     @Override
     protected void downloadFile(String url, File location) {
-
         Frame ui = null;
         try {
             ui = new Frame();
@@ -38,8 +36,12 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
             URLConnection con = new URL(url).openConnection();
             con.setRequestProperty("User-Agent", "OneConfig-Loader");
             int length = con.getContentLength();
-            if (location.exists()) location.delete();
-            location.createNewFile();
+            if (location.exists() && !location.delete()) {
+                throw new RuntimeException("Could not delete old version of OneConfig! (" + location.getAbsolutePath() + ")");
+            }
+            if (!location.createNewFile()) {
+                throw new RuntimeException("Could not create file! (" + location.getAbsolutePath() + ")");
+            }
             logger.info("Downloading new version of OneConfig... (" + length / 1024f + "KB)");
             Thread downloader = new Thread(() -> {
                 try (InputStream in = con.getInputStream()) {
@@ -103,8 +105,11 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
                 g2d.setFont(new Font("Arial", Font.PLAIN, 13));
             }
             g2d.drawString("Downloading OneConfig...", 24, 150 - 16 - 8 - 8);
-            String percent = new BigDecimal(progress * 100f).setScale(2, RoundingMode.HALF_UP).doubleValue() + "%";
-            g2d.drawString(percent, 400 - 24 - g2d.getFontMetrics().stringWidth(percent), 150 - 16 - 8 - 8);
+
+            DecimalFormat df = new DecimalFormat("#.##");
+            String percentage = df.format(progress * 100f) + "%";
+            g2d.drawString(percentage, 400 - 24 - g2d.getFontMetrics().stringWidth(percentage), 150 - 16 - 8 - 8);
+
             g2d.dispose();
         }
 
