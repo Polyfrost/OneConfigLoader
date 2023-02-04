@@ -57,8 +57,8 @@ subprojects {
     }
 
     val include: Configuration by configurations.creating {
-        configurations.named("compileOnly").get().extendsFrom(this)
-        configurations.named("runtimeOnly").get().extendsFrom(this)
+        configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME).get().extendsFrom(this)
+        configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME).get().extendsFrom(this)
     }
 
     configure<JavaPluginExtension> {
