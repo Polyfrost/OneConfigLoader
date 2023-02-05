@@ -11,7 +11,7 @@ plugins {
 allprojects {
     apply(plugin = "maven-publish")
     group = "cc.polyfrost"
-    version = "1.0.0-beta8"
+    version = "1.0.0-beta7"
     repositories {
         mavenCentral()
     }
@@ -78,19 +78,16 @@ subprojects {
             "minecraft"("com.mojang:minecraft:1.8.9")
             "mappings"("de.oceanlabs.mcp:mcp_stable:22-1.8.9")
             "forge"("net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9")
-            if (!loader) {
-                include(project(":oneconfig-common"))
-            }
+            include(project(":oneconfig-common"))
         }
     }
 
     if (loader) {
         dependencies {
-            "compileClasspath"(project(":oneconfig-common"))
-            if (!common) {
-                include(project(":oneconfig-common-loader")) {
-                    isTransitive = false
-                }
+            if (common) {
+                "compileClasspath"(project(":oneconfig-common"))
+            } else {
+                include(project(":oneconfig-common-loader"))
             }
         }
     }
