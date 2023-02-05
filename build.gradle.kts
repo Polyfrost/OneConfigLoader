@@ -11,7 +11,7 @@ plugins {
 allprojects {
     apply(plugin = "maven-publish")
     group = "cc.polyfrost"
-    version = "1.0.0-beta7"
+    version = "1.0.0-beta9"
     repositories {
         mavenCentral()
     }
@@ -85,7 +85,7 @@ subprojects {
     if (loader) {
         dependencies {
             if (common) {
-                "compileClasspath"(project(":oneconfig-common"))
+                "compileOnly"(project(":oneconfig-common"))
             } else {
                 include(project(":oneconfig-common-loader"))
             }
@@ -105,6 +105,9 @@ subprojects {
                 archiveClassifier.set("dev")
                 configurations = listOf(include)
                 duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+                if (loader) {
+                    relocate("cc.polyfrost.oneconfig.loader.stage0", "cc.polyfrost.oneconfig.loader")
+                }
             }
             named<RemapJarTask>("remapJar") {
                 input.set(shadowJar.archiveFile)
