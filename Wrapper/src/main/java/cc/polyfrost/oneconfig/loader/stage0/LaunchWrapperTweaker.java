@@ -15,7 +15,7 @@ import java.util.Arrays;
 import java.util.List;
 
 public class LaunchWrapperTweaker extends OneConfigWrapperBase implements ITweaker {
-    private ITweaker loader = null;
+    private static ITweaker loader = null;
 
     @Override
     protected boolean shouldSSLStore() {

@@ -22,7 +22,7 @@ import java.util.List;
 public class OneConfigLoader extends OneConfigLoaderBase implements ITweaker {
     private boolean update;
     private String channel;
-    private ITweaker loader = null;
+    private static ITweaker loader = null;
     @Override
     protected LoaderInfo provideLoaderInfo() {
         boolean update = true;
