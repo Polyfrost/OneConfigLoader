@@ -136,6 +136,7 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
             setIconImage(icon);
             setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
             setUndecorated(true);
+            setSize(400, 150);
             setLocationRelativeTo(null);
             setBackground(new Color(0, 0, 0, 0));
             add(downloadUI);
