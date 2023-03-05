@@ -12,7 +12,7 @@ import org.jetbrains.annotations.NotNull;
  * {@code "prelaunch"}.</p>
  *
  * <p>This class should provide the necessary interfaces for platform-specific
- * mechanisms to be abstracted away and possibly delegated to further stages.
+ * mechanisms to be abstracted away and possibly delegated to urther stages.
  * </p>
  *
  * @author xtrm
