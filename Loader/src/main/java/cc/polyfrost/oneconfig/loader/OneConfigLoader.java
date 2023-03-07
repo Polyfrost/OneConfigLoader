@@ -23,6 +23,7 @@ public class OneConfigLoader extends OneConfigLoaderBase implements ITweaker {
     private boolean update;
     private String channel;
     private static ITweaker loader = null;
+
     @Override
     protected LoaderInfo provideLoaderInfo() {
         boolean update = true;
@@ -38,8 +39,8 @@ public class OneConfigLoader extends OneConfigLoaderBase implements ITweaker {
 
         String mcVersion = "1.8.9";
         try {
-            mcVersion = ((String) ForgeVersion.class.getDeclaredField("mcVersion").get(null));
-        } catch (Exception e) {
+            mcVersion = ForgeVersion.mcVersion;
+        } catch (Throwable e) {
             e.printStackTrace();
             System.out.println("Getting the Minecraft version failed, defaulting to 1.8.9. Please report this to https://inv.wtf/polyfrost");
         }

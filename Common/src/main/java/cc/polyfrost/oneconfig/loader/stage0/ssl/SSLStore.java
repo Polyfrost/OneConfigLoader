@@ -1,6 +1,5 @@
 package cc.polyfrost.oneconfig.loader.stage0.ssl;
 
-import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.BufferedInputStream;
@@ -18,7 +17,7 @@ public class SSLStore {
 
     public SSLStore() throws Exception {
         Path keyStorePath = Paths.get(System.getProperty("java.home"), "lib", "security", "cacerts");
-        this.keyStore.load(Files.newInputStream(keyStorePath), (char[])null);
+        this.keyStore.load(Files.newInputStream(keyStorePath), null);
     }
 
     /**
@@ -28,28 +27,13 @@ public class SSLStore {
      * @throws Exception Uses Exception to cover the SSL loading and generation
      */
     public SSLStore load(String sslFile) throws Exception {
-        InputStream certificateResource = SSLStore.class.getResourceAsStream(sslFile);
-        Throwable sslThrowable = null;
+        try (InputStream certificateResource = SSLStore.class.getResourceAsStream(sslFile)) {
 
-        // Try to gen and load the certificate
-        try {
+            // Try to gen and load the certificate
             InputStream certStream = new BufferedInputStream(certificateResource);
             Certificate generatedCertificate = this.certificateFactory.generateCertificate(certStream);
 
             this.keyStore.setCertificateEntry(sslFile, generatedCertificate);
-        } catch (Throwable sslException) {
-            sslThrowable = sslException;
-            throw sslException;
-        } finally {
-            if (certificateResource != null) {
-                try {
-                    certificateResource.close();
-                } catch (Throwable closeException) {
-                    sslThrowable.addSuppressed(closeException);
-                }
-            } else {
-                certificateResource.close();
-            }
         }
         return this;
     }
@@ -67,7 +51,7 @@ public class SSLStore {
 
         // Return the SSLContext after init.
         SSLContext sslContext = SSLContext.getInstance("TLS");
-        sslContext.init((KeyManager[])null, trustManagerFactory.getTrustManagers(), null);
+        sslContext.init(null, trustManagerFactory.getTrustManagers(), null);
 
         return sslContext;
     }

@@ -26,8 +26,8 @@ public class LaunchWrapperTweaker extends OneConfigWrapperBase implements ITweak
     protected LoaderInfo provideLoaderInfo() {
         String mcVersion = "1.8.9";
         try {
-            mcVersion = ((String) ForgeVersion.class.getDeclaredField("mcVersion").get(null));
-        } catch (Exception e) {
+            mcVersion = ForgeVersion.mcVersion;
+        } catch (Throwable e) {
             e.printStackTrace();
             System.out.println("Getting the Minecraft version failed, defaulting to 1.8.9. Please report this to https://inv.wtf/polyfrost");
         }
@@ -83,14 +83,9 @@ public class LaunchWrapperTweaker extends OneConfigWrapperBase implements ITweak
     @Override
     protected void addToClasspath(File file) {
         try {
-            URL url = file.toURI().toURL();
-            Launch.classLoader.addURL(url);
-            ClassLoader classLoader = Launch.classLoader.getClass().getClassLoader();
-            Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-            method.setAccessible(true);
-            method.invoke(classLoader, url);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            Launch.classLoader.addURL(file.toURI().toURL());
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException(file.getAbsolutePath(), e);
         }
     }
 

@@ -11,6 +11,7 @@ import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
@@ -20,17 +21,17 @@ import java.util.Objects;
 
 public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
 
-    private long timeLast = System.currentTimeMillis();
+    private long lastTime = System.currentTimeMillis();
     private float downloadPercent = 0f;
-    private static final Logger logger = LogManager.getLogger("OneConfigLoader");
+    private static final Logger LOGGER = LogManager.getLogger("OneConfigLoader");
 
     @Override
     protected void downloadFile(String url, File location) {
         Frame ui = null;
         try {
             ui = new Frame();
-        } catch (Exception e) {
-            logger.error("Continuing without GUI", e);
+        } catch (Throwable e) {
+            LOGGER.error("Continuing without GUI", e);
         }
         try {
             URLConnection con = new URL(url).openConnection();
@@ -42,12 +43,12 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
             if (!location.createNewFile()) {
                 throw new RuntimeException("Could not create file! (" + location.getAbsolutePath() + ")");
             }
-            logger.info("Downloading new version of OneConfig... (" + length / 1024f + "KB)");
+            LOGGER.info("Downloading new version of OneConfig... (" + length / 1024f + "KB)");
             Thread downloader = new Thread(() -> {
                 try (InputStream in = con.getInputStream()) {
                     Files.copy(in, location.toPath(), StandardCopyOption.REPLACE_EXISTING);
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    throw new UncheckedIOException(e);
                 }
             });
             downloader.start();
@@ -56,12 +57,12 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
                 if (ui != null) {
                     ui.update(downloadPercent);
                 }
-                if (System.currentTimeMillis() - timeLast > 1000) {
-                    timeLast = System.currentTimeMillis();
-                    logger.info("Downloaded " + (location.length() / 1024f) + "KB out of " + (length / 1024f) + "KB (" + (downloadPercent * 100) + "%)");
+                if (System.currentTimeMillis() - lastTime > 1000) {
+                    lastTime = System.currentTimeMillis();
+                    LOGGER.info("Downloaded " + (location.length() / 1024f) + "KB out of " + (length / 1024f) + "KB (" + (downloadPercent * 100) + "%)");
                 }
             }
-            logger.info("Download finished successfully");
+            LOGGER.info("Download finished successfully");
         } catch (IOException e) {
             throw new RuntimeException(e);
         } finally {
@@ -81,7 +82,7 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
                 logo = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/oneconfig-loader/oneconfig.png")));
             } catch (Exception ignored) {
             }
-            setBackground(new Color(0, 0, 0, 0));
+            setBackground(new Color(0, true));
             setPreferredSize(new Dimension(400, 150));
         }
 

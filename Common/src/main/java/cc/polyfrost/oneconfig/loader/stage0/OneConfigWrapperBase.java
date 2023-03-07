@@ -44,23 +44,21 @@ public abstract class OneConfigWrapperBase {
                 if (json != null && json.isJsonObject()) {
                     JsonObject jsonObject = json.getAsJsonObject();
                     JsonInfo jsonInfo = provideJsonInfo(jsonObject, loaderInfo);
-                    if (jsonInfo.success) {
-                        if (!oneconfigFile.exists() || !jsonInfo.checksum.equals(getChecksum(oneconfigFile))) {
-                            System.out.println("Updating OneConfig " + loaderInfo.stageLoading + "...");
-                            File newLoaderFile = new File(oneconfigFile.getParentFile(), oneconfigFile.getName().substring(0, oneconfigFile.getName().lastIndexOf(".")) + "-NEW.jar");
+                    if (jsonInfo.success && (!oneconfigFile.exists() || !jsonInfo.checksum.equals(getChecksum(oneconfigFile)))) {
+                        System.out.println("Updating OneConfig " + loaderInfo.stageLoading + "...");
+                        File newLoaderFile = new File(oneconfigFile.getParentFile(), oneconfigFile.getName().substring(0, oneconfigFile.getName().lastIndexOf(".")) + "-NEW.jar");
 
-                            downloadFile(jsonInfo.downloadUrl, newLoaderFile);
+                        downloadFile(jsonInfo.downloadUrl, newLoaderFile);
 
-                            if (newLoaderFile.exists() && jsonInfo.checksum.equals(getChecksum(newLoaderFile))) {
-                                try {
-                                    Files.move(newLoaderFile.toPath(), oneconfigFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                                    System.out.println("Updated OneConfig " + loaderInfo.stageLoading + "!");
-                                } catch (IOException ignored) {
-                                }
-                            } else {
-                                if (newLoaderFile.exists()) newLoaderFile.delete();
-                                System.out.println("Failed to update OneConfig " + loaderInfo.stageLoading + ", trying to continue...");
+                        if (newLoaderFile.exists() && jsonInfo.checksum.equals(getChecksum(newLoaderFile))) {
+                            try {
+                                Files.move(newLoaderFile.toPath(), oneconfigFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                                System.out.println("Updated OneConfig " + loaderInfo.stageLoading + "!");
+                            } catch (IOException ignored) {
                             }
+                        } else {
+                            if (newLoaderFile.exists()) newLoaderFile.delete();
+                            System.out.println("Failed to update OneConfig " + loaderInfo.stageLoading + ", trying to continue...");
                         }
                     }
                 }
@@ -129,9 +127,9 @@ public abstract class OneConfigWrapperBase {
             con.setRequestProperty("User-Agent", "OneConfig-Loader");
             con.setConnectTimeout(15000);
             con.setReadTimeout(15000);
-            InputStream in = con.getInputStream();
-            Files.copy(in, location.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            in.close();
+            try (InputStream in = con.getInputStream()) {
+                Files.copy(in, location.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -150,15 +148,9 @@ public abstract class OneConfigWrapperBase {
                 System.out.println("API request failed, status code " + status);
                 return null;
             }
-            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-            String inputLine;
-            StringBuilder content = new StringBuilder();
-            while ((inputLine = in.readLine()) != null) {
-                content.append(inputLine);
+            try (Reader in = new InputStreamReader(con.getInputStream())) {
+                return new JsonParser().parse(in);
             }
-            in.close();
-            JsonParser parser = new JsonParser();
-            return parser.parse(content.toString());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -212,13 +204,12 @@ public abstract class OneConfigWrapperBase {
                     title, JOptionPane.OK_CANCEL_OPTION, JOptionPane.ERROR_MESSAGE, icon,
                     new Object[]{"Join Discord", "Close"}, "Join Discord"
             );
-            if (response == 0) {
-                if (!browse(new URI("https://polyfrost.cc/discord"))) {
-                    System.out.println("Failed to open browser.");
-                }
+            if ((response == 0) && !browse(new URI("https://polyfrost.cc/discord"))) {
+                System.out.println("Failed to open browser.");
             }
         } catch (Exception ignored) {
         } finally {
+            // required because some Forge versions prevent System.exit
             try {
                 Method exit = Class.forName("java.lang.Shutdown").getDeclaredMethod("exit", int.class);
                 exit.setAccessible(true);
