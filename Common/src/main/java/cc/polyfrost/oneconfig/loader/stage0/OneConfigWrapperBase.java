@@ -26,7 +26,7 @@ public abstract class OneConfigWrapperBase {
     public static final Color PRIMARY_500 = new Color(26, 103, 255);
     public static final Color PRIMARY_500_80 = new Color(26, 103, 204);
     public static final Color WHITE_80 = new Color(255, 255, 255, 204);
-    public static final Color TRANSPARENT = new Color(0, 0, 0, 0);
+    public static final Color TRANSPARENT = new Color(0, true);
 
     public OneConfigWrapperBase() {
         try {
