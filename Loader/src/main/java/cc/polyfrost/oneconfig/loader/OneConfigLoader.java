@@ -32,7 +32,7 @@ public class OneConfigLoader extends OneConfigLoaderBase implements ITweaker {
             JsonObject config = new JsonParser().parse(reader).getAsJsonObject();
             update = config.get("autoUpdate").getAsBoolean();
             channel = config.get("updateChannel").getAsInt() == 0 ? "release" : "snapshot";
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         }
         this.update = update;
         this.channel = channel;
@@ -71,7 +71,7 @@ public class OneConfigLoader extends OneConfigLoaderBase implements ITweaker {
                 String downloadUrl = object.getAsJsonObject(channel).get("url").getAsString();
                 return new JsonInfo(checksum, downloadUrl, true);
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             e.printStackTrace();
         }
         return new JsonInfo(null, null, false);
@@ -80,14 +80,9 @@ public class OneConfigLoader extends OneConfigLoaderBase implements ITweaker {
     @Override
     protected void addToClasspath(File file) {
         try {
-            URL url = file.toURI().toURL();
-            Launch.classLoader.addURL(url);
-            ClassLoader classLoader = Launch.classLoader.getClass().getClassLoader();
-            Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
-            method.setAccessible(true);
-            method.invoke(classLoader, url);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            Launch.classLoader.addURL(file.toURI().toURL());
+        } catch (MalformedURLException e) {
+            throw new IllegalArgumentException(file.getAbsolutePath(), e);
         }
     }
 
@@ -106,7 +101,7 @@ public class OneConfigLoader extends OneConfigLoaderBase implements ITweaker {
     protected boolean getNextInstance() {
         try {
             loader = ((ITweaker) Launch.classLoader.findClass("cc.polyfrost.oneconfig.internal.plugin.asm.OneConfigTweaker").newInstance());
-        } catch (Exception e) {
+        } catch (Throwable e) {
             e.printStackTrace();
         }
         return loader != null;

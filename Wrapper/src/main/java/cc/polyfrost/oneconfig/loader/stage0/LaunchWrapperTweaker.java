@@ -53,7 +53,7 @@ public class LaunchWrapperTweaker extends OneConfigWrapperBase implements ITweak
                 String downloadUrl = object.getAsJsonObject("loader").get("url").getAsString();
                 return new JsonInfo(checksum, downloadUrl, true);
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             e.printStackTrace();
         }
         return new JsonInfo(null, null, false);
@@ -74,7 +74,7 @@ public class LaunchWrapperTweaker extends OneConfigWrapperBase implements ITweak
     protected boolean getNextInstance() {
         try {
             loader = ((ITweaker) Launch.classLoader.findClass("cc.polyfrost.oneconfig.loader.OneConfigLoader").newInstance());
-        } catch (Exception e) {
+        } catch (Throwable e) {
             e.printStackTrace();
         }
         return loader != null;

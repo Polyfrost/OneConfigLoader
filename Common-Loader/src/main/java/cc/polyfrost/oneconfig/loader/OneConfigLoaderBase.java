@@ -80,7 +80,7 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
             super();
             try {
                 logo = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/oneconfig-loader/oneconfig.png")));
-            } catch (Exception ignored) {
+            } catch (Throwable ignored) {
             }
             setBackground(new Color(0, true));
             setPreferredSize(new Dimension(400, 150));
@@ -130,7 +130,7 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
             Image icon = null;
             try {
                 icon = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/oneconfig-loader/oneconfig-icon.png")));
-            } catch (Exception ignored) {
+            } catch (Throwable ignored) {
             }
             setAlwaysOnTop(true);
             setResizable(false);

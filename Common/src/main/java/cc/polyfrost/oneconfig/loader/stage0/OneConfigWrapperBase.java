@@ -69,7 +69,7 @@ public abstract class OneConfigWrapperBase {
             if (!getNextInstance()) {
                 showErrorScreen();
             }
-        } catch (Exception e) {
+        } catch (Throwable e) {
             e.printStackTrace();
             showErrorScreen();
         }
@@ -188,7 +188,7 @@ public abstract class OneConfigWrapperBase {
             Icon icon = null;
             try {
                 icon = new ImageIcon(Objects.requireNonNull(getClass().getResource("/assets/oneconfig-loader/oneconfig-icon.png")));
-            } catch (Exception ignored) {
+            } catch (Throwable ignored) {
 
             }
             UIManager.put("OptionPane.background", GRAY_900);
@@ -207,14 +207,14 @@ public abstract class OneConfigWrapperBase {
             if ((response == 0) && !browse(new URI("https://polyfrost.cc/discord"))) {
                 System.out.println("Failed to open browser.");
             }
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         } finally {
             // required because some Forge versions prevent System.exit
             try {
                 Method exit = Class.forName("java.lang.Shutdown").getDeclaredMethod("exit", int.class);
                 exit.setAccessible(true);
                 exit.invoke(null, 1);
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 System.exit(1);
             }
         }
@@ -225,7 +225,7 @@ public abstract class OneConfigWrapperBase {
             try {
                 Desktop.getDesktop().browse(uri);
                 return true;
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 e.printStackTrace();
             }
         }
@@ -240,7 +240,7 @@ public abstract class OneConfigWrapperBase {
             SSLContext context = sslStore.finish();
             SSLContext.setDefault(context);
             HttpsURLConnection.setDefaultSSLSocketFactory(context.getSocketFactory());
-        } catch (Exception e) {
+        } catch (Throwable e) {
             e.printStackTrace();
             System.out.println("Failed to add Polyfrost certificate to keystore.");
         }
