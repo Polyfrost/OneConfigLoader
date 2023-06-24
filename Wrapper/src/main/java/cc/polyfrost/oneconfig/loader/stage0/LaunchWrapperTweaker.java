@@ -14,6 +14,15 @@ import java.net.URLClassLoader;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * The main OneConfig Tweaker that mods use as the entrypoint to downloading OneConfig.
+ * 
+ * <b>**DO NOT CALL THIS FROM YOUR MOD**</b> You need to add the wrapper from the build logic,
+ * see https://docs.polyfrost.cc for more information on loading OneConfig from your mod.
+ * 
+ * @see net.minecraft.launchwrapper.ITweaker
+ * @see cc.polyfrost.oneconfig.loader.stage0.OneConfigWrapperBase
+ */
 public class LaunchWrapperTweaker extends OneConfigWrapperBase implements ITweaker {
     private static ITweaker loader = null;
 

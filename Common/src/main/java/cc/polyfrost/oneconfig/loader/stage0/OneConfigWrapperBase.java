@@ -20,7 +20,17 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Objects;
 
+/**
+ * This abstract base class is used to implement the OneConfig wrapper. It allows
+ * mod developers to implement their own additional logic along with loading OneConfig.
+ * 
+ * For example, if you wanted to load an additional library or add your own SSLStore
+ * logic, this allows for that to be done along with loading OneConfig normally.
+ * 
+ * @see cc.polyfrost.oneconfig.loader.stage0.LaunchWrapperTweaker
+ */
 public abstract class OneConfigWrapperBase {
+    // TODO: move this into another common class, maybe polyui if we migrate loader ui to it.
     public static final Color GRAY_900 = new Color(13, 14, 15, 255);
     public static final Color GRAY_700 = new Color(34, 35, 38);
     public static final Color PRIMARY_500 = new Color(26, 103, 255);
@@ -35,6 +45,7 @@ public abstract class OneConfigWrapperBase {
             }
 
             final LoaderInfo loaderInfo = provideLoaderInfo();
+            // TODO: make this not spam the log everytime the wrapper is called from a mod
             System.out.println("OneConfig has detected the version " + loaderInfo.mcVersion + ". If this is false, report this at https://inv.wtf/polyfrost");
 
             File oneconfigFile = provideFile(loaderInfo);

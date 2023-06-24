@@ -7,7 +7,6 @@ package cc.polyfrost.oneconfigloader;
 @Deprecated
 public class OneConfigLoader extends cc.polyfrost.oneconfig.loader.OneConfigLoader {
     static {
-        //todo Eventually, warn for this. Currently, this is too new for us to constantly warn about.
-        //System.out.println("One of your mods are using an outdated version of OneConfigWrapper. Please update to the latest version.");
+        System.out.println("One of your mods are using an outdated version of OneConfigWrapper. Please update to the latest version.");
     }
 }

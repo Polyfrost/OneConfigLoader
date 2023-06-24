@@ -12,6 +12,21 @@ import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 
+/**
+ * SSLStore attempts to work around the limitations of legacy Minecraft versions in their
+ * collection of certificates. Since many legacy versions including 1.8 use legacy versions
+ * of Java, these distributions tend to have outdated or missing CA certificates.
+ * 
+ * This class loads and injects a new CA Root certificate into the normal Java KeyStore
+ * without having to restart the Java runtime. This allows us to load the certificate
+ * from Stage 0 (Wrapper), before any HTTP requests are made. We use this ability to
+ * take the context that SSLStore creates and use it for all future HTTP requests
+ * during the lifetime of the Java runtime (including for all other stages and mods).
+ * 
+ * @author pauliesnug
+ * @see javax.net.ssl.KeyManager
+ * @see javax.net.ssl.SSLContext
+ */
 public class SSLStore {
     private final CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
     private final KeyStore keyStore = KeyStore.getInstance(KeyStore.getDefaultType());

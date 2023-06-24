@@ -3,7 +3,7 @@
 This repository contains the source code for early loading of [OneConfig].
 
 This below documentation is not intended for end users or consuming developers of OneConfig.
-Check out the [PolyFrost DocuMentation] instead.
+Check out the [Polyfrost Documentation] instead.
 
 ## Stage 0: Wrapper
 
@@ -21,10 +21,10 @@ loads `cc.polyfrost.oneconfig.internal.plugin.asm.OneConfigTweaker` and delegate
 
 ## API
 
-The API hosts download URLs and hashes of downloaded files at 
+The API hosts download URLs and hashes of downloaded files at:
 
- - https://api.polyfrost.cc/oneconfig/1.8.9-forge
- - https://api.polyfrost.cc/oneconfig/1.12.2-forge
+- <https://api.polyfrost.cc/oneconfig/1.8.9-forge>
+- <https://api.polyfrost.cc/oneconfig/1.12.2-forge>
 
-[PolyFrost DocuMentation]: https://docs.polyfrost.cc/
+[Polyfrost Documentation]: https://docs.polyfrost.cc/
 [OneConfig]: https://github.com/Polyfrost/OneConfig

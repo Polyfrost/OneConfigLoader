@@ -18,6 +18,14 @@ import java.nio.file.StandardCopyOption;
 import java.text.DecimalFormat;
 import java.util.Objects;
 
+/**
+ * This abstract base class allows us to implement the OneConfig Loader.
+ * 
+ * OneConfigLoaderBase SHOULD NOT be modified, added on to, or included in
+ * third party mods. If you have a special use case that requires the loader
+ * to be modified rather than downloaded by the wrapper please contact us at
+ * https://inv.wtf/polyfrost so we can work to accomodate your use case.
+ */
 public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
 
     private long timeLast = System.currentTimeMillis();
