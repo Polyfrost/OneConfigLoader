@@ -48,7 +48,7 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
             con.setRequestProperty("User-Agent", "OneConfig-Loader");
             con.setRequestMethod("GET");
             con.setConnectTimeout(15000);
-            con.setReadTimeout(60000);
+            con.setReadTimeout(15000);
             con.setDoOutput(true);
             int length = con.getContentLength();
             if (location.exists() && !location.delete()) {

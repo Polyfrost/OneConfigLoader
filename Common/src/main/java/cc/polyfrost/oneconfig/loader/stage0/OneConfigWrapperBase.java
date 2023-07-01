@@ -139,7 +139,7 @@ public abstract class OneConfigWrapperBase {
             URLConnection con = new URL(url).openConnection();
             con.setRequestProperty("User-Agent", "OneConfig-Loader");
             con.setConnectTimeout(15000);
-            con.setReadTimeout(60000);
+            con.setReadTimeout(15000);
             InputStream in = con.getInputStream();
             Files.copy(in, location.toPath(), StandardCopyOption.REPLACE_EXISTING);
             in.close();
