@@ -5,6 +5,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import javax.imageio.ImageIO;
+import javax.net.ssl.HttpsURLConnection;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -24,13 +25,15 @@ import java.util.Objects;
  * OneConfigLoaderBase SHOULD NOT be modified, added on to, or included in
  * third party mods. If you have a special use case that requires the loader
  * to be modified rather than downloaded by the wrapper please contact us at
- * https://inv.wtf/polyfrost so we can work to accomodate your use case.
+ * https://inv.wtf/polyfrost so we can work to accommodate your use case.
  */
 public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
 
     private long timeLast = System.currentTimeMillis();
     private float downloadPercent = 0f;
     private static final Logger logger = LogManager.getLogger("OneConfigLoader");
+
+    private Throwable error = null;
 
     @Override
     protected void downloadFile(String url, File location) {
@@ -41,8 +44,12 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
             logger.error("Continuing without GUI", e);
         }
         try {
-            URLConnection con = new URL(url).openConnection();
+            HttpsURLConnection con = (HttpsURLConnection) new URL(url).openConnection();
             con.setRequestProperty("User-Agent", "OneConfig-Loader");
+            con.setRequestMethod("GET");
+            con.setConnectTimeout(15000);
+            con.setReadTimeout(60000);
+            con.setDoOutput(true);
             int length = con.getContentLength();
             if (location.exists() && !location.delete()) {
                 throw new RuntimeException("Could not delete old version of OneConfig! (" + location.getAbsolutePath() + ")");
@@ -54,12 +61,15 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
             Thread downloader = new Thread(() -> {
                 try (InputStream in = con.getInputStream()) {
                     Files.copy(in, location.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
+                } catch (Exception e) {
+                    error = e;
                 }
             });
             downloader.start();
             while (downloadPercent < 1f) {
+                if (error != null) {
+                    throw new RuntimeException(error);
+                }
                 downloadPercent = (float) location.length() / (float) length;
                 if (ui != null) {
                     ui.update(downloadPercent);
@@ -70,7 +80,7 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
                 }
             }
             logger.info("Download finished successfully");
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         } finally {
             if (ui != null) {
