@@ -13,7 +13,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
-import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.text.DecimalFormat;
@@ -21,7 +20,7 @@ import java.util.Objects;
 
 /**
  * This abstract base class allows us to implement the OneConfig Loader.
- * 
+ * <p>
  * OneConfigLoaderBase SHOULD NOT be modified, added on to, or included in
  * third party mods. If you have a special use case that requires the loader
  * to be modified rather than downloaded by the wrapper please contact us at
@@ -92,6 +91,7 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
     private static class DownloadUI extends JPanel {
         private BufferedImage logo;
         private float progress = 0f;
+        private final DecimalFormat df = new DecimalFormat("#.##");
 
         public DownloadUI() {
             super();
@@ -117,14 +117,15 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
             g2d.fillRoundRect(24, 150 - 16 - 8, (int) (352 * progress), 8, 6, 6);
             g2d.setColor(Color.WHITE);
             try {
-                g2d.setFont(Font.createFont(Font.TRUETYPE_FONT, Objects.requireNonNull(getClass().getResourceAsStream("/assets/oneconfig-loader/Regular.otf"))).deriveFont(13f));
+                Font font = Font.createFont(Font.TRUETYPE_FONT, Objects.requireNonNull(getClass().getResourceAsStream("/assets/oneconfig-loader/Regular.otf")));
+                g2d.setFont(font.deriveFont(getAdjustedFontSize(13f, font, g2d)));
             } catch (FontFormatException | IOException e) {
                 e.printStackTrace();
-                g2d.setFont(new Font("Arial", Font.PLAIN, 13));
+                Font font = new Font("Arial", Font.PLAIN, 13);
+                g2d.setFont(font.deriveFont(getAdjustedFontSize(13f, font, g2d)));
             }
             g2d.drawString("Downloading OneConfig...", 24, 150 - 16 - 8 - 8);
 
-            DecimalFormat df = new DecimalFormat("#.##");
             String percentage = df.format(progress * 100f) + "%";
             g2d.drawString(percentage, 400 - 24 - g2d.getFontMetrics().stringWidth(percentage), 150 - 16 - 8 - 8);
 
@@ -134,6 +135,12 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
         public void update(float progress) {
             this.progress = progress;
             repaint();
+        }
+
+        // Adjust the font size to the expected value that's the same everywhere by looking at the size that
+        // the font is with 12pts size which normally is 16px
+        private float getAdjustedFontSize(float fontSize, Font font, Graphics2D g2d) {
+            return (16f / font.deriveFont(12f).getLineMetrics("", g2d.getFontRenderContext()).getHeight()) * fontSize;
         }
     }
 
