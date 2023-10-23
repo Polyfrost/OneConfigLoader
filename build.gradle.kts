@@ -3,15 +3,15 @@ import net.fabricmc.loom.api.LoomGradleExtensionAPI
 import net.fabricmc.loom.task.RemapJarTask
 
 plugins {
-    id("cc.polyfrost.loom") version "0.10.0.+" apply false
-    id("com.github.johnrengelman.shadow") version "7.1.2" apply false
+    id("gg.essential.loom") version "1.3.polyfrost.3" apply false
+    id("com.github.johnrengelman.shadow") version "8.1.1" apply false
     id("dev.architectury.architectury-pack200") version "0.1.3"
 }
 
 allprojects {
     apply(plugin = "maven-publish")
     group = "cc.polyfrost"
-    version = "1.0.0-beta11"
+    version = "1.0.0-beta12"
     repositories {
         mavenCentral()
     }
@@ -54,10 +54,10 @@ subprojects {
     val common = project.name.contains("common")
     val loader = project.name.contains("loader")
     if (!common) {
-        apply(plugin = "cc.polyfrost.loom")
+        apply(plugin = "gg.essential.loom")
     }
 
-    val include: Configuration by configurations.creating {
+    val shade: Configuration by configurations.creating {
         configurations.named(JavaPlugin.COMPILE_CLASSPATH_CONFIGURATION_NAME).get().extendsFrom(this)
         configurations.named(JavaPlugin.RUNTIME_CLASSPATH_CONFIGURATION_NAME).get().extendsFrom(this)
     }
@@ -78,7 +78,7 @@ subprojects {
             "minecraft"("com.mojang:minecraft:1.8.9")
             "mappings"("de.oceanlabs.mcp:mcp_stable:22-1.8.9")
             "forge"("net.minecraftforge:forge:1.8.9-11.15.1.2318-1.8.9")
-            include(project(":oneconfig-common"))
+            shade(project(":oneconfig-common"))
         }
     }
 
@@ -87,7 +87,7 @@ subprojects {
             if (common) {
                 "compileOnly"(project(":oneconfig-common"))
             } else {
-                include(project(":oneconfig-common-loader"))
+                shade(project(":oneconfig-common-loader"))
             }
         }
     }
@@ -103,14 +103,14 @@ subprojects {
             }
             val shadowJar by named<ShadowJar>("shadowJar") {
                 archiveClassifier.set("dev")
-                configurations = listOf(include)
+                configurations = listOf(shade)
                 duplicatesStrategy = DuplicatesStrategy.EXCLUDE
                 if (loader) {
                     relocate("cc.polyfrost.oneconfig.loader.stage0", "cc.polyfrost.oneconfig.loader")
                 }
             }
             named<RemapJarTask>("remapJar") {
-                input.set(shadowJar.archiveFile)
+                inputFile.set(shadowJar.archiveFile)
                 archiveClassifier.set("")
             }
             named<Jar>("jar") {

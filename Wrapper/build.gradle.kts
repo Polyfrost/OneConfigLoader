@@ -1,7 +1,7 @@
 loom {
-    launchConfigs {
+    runConfigs {
         "client" {
-            arg("--tweakClass", "cc.polyfrost.oneconfig.loader.stage0.LaunchWrapperTweaker")
+            programArgs("--tweakClass", "cc.polyfrost.oneconfig.loader.stage0.LaunchWrapperTweaker")
         }
     }
 }
