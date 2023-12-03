@@ -117,7 +117,7 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
             g2d.fillRoundRect(24, 150 - 16 - 8, (int) (352 * progress), 8, 6, 6);
             g2d.setColor(Color.WHITE);
             try {
-                Font font = Font.createFont(Font.TRUETYPE_FONT, Objects.requireNonNull(getClass().getResourceAsStream("/assets/oneconfig-loader/Regular.otf")));
+                Font font = Font.createFont(Font.TRUETYPE_FONT, Objects.requireNonNull(getClass().getResourceAsStream("/assets/oneconfig-loader/Regular.ttf")));
                 g2d.setFont(font.deriveFont(getAdjustedFontSize(13f, font, g2d)));
             } catch (FontFormatException | IOException e) {
                 e.printStackTrace();
