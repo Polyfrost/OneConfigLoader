@@ -11,7 +11,7 @@ plugins {
 allprojects {
     apply(plugin = "maven-publish")
     group = "cc.polyfrost"
-    version = "1.0.0-beta13"
+    version = "1.0.0-beta14"
     repositories {
         mavenCentral()
     }

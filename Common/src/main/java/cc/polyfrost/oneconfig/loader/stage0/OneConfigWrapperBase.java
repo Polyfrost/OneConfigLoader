@@ -137,7 +137,7 @@ public abstract class OneConfigWrapperBase {
     protected void downloadFile(String url, File location) {
         try {
             URLConnection con = new URL(url).openConnection();
-            con.setRequestProperty("User-Agent", "OneConfig-Loader");
+            con.setRequestProperty("User-Agent", "OneConfigWrapper");
             con.setConnectTimeout(15000);
             con.setReadTimeout(15000);
             InputStream in = con.getInputStream();
@@ -152,7 +152,7 @@ public abstract class OneConfigWrapperBase {
         try {
             URL url = new URL(site);
             HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
-            con.setRequestProperty("User-Agent", "OneConfig-Loader");
+            con.setRequestProperty("User-Agent", "OneConfigWrapper");
             con.setRequestMethod("GET");
             con.setConnectTimeout(15000);
             con.setReadTimeout(15000);

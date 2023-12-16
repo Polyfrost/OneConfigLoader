@@ -1,6 +1,9 @@
 package cc.polyfrost.oneconfig.loader;
 
 import cc.polyfrost.oneconfig.loader.stage0.OneConfigWrapperBase;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -9,9 +12,7 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -34,6 +35,83 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
 
     private Throwable error = null;
 
+    //TODO when we have the opportunity to, make this and OneConfigWrapperBase's constructor not duplicated
+    // the only reason its not is because static methods can't be overridden
+    public OneConfigLoaderBase() {
+        try {
+            final LoaderInfo loaderInfo = provideLoaderInfo();
+            // TODO: make this not spam the log everytime the wrapper is called from a mod
+            System.out.println("OneConfig has detected the version " + loaderInfo.mcVersion + ". If this is false, report this at https://inv.wtf/polyfrost");
+
+            File oneconfigFile = provideFile(loaderInfo);
+
+            if (!isInitialized(oneconfigFile) && shouldUpdate()) {
+                JsonElement json = getLoaderRequest("https://api.polyfrost.cc/oneconfig/" + loaderInfo.mcVersion + "-" + loaderInfo.modLoader);
+                if (json != null && json.isJsonObject()) {
+                    JsonObject jsonObject = json.getAsJsonObject();
+                    JsonInfo jsonInfo = provideJsonInfo(jsonObject, loaderInfo);
+                    if (jsonInfo.success) {
+                        if (!oneconfigFile.exists() || !jsonInfo.checksum.equals(getChecksum(oneconfigFile))) {
+                            System.out.println("Updating OneConfig " + loaderInfo.stageLoading + "...");
+                            File newLoaderFile = new File(oneconfigFile.getParentFile(), oneconfigFile.getName().substring(0, oneconfigFile.getName().lastIndexOf(".")) + "-NEW.jar");
+
+                            downloadFile(jsonInfo.downloadUrl, newLoaderFile);
+
+                            if (newLoaderFile.exists() && jsonInfo.checksum.equals(getChecksum(newLoaderFile))) {
+                                try {
+                                    Files.move(newLoaderFile.toPath(), oneconfigFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                                    System.out.println("Updated OneConfig " + loaderInfo.stageLoading + "!");
+                                } catch (IOException ignored) {
+                                }
+                            } else {
+                                if (newLoaderFile.exists()) newLoaderFile.delete();
+                                System.out.println("Failed to update OneConfig " + loaderInfo.stageLoading + ", trying to continue...");
+                            }
+                        }
+                    }
+                }
+
+                if (!oneconfigFile.exists()) showErrorScreen();
+                addToClasspath(oneconfigFile);
+            }
+            if (!getNextInstance()) {
+                showErrorScreen();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            showErrorScreen();
+        }
+    }
+
+    //todo this sucks
+    protected static JsonElement getLoaderRequest(String site) {
+        try {
+            URL url = new URL(site);
+            HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
+            con.setRequestProperty("User-Agent", "OneConfigLoader");
+            con.setRequestMethod("GET");
+            con.setConnectTimeout(15000);
+            con.setReadTimeout(15000);
+            int status = con.getResponseCode();
+            if (status != 200) {
+                System.out.println("API request failed, status code " + status);
+                return null;
+            }
+            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+            String inputLine;
+            StringBuilder content = new StringBuilder();
+            while ((inputLine = in.readLine()) != null) {
+                content.append(inputLine);
+            }
+            in.close();
+            JsonParser parser = new JsonParser();
+            return parser.parse(content.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
+
     @Override
     protected void downloadFile(String url, File location) {
         Frame ui = null;
@@ -44,7 +122,7 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
         }
         try {
             HttpsURLConnection con = (HttpsURLConnection) new URL(url).openConnection();
-            con.setRequestProperty("User-Agent", "OneConfig-Loader");
+            con.setRequestProperty("User-Agent", "OneConfigLoader");
             con.setRequestMethod("GET");
             con.setConnectTimeout(15000);
             con.setReadTimeout(15000);
