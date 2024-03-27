@@ -1,3 +1,5 @@
+@file:Suppress("VulnerableLibrariesLocal")
+
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
@@ -20,28 +22,18 @@ allprojects {
 
     configure<PublishingExtension> {
         repositories {
-            maven {
-                name = "releases"
-                setUrl("https://repo.polyfrost.cc/releases")
-                credentials(PasswordCredentials::class)
-                authentication {
-                    create<BasicAuthentication>("basic")
-                }
-            }
-            maven {
-                name = "snapshots"
-                setUrl("https://repo.polyfrost.cc/snapshots")
-                credentials(PasswordCredentials::class)
-                authentication {
-                    create<BasicAuthentication>("basic")
-                }
-            }
-            maven {
-                name = "private"
-                setUrl("https://repo.polyfrost.cc/releases")
-                credentials(PasswordCredentials::class)
-                authentication {
-                    create<BasicAuthentication>("private")
+            mapOf(
+                "releases" to "basic",
+                "snapshots" to "basic",
+                "private" to "private"
+            ).forEach { (channel, authMethod) ->
+                maven {
+                    name = channel
+                    setUrl("https://repo.polyfrost.cc/$channel")
+                    credentials(PasswordCredentials::class)
+                    authentication {
+                        create<BasicAuthentication>(authMethod)
+                    }
                 }
             }
         }
@@ -54,7 +46,8 @@ subprojects {
     apply(plugin = "com.github.johnrengelman.shadow")
     apply(plugin = "io.freefair.lombok")
 
-    val isCommon = (project.name.contains("common"))
+    val isCommon = (project.name == "common")
+    val isStage0 = (project.name == "stage0")
 
     val compileOnly by configurations
     val include: Configuration by configurations.creating {
@@ -65,6 +58,7 @@ subprojects {
 
     configure<JavaPluginExtension> {
         withSourcesJar()
+        withJavadocJar()
         toolchain {
             languageVersion.set(JavaLanguageVersion.of(8))
         }
@@ -72,7 +66,15 @@ subprojects {
 
     dependencies {
         compileOnly("org.jetbrains:annotations:20.1.0")
+
+        // real MC uses older versions of log4j but that doesn't really matter in this case
+        compileOnly("org.apache.logging.log4j:log4j-api:2.19.0")
+        compileOnly("org.apache.logging.log4j:log4j-core:2.19.0")
+
+        // same for Gson, let's use the oldest version to ensure compatibility
+        compileOnly("com.google.code.gson:gson:2.2.4")
     }
+
 
     if (!isCommon) {
         val platforms = mapOf(
@@ -81,25 +83,28 @@ subprojects {
             "prelaunch" to "net.fabricmc:fabric-loader:0.11.6"
         )
 
+        val platformSets = mutableListOf<SourceSet>()
         val main by sourceSets
-        val platformSets = sourceSets.run {
-            fun createConfigured(name: String, block: SourceSet.() -> Unit = {}): SourceSet =
-                create(name) {
-                    compileClasspath += main.compileClasspath + main.output
-                    runtimeClasspath += main.runtimeClasspath + main.output
-                    block()
-                }
+        if (isStage0) {
+            platformSets += sourceSets.run {
+                fun createConfigured(name: String, block: SourceSet.() -> Unit = {}): SourceSet =
+                    create(name) {
+                        compileClasspath += main.compileClasspath + main.output
+                        runtimeClasspath += main.runtimeClasspath + main.output
+                        block()
+                    }
 
-            platforms.keys.map(::createConfigured)
-        }
-
-        dependencies {
-            platforms.forEach { (name, dep) ->
-                "${name}CompileOnly"(dep)
+                platforms.keys.map(::createConfigured)
             }
 
-            include(project(":common")) {
-                isTransitive = false
+            dependencies {
+                platforms.forEach { (name, dep) ->
+                    "${name}CompileOnly"(dep)
+                }
+
+                include(project(":common")) {
+                    isTransitive = false
+                }
             }
         }
 
@@ -115,27 +120,30 @@ subprojects {
                 )
             }
 
-            named<Jar>(main.sourcesJarTaskName) {
-                platformSets.forEach { set ->
-                    from(set.allSource)
-                }
-            }
-
-            platformSets.forEach { set ->
-                create(set.jarTaskName, ShadowJar::class) {
-                    archiveBaseName.set(project.name)
-                    archiveClassifier.set(set.name)
-
-                    from(set.output)
-                    from(main.output)
-
-                    manifest.inheritFrom(jar.get().manifest)
-                    configurations = listOf(include)
-                }
-            }
-
             withType(JavaCompile::class) {
                 options.encoding = "UTF-8"
+            }
+
+            if (isStage0) {
+                named<Jar>(main.sourcesJarTaskName) {
+                    platformSets.forEach { set ->
+                        from(set.allSource)
+                    }
+                }
+
+                platformSets.forEach { set ->
+                    create(set.jarTaskName, ShadowJar::class) {
+                        archiveBaseName.set(project.name)
+                        archiveClassifier.set(set.name)
+                        group = "build"
+
+                        from(set.output)
+                        from(main.output)
+
+                        manifest.inheritFrom(jar.get().manifest)
+                        configurations = listOf(include)
+                    }
+                }
             }
 
             named<ShadowJar>("shadowJar") {

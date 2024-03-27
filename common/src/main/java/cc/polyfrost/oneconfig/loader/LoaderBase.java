@@ -7,14 +7,7 @@ import org.jetbrains.annotations.NotNull;
  * @author xtrm
  */
 public abstract @Data class LoaderBase implements ILoader {
-    private final String name;
-    private final String version;
-
-    @NotNull
-    public abstract ILoader getNextLoader();
-
-    @Override
-    public void load() {
-        ILoader nextLoader = getNextLoader();
-    }
+    private final @NotNull String name;
+    private final @NotNull String version;
+    private final @NotNull Capabilities capabilities;
 }

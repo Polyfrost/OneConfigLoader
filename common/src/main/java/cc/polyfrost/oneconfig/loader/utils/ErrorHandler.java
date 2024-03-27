@@ -3,6 +3,7 @@ package cc.polyfrost.oneconfig.loader.utils;
 import cc.polyfrost.oneconfig.loader.ILoader;
 import cc.polyfrost.oneconfig.loader.IMetaHolder;
 import lombok.extern.log4j.Log4j2;
+import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.awt.*;
@@ -58,7 +59,7 @@ public class ErrorHandler {
         String formattedTitle = String.format(TITLE, loaderName + "/" + loaderVersion);
 
         String messageBody = "An unexpected error occured.\n" + "\n" + "%s\n" + "\n" + "We recommend you join our Discord Server\nfor support, or try again later.";
-        String formattedMessage = String.format(messageBody, message, DiscordProvider.getDiscordURL());
+        String formattedMessage = String.format(messageBody, message, Constants.DISCORD_URL);
         String maybeCenter = CENTER_BODY ? "<center>" : "";
         formattedMessage = "<html><body>" + maybeCenter + formattedMessage.replaceAll("\n", "<br/>");
 
@@ -79,10 +80,10 @@ public class ErrorHandler {
                 super.paint(g);
             }
         };
-        frame.setUndecorated(true);
         frame.setLocationRelativeTo(null);
         frame.setAlwaysOnTop(true);
         frame.setResizable(false);
+        frame.setUndecorated(true);
         frame.setVisible(true);
 
         Icon icon = null;
@@ -94,19 +95,7 @@ public class ErrorHandler {
         } catch (Exception ignored) {
         }
 
-        JButton discord = new JButton("Join our Discord");
-        discord.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent event) {
-                try {
-                    Desktop.getDesktop().browse(new URI(DiscordProvider.getDiscordURL()));
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                exitCallback.run();
-            }
-        });
-
+        JButton discord = getDiscordButton(exitCallback, frame);
         JButton close = new JButton("Close");
         close.addMouseListener(new MouseAdapter() {
             @Override
@@ -134,9 +123,27 @@ public class ErrorHandler {
         dialog.dispose();
     }
 
+    @NotNull
+    private static JButton getDiscordButton(Runnable exitCallback, JFrame frame) {
+        JButton discord = new JButton("Join our Discord");
+        discord.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                try {
+                    Desktop.getDesktop().browse(new URI(Constants.DISCORD_URL));
+                } catch (Exception e) {
+                    log.error("Failed to open Discord URL: " + Constants.DISCORD_URL);
+                    JOptionPane.showMessageDialog(frame, "Failed to open Discord URL: " + Constants.DISCORD_URL, "Error", JOptionPane.ERROR_MESSAGE);
+                }
+                exitCallback.run();
+            }
+        });
+        return discord;
+    }
+
     /**
      * Exits the JVM with the given error code, escaping any SecurityManager
-     * in place (looking at you Forge).
+     * in place (looking at you Froge).
      *
      * @param errorCode the error code to exit with
      */
@@ -151,14 +158,17 @@ public class ErrorHandler {
                 Runtime.getRuntime().exit(errorCode);
             } catch (Throwable e1) {
                 if (getJavaVersion() <= 19) { // beware of class removal
-                    exitPriviledged(errorCode);
+                    exitPrivileged(errorCode);
+                } else {
+                    // this'll exit alright, but it's not pretty
+                    throw new RuntimeException("Exitting the JVM, no errors to report here.", e1);
                 }
             }
         }
     }
 
-    @SuppressWarnings("removal")
-    private static void exitPriviledged(int errorCode) {
+    @SuppressWarnings({"removal", "RedundantSuppression"})
+    private static void exitPrivileged(int errorCode) {
         java.security.AccessController.doPrivileged((java.security.PrivilegedAction<Void>) () -> {
             Runtime.getRuntime().exit(errorCode);
             return null;
@@ -176,10 +186,5 @@ public class ErrorHandler {
             }
         }
         return Integer.parseInt(version);
-    }
-
-    public static void main(String... args) {
-        IMetaHolder dummyMeta = IMetaHolder.of("DummyLoader", "0.0.0");
-        displayError(dummyMeta, "This is a test error message.\nVery cool, right?");
     }
 }

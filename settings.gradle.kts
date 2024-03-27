@@ -1,11 +1,18 @@
 pluginManagement {
     repositories {
+        gradlePluginPortal()
         maven("https://repo.polyfrost.cc/releases")
     }
 }
 
+plugins {
+    id("org.gradle.toolchains.foojay-resolver-convention") version "0.+"
+}
+
 rootProject.name = "loader"
 
-arrayOf("common", "stage0", "stage1").forEach { name ->
-    include(name)
-}
+// Direct submodules
+val blacklist = arrayOf("gradle", "build-logic", "buildSrc")
+rootDir.listFiles { it ->
+    it.isDirectory && !it.name.startsWith(".") && it.name !in blacklist
+}?.forEach { include(it.name) }
