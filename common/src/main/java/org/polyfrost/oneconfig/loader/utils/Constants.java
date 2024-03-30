@@ -1,4 +1,4 @@
-package cc.polyfrost.oneconfig.loader.utils;
+package org.polyfrost.oneconfig.loader.utils;
 
 /**
  * @author xtrm

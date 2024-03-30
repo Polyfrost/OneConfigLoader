@@ -1,4 +1,4 @@
-package cc.polyfrost.oneconfig.loader.utils;
+package org.polyfrost.oneconfig.loader.utils;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;
@@ -46,13 +46,12 @@ public class SSLStore {
      *
      * @param sslFile A resource path to a {@code .der} file.
      *
-     * @return The SSLStore instance.
      * @throws IllegalArgumentException If the certificate resource is not found.
      * @throws KeyStoreException If the KeyStore fails to load the certificate.
      * @throws CertificateException If the CertificateFactory fails to generate the certificate.
      * @throws IOException If a problem occurs with I/O operations.
      */
-    public SSLStore load(String sslFile)
+    public void load(String sslFile)
             throws IllegalArgumentException, KeyStoreException, CertificateException, IOException
     {
         InputStream certificateResource = SSLStore.class.getResourceAsStream(sslFile);
@@ -80,7 +79,6 @@ public class SSLStore {
                 sslThrowable.addSuppressed(closeException);
             }
         }
-        return this;
     }
 
     /**

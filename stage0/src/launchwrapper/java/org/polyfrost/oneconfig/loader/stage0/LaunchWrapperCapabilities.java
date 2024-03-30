@@ -1,7 +1,7 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
-import cc.polyfrost.oneconfig.loader.ILoader;
-import cc.polyfrost.oneconfig.loader.utils.EnumEntrypoint;
+import org.polyfrost.oneconfig.loader.ILoader;
+import org.polyfrost.oneconfig.loader.utils.EnumEntrypoint;
 import lombok.Data;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 import org.jetbrains.annotations.NotNull;

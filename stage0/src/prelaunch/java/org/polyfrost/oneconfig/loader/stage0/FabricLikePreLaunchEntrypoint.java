@@ -1,6 +1,6 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
-import cc.polyfrost.oneconfig.loader.ILoader;
+import org.polyfrost.oneconfig.loader.ILoader;
 import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint;
 
 /**
@@ -11,6 +11,6 @@ public class FabricLikePreLaunchEntrypoint implements PreLaunchEntrypoint {
     @Override
     public void onPreLaunch() {
         ILoader.Capabilities capabilities = new FabricLikeCapabilities();
-        new Stage0Loader(capabilities).load(null);
+        new Stage0Loader(capabilities).load();
     }
 }

@@ -1,6 +1,6 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
-import cc.polyfrost.oneconfig.loader.ILoader;
+import org.polyfrost.oneconfig.loader.ILoader;
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
@@ -17,7 +17,7 @@ public class LaunchWrapperTweaker implements ITweaker {
     @Override
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {
         ILoader.Capabilities capabilities = new LaunchWrapperCapabilities(classLoader);
-        new Stage0Loader(capabilities);
+        new Stage0Loader(capabilities).load();
     }
 
     //@formatter:off

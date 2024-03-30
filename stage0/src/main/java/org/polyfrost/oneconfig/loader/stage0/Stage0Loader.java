@@ -1,8 +1,6 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
-import cc.polyfrost.oneconfig.loader.ILoader;
-import cc.polyfrost.oneconfig.loader.LoaderBase;
-import org.jetbrains.annotations.Nullable;
+import org.polyfrost.oneconfig.loader.LoaderBase;
 
 /**
  * The first stage of the OneConfig Loader.
@@ -18,6 +16,9 @@ import org.jetbrains.annotations.Nullable;
  * @since 1.1.0
  */
 public class Stage0Loader extends LoaderBase {
+    private static final String MAVEN_URL = "https://polyfrost.cc/";
+    private static final String MAVEN_REPO = "releases";
+
     Stage0Loader(Capabilities capabilities) {
         super(
                 "stage0",
@@ -27,8 +28,10 @@ public class Stage0Loader extends LoaderBase {
     }
 
     @Override
-    public void load(@Nullable ILoader unused) {
-        // Lookup stage1 in cache
-        //
+    public void load() {
+        // Fetch stage1 version info
+        // Lookup stage1 in cache, handle downloading
+        // Load in classloader as a library
+        // Delegate loading to stage1
     }
 }

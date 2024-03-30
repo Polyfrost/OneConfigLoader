@@ -24,7 +24,6 @@ public class ModLauncherTransformationService implements ITransformationService 
 
     @Override
     public void initialize(IEnvironment environment) {
-
     }
 
     @Override
@@ -33,8 +32,22 @@ public class ModLauncherTransformationService implements ITransformationService 
     }
 
     @Override
-    public void onLoad(IEnvironment env, Set<String> otherServices) throws IncompatibleEnvironmentException {
+    public void onLoad(IEnvironment env, Set<String> otherServices)
+            throws IncompatibleEnvironmentException
+    {
+        String[] required = {"fmlclient", "forge_client", "fmlclientuserdev"};
+        for (String service : required) {
+            if (env.findLaunchHandler(service).isPresent()) {
+                return;
+            }
+        }
 
+        throw new IncompatibleEnvironmentException(
+                String.format(
+                        "Missing required launch handler (%s)",
+                        String.join(", ", required)
+                )
+        );
     }
 
     @SuppressWarnings({"rawtypes"})

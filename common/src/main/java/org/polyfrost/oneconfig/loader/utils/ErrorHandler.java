@@ -1,7 +1,7 @@
-package cc.polyfrost.oneconfig.loader.utils;
+package org.polyfrost.oneconfig.loader.utils;
 
-import cc.polyfrost.oneconfig.loader.ILoader;
-import cc.polyfrost.oneconfig.loader.IMetaHolder;
+import org.polyfrost.oneconfig.loader.ILoader;
+import org.polyfrost.oneconfig.loader.IMetaHolder;
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
 

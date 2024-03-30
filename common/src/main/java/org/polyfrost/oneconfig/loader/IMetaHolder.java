@@ -1,4 +1,4 @@
-package cc.polyfrost.oneconfig.loader;
+package org.polyfrost.oneconfig.loader;
 
 /**
  * A loader metadata container trait.

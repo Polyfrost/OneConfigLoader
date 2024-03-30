@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "cc.polyfrost.oneconfig"
-version = "1.1.0-alpha.2"
+version = "1.1.0-alpha.3"
 
 allprojects {
     apply(plugin = "maven-publish")
@@ -18,6 +18,7 @@ allprojects {
     repositories {
         mavenCentral()
         maven("https://repo.polyfrost.cc/releases")
+        maven("https://maven.neoforged.net/releases")
     }
 
     configure<PublishingExtension> {
@@ -47,7 +48,6 @@ subprojects {
     apply(plugin = "io.freefair.lombok")
 
     val isCommon = (project.name == "common")
-    val isStage0 = (project.name == "stage0")
 
     val compileOnly by configurations
     val include: Configuration by configurations.creating {
@@ -75,36 +75,16 @@ subprojects {
         compileOnly("com.google.code.gson:gson:2.2.4")
     }
 
-
     if (!isCommon) {
-        val platforms = mapOf(
-            "launchwrapper" to "net.minecraft:launchwrapper:1.12",
-            "modlauncher" to "cpw.mods:modlauncher:8.0.9",
-            "prelaunch" to "net.fabricmc:fabric-loader:0.11.6"
-        )
-
-        val platformSets = mutableListOf<SourceSet>()
         val main by sourceSets
-        if (isStage0) {
-            platformSets += sourceSets.run {
-                fun createConfigured(name: String, block: SourceSet.() -> Unit = {}): SourceSet =
-                    create(name) {
-                        compileClasspath += main.compileClasspath + main.output
-                        runtimeClasspath += main.runtimeClasspath + main.output
-                        block()
-                    }
+        val mock by sourceSets.creating {
+            compileClasspath += main.compileClasspath
+        }
+        main.compileClasspath += mock.output
 
-                platforms.keys.map(::createConfigured)
-            }
-
-            dependencies {
-                platforms.forEach { (name, dep) ->
-                    "${name}CompileOnly"(dep)
-                }
-
-                include(project(":common")) {
-                    isTransitive = false
-                }
+        dependencies {
+            include(project(":common")) {
+                isTransitive = false
             }
         }
 
@@ -124,36 +104,11 @@ subprojects {
                 options.encoding = "UTF-8"
             }
 
-            if (isStage0) {
-                named<Jar>(main.sourcesJarTaskName) {
-                    platformSets.forEach { set ->
-                        from(set.allSource)
-                    }
-                }
-
-                platformSets.forEach { set ->
-                    create(set.jarTaskName, ShadowJar::class) {
-                        archiveBaseName.set(project.name)
-                        archiveClassifier.set(set.name)
-                        group = "build"
-
-                        from(set.output)
-                        from(main.output)
-
-                        manifest.inheritFrom(jar.get().manifest)
-                        configurations = listOf(include)
-                    }
-                }
-            }
-
             named<ShadowJar>("shadowJar") {
                 archiveBaseName.set(project.name)
                 archiveClassifier.set("")
 
                 from(main.output)
-                platformSets.forEach {
-                    from(it.output)
-                }
 
                 manifest.inheritFrom(jar.get().manifest)
                 configurations = listOf(include)

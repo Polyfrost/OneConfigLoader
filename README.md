@@ -16,8 +16,6 @@ This below documentation is not intended for end users or consuming developers o
 - No extra-downloading
   - If a file is needed, it should belong in a local shared cache on the computer.
 
-Basically having a nice 
-
 ## Stage 0: Wrapper
 
 The **Wrapper** is the first entrypoint for **OneConfig** and is called depending on the platform as:

@@ -1,6 +1,6 @@
-package cc.polyfrost.oneconfig.loader;
+package org.polyfrost.oneconfig.loader;
 
-import cc.polyfrost.oneconfig.loader.utils.EnumEntrypoint;
+import org.polyfrost.oneconfig.loader.utils.EnumEntrypoint;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -12,11 +12,9 @@ import java.net.URL;
  */
 public interface ILoader extends IMetaHolder {
     /**
-     * Initializes and runs the loader.
-     *
-     * @param previous the previous loader, if any.
+     * Initializes and runs the current loader.
      */
-    void load(@Nullable ILoader previous);
+    void load();
 
     /**
      * @return the loader's preserved {@link Capabilities}.
