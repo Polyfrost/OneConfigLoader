@@ -19,6 +19,7 @@ public class Stage1Loader extends LoaderBase {
     public void load() {
         // Fetch oneconfig version info
         // Lookup dependencies metadata
-        //
+        // Download to cache
+        // Delegate everything to OneConfig
     }
 }

@@ -7,9 +7,10 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Utility class for IO operations, including URL operations.
+ * Utility class for IO operations.
  *
  * @author xtrm
+ * @since 1.1.0
  */
 public class IOUtils {
     private static final int DEFAULT_BUFFER_SIZE = 8192;

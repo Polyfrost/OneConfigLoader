@@ -1,0 +1,33 @@
+{
+  "schemaVersion": 1,
+  "id": "oneconfig-loader",
+  "version": "1.1.0+todo-replace-with-actual-version-replacement",
+  "name": "oneconfig-loader",
+  "description": "Loader for OneConfig",
+  "authors": [
+    "glisco"
+  ],
+  "contact": {},
+  "license": "ARR",
+  "icon": "assets/oneconfig-loader/icon.png",
+  "environment": "*",
+  "provides": [
+    "oneconfig"
+  ],
+  "languageAdapters": {
+    "__ocloader_entrypoint": "org.polyfrost.oneconfig.loader.stage0.FabricLikeLanguageAdapter"
+  },
+  "depends": {
+    "fabricloader": "*"
+  },
+  "custom": {
+    "modmenu": {
+      "links": {
+        "modmenu.discord": "https://polyfrost.org/discord"
+      },
+      "badges": [
+        "library"
+      ]
+    }
+  }
+}

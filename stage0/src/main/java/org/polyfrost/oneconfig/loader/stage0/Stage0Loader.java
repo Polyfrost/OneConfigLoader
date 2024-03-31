@@ -2,6 +2,8 @@ package org.polyfrost.oneconfig.loader.stage0;
 
 import org.polyfrost.oneconfig.loader.LoaderBase;
 
+import javax.swing.*;
+
 /**
  * The first stage of the OneConfig Loader.
  * <p>
@@ -29,6 +31,14 @@ public class Stage0Loader extends LoaderBase {
 
     @Override
     public void load() {
+        logger.info("Loading OneConfig settings");
+        logger.info("Fetching stage1 version info");
+        logger.info("Getting stage1 from cache");
+        logger.info("Loading stage1 as a library");
+
+        JOptionPane.showMessageDialog(null, "Loading shit fuckers");
+        // fetch settings
+
         // Fetch stage1 version info
         // Lookup stage1 in cache, handle downloading
         // Load in classloader as a library

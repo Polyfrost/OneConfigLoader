@@ -1,5 +1,6 @@
 package org.polyfrost.oneconfig.loader.utils;
 
+import org.apache.logging.log4j.LogManager;
 import org.polyfrost.oneconfig.loader.ILoader;
 import org.polyfrost.oneconfig.loader.IMetaHolder;
 import lombok.extern.log4j.Log4j2;
@@ -7,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.datatransfer.StringSelection;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.lang.reflect.Method;
@@ -18,6 +20,8 @@ import java.net.URL;
  */
 @Log4j2
 public class ErrorHandler {
+    private static final String DISCORD_URL = "https://polyfrost.org/discord";
+
     private static final String TITLE = "OneConfig Loader (%s) - Error";
     private static final boolean CENTER_BODY = false;
     private static final int ICON_SIZE = 64;
@@ -29,22 +33,6 @@ public class ErrorHandler {
     private static final Color WHITE_80 = new Color(255, 255, 255, 204);
     private static final Color TRANSPARENT = new Color(0, 0, 0, 0);
 
-    static {
-        try {
-            // Try and default to Metal UI
-            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
-        } catch (Throwable ignored) {
-        }
-
-        UIManager.put("OptionPane.background", GRAY_900);
-        UIManager.put("Panel.background", GRAY_900);
-        UIManager.put("OptionPane.messageForeground", WHITE_80);
-        UIManager.put("Button.background", PRIMARY_500);
-        UIManager.put("Button.select", PRIMARY_500_80);
-        UIManager.put("Button.foreground", WHITE_80);
-        UIManager.put("Button.focus", TRANSPARENT);
-    }
-
     private ErrorHandler() {
         throw new IllegalStateException("This class cannot be instantiated.");
     }
@@ -54,12 +42,14 @@ public class ErrorHandler {
     }
 
     public static void displayError(IMetaHolder meta, String message, int errorCode) {
+        setSwingStyle();
+
         String loaderName = meta.getName();
         String loaderVersion = meta.getVersion();
         String formattedTitle = String.format(TITLE, loaderName + "/" + loaderVersion);
 
         String messageBody = "An unexpected error occured.\n" + "\n" + "%s\n" + "\n" + "We recommend you join our Discord Server\nfor support, or try again later.";
-        String formattedMessage = String.format(messageBody, message, Constants.DISCORD_URL);
+        String formattedMessage = String.format(messageBody, message, DISCORD_URL);
         String maybeCenter = CENTER_BODY ? "<center>" : "";
         formattedMessage = "<html><body>" + maybeCenter + formattedMessage.replaceAll("\n", "<br/>");
 
@@ -130,15 +120,40 @@ public class ErrorHandler {
             @Override
             public void mouseClicked(MouseEvent event) {
                 try {
-                    Desktop.getDesktop().browse(new URI(Constants.DISCORD_URL));
+                    Desktop.getDesktop().browse(new URI(DISCORD_URL));
                 } catch (Exception e) {
-                    log.error("Failed to open Discord URL: " + Constants.DISCORD_URL);
-                    JOptionPane.showMessageDialog(frame, "Failed to open Discord URL: " + Constants.DISCORD_URL, "Error", JOptionPane.ERROR_MESSAGE);
+                    log.error("Failed to open Discord URL: " + DISCORD_URL, e);
+                    int res = JOptionPane.showConfirmDialog(frame, "Failed to open Discord URL: " + DISCORD_URL + ".\nDo you want to copy it to your clipboard?", "Error", JOptionPane.YES_NO_OPTION);
+                    if (res == JOptionPane.YES_OPTION) {
+                        try {
+                            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(DISCORD_URL), null);
+                        } catch (Exception e1) {
+                            log.error("Failed to copy Discord URL in user's clipboard.", e1);
+                            JOptionPane.showMessageDialog(frame, "Failed to copy to clipboard.", "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
                 }
                 exitCallback.run();
             }
         });
         return discord;
+    }
+
+    private static void setSwingStyle() {
+        try {
+            // Try and default to Metal UI
+            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+        } catch (Throwable e) {
+            LogManager.getLogger(ErrorHandler.class).error("Failed to set Metal UI.", e);
+        }
+
+        UIManager.put("OptionPane.background", GRAY_900);
+        UIManager.put("Panel.background", GRAY_900);
+        UIManager.put("OptionPane.messageForeground", WHITE_80);
+        UIManager.put("Button.background", PRIMARY_500);
+        UIManager.put("Button.select", PRIMARY_500_80);
+        UIManager.put("Button.foreground", WHITE_80);
+        UIManager.put("Button.focus", TRANSPARENT);
     }
 
     /**

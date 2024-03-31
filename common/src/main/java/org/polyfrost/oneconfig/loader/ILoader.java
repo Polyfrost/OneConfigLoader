@@ -1,10 +1,12 @@
 package org.polyfrost.oneconfig.loader;
 
-import org.polyfrost.oneconfig.loader.utils.EnumEntrypoint;
+import org.apache.logging.log4j.core.Appender;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.polyfrost.oneconfig.loader.utils.EnumEntrypoint;
 
 import java.net.URL;
+import java.nio.file.Path;
 
 /**
  * @author xtrm
@@ -35,5 +37,12 @@ public interface ILoader extends IMetaHolder {
         void appendToClassPath(boolean mod, @NotNull URL @NotNull... urls);
 
         @Nullable ClassLoader getClassLoader();
+
+        Path getGameDir();
+
+        @Nullable
+        default Appender provideLogAppender() {
+            return null;
+        }
     }
 }

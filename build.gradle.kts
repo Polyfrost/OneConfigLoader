@@ -59,6 +59,7 @@ subprojects {
     configure<JavaPluginExtension> {
         withSourcesJar()
         withJavadocJar()
+
         toolchain {
             languageVersion.set(JavaLanguageVersion.of(8))
         }
@@ -81,58 +82,31 @@ subprojects {
             compileClasspath += main.compileClasspath
         }
         main.compileClasspath += mock.output
-
-        dependencies {
-            include(project(":common")) {
-                isTransitive = false
-            }
-        }
-
-        tasks {
-            val jar = named<Jar>("jar") {
-                manifest.attributes += mapOf(
-                    "Specification-Title" to "OneConfig Loader",
-                    "Specification-Vendor" to "Polyfrost",
-                    "Specification-Version" to "2.0.0",
-                    "Implementation-Title" to "loader-${project.name}",
-                    "Implementation-Vendor" to project.group,
-                    "Implementation-Version" to project.version
-                )
-            }
-
-            withType(JavaCompile::class) {
-                options.encoding = "UTF-8"
-            }
-
-            named<ShadowJar>("shadowJar") {
-                archiveBaseName.set(project.name)
-                archiveClassifier.set("")
-
-                from(main.output)
-
-                manifest.inheritFrom(jar.get().manifest)
-                configurations = listOf(include)
-            }
-        }
-    } else {
-        tasks {
-            named<ShadowJar>("shadowJar") {
-                archiveBaseName.set(project.name)
-                archiveClassifier.set("")
-                configurations = listOf(include)
-                from(sourceSets["main"].output)
-            }
-        }
     }
 
     tasks {
-        named("jar") {
-            enabled = false
+        named<Jar>("jar") {
+            manifest.attributes += mapOf(
+                "Specification-Title" to "OneConfig Loader",
+                "Specification-Vendor" to "Polyfrost",
+                "Specification-Version" to "2.0.0",
+                "Implementation-Title" to "loader-${project.name}",
+                "Implementation-Vendor" to project.group,
+                "Implementation-Version" to project.version
+            )
+        }
+
+        named<ShadowJar>("shadowJar") {
+            configurations = listOf(include)
         }
 
         val build by this
         withType(ShadowJar::class) {
             build.finalizedBy(this)
+        }
+
+        withType(JavaCompile::class) {
+            options.encoding = "UTF-8"
         }
     }
 }

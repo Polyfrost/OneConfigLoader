@@ -1,5 +1,6 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
+import net.minecraft.launchwrapper.Launch;
 import org.polyfrost.oneconfig.loader.ILoader;
 import org.polyfrost.oneconfig.loader.utils.EnumEntrypoint;
 import lombok.Data;
@@ -7,6 +8,7 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
 import org.jetbrains.annotations.NotNull;
 
 import java.net.URL;
+import java.nio.file.Path;
 
 /**
  * LaunchWrapper Capabilities for OneConfig Loader.
@@ -31,5 +33,10 @@ public @Data class LaunchWrapperCapabilities implements ILoader.Capabilities {
     @Override
     public ClassLoader getClassLoader() {
         return launchClassLoader;
+    }
+
+    @Override
+    public Path getGameDir() {
+        return Launch.minecraftHome.toPath();
     }
 }

@@ -1,5 +1,6 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
+import net.fabricmc.loader.api.FabricLoader;
 import org.polyfrost.oneconfig.loader.ILoader;
 import org.polyfrost.oneconfig.loader.utils.EnumEntrypoint;
 import lombok.Data;
@@ -7,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.URL;
+import java.nio.file.Path;
 
 /**
  * @author xtrm
@@ -23,5 +25,10 @@ public @Data class FabricLikeCapabilities implements ILoader.Capabilities {
     @Override
     public @Nullable ClassLoader getClassLoader() {
         return null;
+    }
+
+    @Override
+    public Path getGameDir() {
+        return FabricLoader.getInstance().getGameDir();
     }
 }
