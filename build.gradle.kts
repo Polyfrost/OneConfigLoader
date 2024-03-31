@@ -3,8 +3,8 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
-    id("com.github.johnrengelman.shadow") version "7.1.2" apply false
-    id("io.freefair.lombok") version "6.1.0" apply false
+    id("com.github.johnrengelman.shadow") version "8.1.1" apply false
+    id("io.freefair.lombok") version "8.6" apply false
 }
 
 group = "cc.polyfrost.oneconfig"
