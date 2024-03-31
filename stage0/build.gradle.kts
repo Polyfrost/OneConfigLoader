@@ -28,7 +28,7 @@ val platforms = setOf(
     ),
     Platform(
         "fabriclike",
-        setOf("net.fabricmc:fabric-loader:0.11.6", "org.quiltmc:quilt-loader:0.24.0")
+        setOf("net.fabricmc:fabric-loader:0.13.3", "org.quiltmc:quilt-loader:0.24.0")
     )
 )
 

@@ -19,7 +19,7 @@ import java.util.Objects;
 public abstract class LoaderBase implements ILoader {
     private final @NotNull String name;
     private final @NotNull String version;
-    private final @NotNull Capabilities capabilities;
+    protected final @NotNull Capabilities capabilities;
 
     protected final org.apache.logging.log4j.Logger logger;
 

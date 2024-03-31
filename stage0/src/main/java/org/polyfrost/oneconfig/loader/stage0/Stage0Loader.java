@@ -1,13 +1,15 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
+import lombok.SneakyThrows;
+import me.xtrm.test.Testing;
 import org.polyfrost.oneconfig.loader.LoaderBase;
 
-import javax.swing.*;
+import java.io.File;
 
 /**
  * The first stage of the OneConfig Loader.
  * <p>
- * TODO: Document
+ * TODO: Documentation
  *
  * @author xtrm
  * @since 1.1.0
@@ -24,8 +26,18 @@ public class Stage0Loader extends LoaderBase {
         );
     }
 
+    private static final String FILE_PATH =
+            "/home/x/Work/Polyfrost/test/build/libs/test-1.0-SNAPSHOT.jar";
+
+    @SneakyThrows
     @Override
     public void load() {
+        capabilities.appendToClassPath(
+                false,
+                new File(FILE_PATH).toURI().toURL()
+        );
+        Testing.hi();
+
         // fetch settings
         logger.info("Loading OneConfig settings");
         // Fetch stage1 version info
