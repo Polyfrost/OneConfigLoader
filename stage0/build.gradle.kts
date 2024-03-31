@@ -27,7 +27,7 @@ val platforms = setOf(
         J9Platform(setOf("cpw.mods:modlauncher:9.1.6"))
     ),
     Platform(
-        "prelaunch",
+        "fabriclike",
         setOf("net.fabricmc:fabric-loader:0.11.6", "org.quiltmc:quilt-loader:0.24.0")
     )
 )

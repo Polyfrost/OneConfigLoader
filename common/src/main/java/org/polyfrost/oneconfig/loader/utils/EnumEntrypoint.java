@@ -12,9 +12,9 @@ import lombok.ToString;
 @RequiredArgsConstructor
 @ToString
 public enum EnumEntrypoint {
-    LAUNCHWRAPPER("launchwrapper"),
-    MODLAUNCHER("modlauncher"),
-    FABRICLIKE("prelaunch"),
+    LAUNCHWRAPPER("LaunchWrapper"),
+    MODLAUNCHER("ModLauncher"),
+    FABRICLIKE("Fabric-Like"),
     ;
 
     private final String id;

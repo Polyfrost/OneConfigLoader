@@ -55,7 +55,7 @@ public abstract class LoaderBase implements ILoader {
             });
         }
         this.logger = log;
-        this.logger.info("Initializing oneconfig-loader/" + name + " v" + version + " for " + capabilities.getEntrypointType().name());
+        this.logger.info("Initializing oneconfig-loader/" + name + " v" + version + " for " + capabilities.getEntrypointType().getId());
         if (appender != null) {
             // c'mon a little suspense never killed anybody
             try {
