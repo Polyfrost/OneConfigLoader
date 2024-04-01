@@ -7,8 +7,10 @@ import cpw.mods.modlauncher.api.IncompatibleEnvironmentException;
 import org.jetbrains.annotations.NotNull;
 import org.polyfrost.oneconfig.loader.ILoader;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -18,6 +20,11 @@ import java.util.Set;
  * @since 1.1.0
  */
 public class ModLauncherLegacyTransformationService implements ITransformationService, Runnable {
+    static {
+        System.out.println("Loaded ModLauncherLegacyTransformationService");
+        ModLauncherHijack.INSTANCE.injectLaunchPluginService();
+    }
+
     @Override
     public void run() {
         ILoader.Capabilities capabilities = new ModLauncherCapabilities();
@@ -43,10 +50,22 @@ public class ModLauncherLegacyTransformationService implements ITransformationSe
         );
     }
 
+    @Override
+    public List<Map.Entry<String, Path>> runScan(IEnvironment environment) {
+        System.out.println("runScan");
+        return ITransformationService.super.runScan(environment);
+//        return Collections.singletonList(
+//                new AbstractMap.SimpleEntry<>(
+//                        "oneconfig-loader",
+//                        Paths.get("oneconfig-loader.jar")
+//                )
+//        );
+    }
+
     //@formatter:off
     @Override public @NotNull String name() { return "oneconfig-loader"; }
     @Override public void initialize(IEnvironment environment) {}
     @SuppressWarnings("rawtypes") @Override public @NotNull List<ITransformer> transformers() { return new ArrayList<>(); }
-    @Override public void beginScanning(IEnvironment environment) { run(); }
+    @Override public void beginScanning(IEnvironment environment) { System.out.println("beginScanning"); run(); }
     //@formatter:on
 }

@@ -42,7 +42,7 @@ public @Data class FabricLikeCapabilities implements ILoader.Capabilities {
 
     @SuppressWarnings("deprecation")
     private void initializeAppender() {
-        //TODO: maybe find a quilt api to do this?
+        //TODO: In the future, use a Quilt Loader Plugin for this shit
         Consumer<Path> appenderMiddleware;
         try {
             appenderMiddleware = QuiltLauncherBase.getLauncher()::addToClassPath;

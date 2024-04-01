@@ -14,6 +14,7 @@ import org.polyfrost.oneconfig.loader.utils.EnumEntrypoint;
 
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.regex.Pattern;
 
 /**
  * @author xtrm
@@ -21,16 +22,18 @@ import java.nio.file.Path;
  */
 @Log4j2
 public @Data class ModLauncherCapabilities implements ILoader.Capabilities {
+    static final int MODLAUNCHER_VERSION;
     private final EnumEntrypoint entrypointType = EnumEntrypoint.MODLAUNCHER;
 
     @Override
     public void appendToClassPath(boolean mod, @NotNull URL @NotNull ... urls) {
-
+        //TODO: Add to a list/set that's passed on to the TransformationService's runScan thingy
+        throw new UnsupportedOperationException("Not implemented");
     }
 
     @Override
     public @Nullable ClassLoader getClassLoader() {
-        return null;
+        return ModLauncherCapabilities.class.getClassLoader();
     }
 
     @Override
@@ -59,10 +62,29 @@ public @Data class ModLauncherCapabilities implements ILoader.Capabilities {
                             .map(consumer -> new BaseAppender("fml", consumer))
                             .orElse(null);
                 } catch (NoClassDefFoundError ignored3) {
-                    log.warn("No startup message manager found, are you even running Forge..?");
+                    // might be 1.13.x
+                    log.warn("No startup message manager found");
                     return null;
                 }
             }
         }
+    }
+
+    static {
+        int version;
+        try {
+            version = Launcher.INSTANCE.environment().getProperty(IEnvironment.Keys.MLSPEC_VERSION.get())
+                    .map(Object::toString)
+                    .map(it -> it.split(Pattern.quote("."))[0])
+                    .map(Integer::parseInt)
+                    .orElseThrow(() -> new IllegalStateException("ModLauncher version not found"));
+        } catch (NoClassDefFoundError ex2) {
+            try {
+                version = Integer.parseInt(IEnvironment.class.getPackage().getSpecificationVersion().split(Pattern.quote("."))[0]);
+            } catch (Exception ex) {
+                throw new IllegalStateException("Unknown ModLauncher version", ex2);
+            }
+        }
+        MODLAUNCHER_VERSION = version;
     }
 }

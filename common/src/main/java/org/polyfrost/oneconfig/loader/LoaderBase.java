@@ -17,6 +17,7 @@ import java.util.Objects;
  */
 @Getter
 public abstract class LoaderBase implements ILoader {
+    protected static final String UNKNOWN_VERSION = "0.0.0+unknown";
     private final @NotNull String name;
     private final @NotNull String version;
     protected final @NotNull Capabilities capabilities;
@@ -33,6 +34,11 @@ public abstract class LoaderBase implements ILoader {
         this.capabilities = capabilities;
 
         Logger log = (Logger) LogManager.getLogger(getClass());
+
+        if (version.equalsIgnoreCase(UNKNOWN_VERSION)) {
+            log.warn("Jar version is unknown, please report this.");
+        }
+
         Appender appender = capabilities.provideLogAppender();
         if (appender != null) {
             if (!appender.isStarted()) {
@@ -50,7 +56,9 @@ public abstract class LoaderBase implements ILoader {
             });
         }
         this.logger = log;
+
         this.logger.info("Initializing oneconfig-loader/" + name + " v" + version + " for " + capabilities.getEntrypointType().getId());
+
         if (appender != null) {
             // c'mon a little suspense never killed anybody
             // plus we're on forge, it's not like a second of waiting is gonna affect game launch speeds
