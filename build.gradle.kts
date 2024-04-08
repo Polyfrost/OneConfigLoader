@@ -17,7 +17,7 @@ allprojects {
 
     repositories {
         mavenCentral()
-        maven("https://repo.polyfrost.cc/releases")
+        maven("https://repo.polyfrost.org/releases")
         maven("https://maven.neoforged.net/releases")
     }
 
@@ -30,7 +30,7 @@ allprojects {
             ).forEach { (channel, authMethod) ->
                 maven {
                     name = channel
-                    setUrl("https://repo.polyfrost.cc/$channel")
+                    setUrl("https://repo.polyfrost.org/$channel")
                     credentials(PasswordCredentials::class)
                     authentication {
                         create<BasicAuthentication>(authMethod)

@@ -61,7 +61,7 @@ If you wish to see the older version, please check out the [main branch readme](
 
 This project and its files (code, assets, etc.), except where stated otherwise, is licensed under the GNU Lesser General Public License v3.0, see the [LICENSE](./LICENSE) file for more information.
 
-[Polyfrost Documentation]: https://docs.polyfrost.cc/
+[Polyfrost Documentation]: https://docs.polyfrost.org/
 [OneConfig]: https://github.com/Polyfrost/OneConfig
 
 [LaunchWrapper]: https://github.com/Mojang/legacy-launcher
