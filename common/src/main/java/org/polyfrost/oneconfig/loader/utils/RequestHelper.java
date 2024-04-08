@@ -21,7 +21,11 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 
 /**
+ * A helper class for establishing connections to remote resources.
+ *
  * @author xtrm
+ * @author ty
+ * @author pauliesnug
  * @since 1.1.0
  */
 public class RequestHelper {
