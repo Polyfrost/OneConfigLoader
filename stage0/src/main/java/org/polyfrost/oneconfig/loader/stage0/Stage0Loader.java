@@ -20,7 +20,7 @@ import java.util.jar.Manifest;
  * @since 1.1.0
  */
 public class Stage0Loader extends LoaderBase {
-    private static final String MAVEN_URL = "https://polyfrost.cc/";
+    private static final String MAVEN_URL = "https://repo.polyfrost.org/";
     private static final String MAVEN_REPO = "releases";
 
     Stage0Loader(Capabilities capabilities) {
