@@ -1,15 +1,11 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
 import lombok.SneakyThrows;
-import org.jetbrains.annotations.NotNull;
 import org.polyfrost.oneconfig.loader.LoaderBase;
+import org.polyfrost.oneconfig.loader.utils.IOUtils;
 
 import javax.swing.*;
 import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.jar.Manifest;
 
 /**
  * The first stage of the OneConfig Loader.
@@ -26,12 +22,14 @@ public class Stage0Loader extends LoaderBase {
     Stage0Loader(Capabilities capabilities) {
         super(
                 "stage0",
-                provideImplementationVersion(),
+                IOUtils.provideImplementationVersion(
+                        Stage0Loader.class, UNKNOWN_VERSION
+                ),
                 capabilities
         );
     }
 
-    private static final String FILE_PATH =
+    private static final String TEST_FILE_PATH =
             "/home/x/Work/Polyfrost/test/build/libs/test-1.0-SNAPSHOT.jar";
 
     @SneakyThrows
@@ -39,7 +37,7 @@ public class Stage0Loader extends LoaderBase {
     public void load() {
         capabilities.appendToClassPath(
                 false,
-                new File(FILE_PATH).toURI().toURL()
+                new File(TEST_FILE_PATH).toURI().toURL()
         );
 //        Class<?> testingClass = capabilities.getClassLoader().loadClass("me.xtrm.test.Testing2");
 //        testingClass.getMethod("hi").invoke(null);
@@ -55,46 +53,5 @@ public class Stage0Loader extends LoaderBase {
         logger.info("Loading stage1 as a library");
         // Delegate loading to stage1
 		logger.info("GO");
-    }
-
-    private static @NotNull String provideImplementationVersion() {
-        String packageVersion =
-                Stage0Loader.class.getPackage().getImplementationVersion();
-        if (packageVersion != null) {
-            return packageVersion;
-        }
-
-        // Fabric / Quilt don't currently support this, so we'll parse the Manifest
-        URL manifestUrl = Stage0Loader.class.getResource("/META-INF/MANIFEST.MF");
-        if (manifestUrl == null) {
-            return UNKNOWN_VERSION;
-        }
-
-        Throwable error = null;
-        InputStream is = null;
-        try {
-            is = manifestUrl.openStream();
-            Manifest manifest = new Manifest(is);
-            String version = manifest.getMainAttributes().getValue("Implementation-Version");
-            if (version == null) {
-                return UNKNOWN_VERSION;
-            }
-            return version;
-        } catch (IOException e) {
-            error = e;
-            throw new RuntimeException("Error while reading Jar manifest file", e);
-        } finally {
-            if (is != null) {
-                try {
-                    is.close();
-                } catch (IOException e) {
-                    if (error != null) {
-                        error.addSuppressed(e);
-                    } else {
-                        throw new RuntimeException("Failed to close InputStream", e);
-                    }
-                }
-            }
-        }
     }
 }

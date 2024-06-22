@@ -3,12 +3,12 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
-    id("com.github.johnrengelman.shadow") version "8.1.1" apply false
-    id("io.freefair.lombok") version "8.6" apply false
+    id("com.github.johnrengelman.shadow") version "8.+" apply false
+    id("io.freefair.lombok") version "8.+" apply false
 }
 
 group = "cc.polyfrost.oneconfig"
-version = "1.1.0-alpha.3"
+version = "1.1.0-alpha.4"
 
 allprojects {
     apply(plugin = "maven-publish")
