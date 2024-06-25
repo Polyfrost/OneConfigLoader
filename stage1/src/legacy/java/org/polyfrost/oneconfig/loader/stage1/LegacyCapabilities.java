@@ -11,7 +11,8 @@ import java.net.URL;
 import java.nio.file.Path;
 
 /**
- * {@link Capabilities} implementation for initialization through legacy entrypoints.
+ * {@link Capabilities} implementation for initialization through legacy entrypoints, which all use
+ * <a href="https://github.com/Mojang/LegacyLauncher">LaunchWrapper</a>.
  *
  * @author xtrm
  * @since 1.1.0

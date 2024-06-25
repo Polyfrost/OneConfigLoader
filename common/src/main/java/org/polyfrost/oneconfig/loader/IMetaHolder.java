@@ -1,11 +1,23 @@
 package org.polyfrost.oneconfig.loader;
 
 /**
- * A loader metadata container trait.
+ * A loader metadata trait, describing information about a specific loader and/or loader stage.
+ * <p>
+ * Note that this is regarding OneConfig Loader's metadata, not an underlying game modloader.
  *
  * @author xtrm
  */
 public interface IMetaHolder {
+    /**
+     * @return the loader's name
+     */
+    String getName();
+
+    /**
+     * @return the loader's version
+     */
+    String getVersion();
+
     /**
      * Creates a {@link IMetaHolder} instance from the given params.
      *
@@ -26,18 +38,4 @@ public interface IMetaHolder {
             }
         };
     }
-
-    /**
-     * Returns the loader's name.
-     *
-     * @return the loader's name
-     */
-    String getName();
-
-    /**
-     * Returns the loader's version.
-     *
-     * @return the loader's version
-     */
-    String getVersion();
 }
