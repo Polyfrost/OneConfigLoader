@@ -3,7 +3,7 @@ import net.fabricmc.loom.api.LoomGradleExtensionAPI
 import net.fabricmc.loom.task.RemapJarTask
 
 plugins {
-    id("gg.essential.loom") version "1.3.polyfrost.3" apply false
+    id("org.polyfrost.loom") version "1.6.polyfrost.3" apply false
     id("com.github.johnrengelman.shadow") version "8.1.1" apply false
     id("dev.architectury.architectury-pack200") version "0.1.3"
 }
@@ -11,7 +11,7 @@ plugins {
 allprojects {
     apply(plugin = "maven-publish")
     group = "cc.polyfrost"
-    version = "1.0.0-beta14"
+    version = "1.0.0-beta17"
     repositories {
         mavenCentral()
     }
@@ -20,7 +20,7 @@ allprojects {
         repositories {
             maven {
                 name = "releases"
-                setUrl("https://repo.polyfrost.cc/releases")
+                setUrl("https://repo.polyfrost.org/releases")
                 credentials(PasswordCredentials::class)
                 authentication {
                     create<BasicAuthentication>("basic")
@@ -28,7 +28,7 @@ allprojects {
             }
             maven {
                 name = "snapshots"
-                setUrl("https://repo.polyfrost.cc/snapshots")
+                setUrl("https://repo.polyfrost.org/snapshots")
                 credentials(PasswordCredentials::class)
                 authentication {
                     create<BasicAuthentication>("basic")
@@ -36,7 +36,7 @@ allprojects {
             }
             maven {
                 name = "private"
-                setUrl("https://repo.polyfrost.cc/releases")
+                setUrl("https://repo.polyfrost.org/releases")
                 credentials(PasswordCredentials::class)
                 authentication {
                     create<BasicAuthentication>("private")
@@ -54,7 +54,7 @@ subprojects {
     val common = project.name.contains("common")
     val loader = project.name.contains("loader")
     if (!common) {
-        apply(plugin = "gg.essential.loom")
+        apply(plugin = "org.polyfrost.loom")
     }
 
     val shade: Configuration by configurations.creating {

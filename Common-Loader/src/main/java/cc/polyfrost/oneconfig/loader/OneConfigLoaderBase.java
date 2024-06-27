@@ -46,7 +46,7 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
             File oneconfigFile = provideFile(loaderInfo);
 
             if (!isInitialized(oneconfigFile) && shouldUpdate()) {
-                JsonElement json = getLoaderRequest("https://api.polyfrost.cc/oneconfig/" + loaderInfo.mcVersion + "-" + loaderInfo.modLoader);
+                JsonElement json = getLoaderRequest("https://api.polyfrost.org/oneconfig/" + loaderInfo.mcVersion + "-" + loaderInfo.modLoader);
                 if (json != null && json.isJsonObject()) {
                     JsonObject jsonObject = json.getAsJsonObject();
                     JsonInfo jsonInfo = provideJsonInfo(jsonObject, loaderInfo);
@@ -88,7 +88,7 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
         try {
             URL url = new URL(site);
             HttpsURLConnection con = (HttpsURLConnection) url.openConnection();
-            con.setRequestProperty("User-Agent", "OneConfigLoader");
+            con.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 OneConfigLoader");
             con.setRequestMethod("GET");
             con.setConnectTimeout(15000);
             con.setReadTimeout(15000);
@@ -122,7 +122,7 @@ public abstract class OneConfigLoaderBase extends OneConfigWrapperBase {
         }
         try {
             HttpsURLConnection con = (HttpsURLConnection) new URL(url).openConnection();
-            con.setRequestProperty("User-Agent", "OneConfigLoader");
+            con.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36 OneConfigLoader");
             con.setRequestMethod("GET");
             con.setConnectTimeout(15000);
             con.setReadTimeout(15000);

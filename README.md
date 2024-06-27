@@ -23,8 +23,8 @@ loads `cc.polyfrost.oneconfig.internal.plugin.asm.OneConfigTweaker` and delegate
 
 The API hosts download URLs and hashes of downloaded files at:
 
-- <https://api.polyfrost.cc/oneconfig/1.8.9-forge>
-- <https://api.polyfrost.cc/oneconfig/1.12.2-forge>
+- <https://api.polyfrost.org/oneconfig/1.8.9-forge>
+- <https://api.polyfrost.org/oneconfig/1.12.2-forge>
 
-[Polyfrost Documentation]: https://docs.polyfrost.cc/
+[Polyfrost Documentation]: https://docs.polyfrost.org/
 [OneConfig]: https://github.com/Polyfrost/OneConfig

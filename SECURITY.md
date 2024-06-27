@@ -19,7 +19,7 @@ nea89 or any other dev in [the Polyfrost discord server.](https://inv.wtf/polyfr
 In the legacy versions of Minecraft that this version of OneConfig currently supports,
 it is generally accepted to use Mojang's launch wrapper system to load additional mods
 and libraries, as seen with [the Essential mod](https://essential.gg). In this case,
-we use [our API](https://api.polyfrost.cc) and [our Maven Repository](https://repo.polyfrost.cc)
+we use [our API](https://api.polyfrost.org) and [our Maven Repository](https://repo.polyfrost.org)
 to download and verify the hash of the OneConfig jar as outlined in the README of
 [this repository](./README.md). We are working on improving the security of the Maven
 repository so it can be seperated from the API. In the current version of our open
