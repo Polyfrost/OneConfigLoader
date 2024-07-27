@@ -2,8 +2,8 @@ package org.polyfrost.oneconfig.loader.stage1.dependency.maven.cache;
 
 import lombok.RequiredArgsConstructor;
 import org.polyfrost.oneconfig.loader.stage1.dependency.cache.CachingSolution;
-import org.polyfrost.oneconfig.loader.stage1.util.XDG;
 import org.polyfrost.oneconfig.loader.utils.RequestHelper;
+import org.polyfrost.oneconfig.loader.utils.XDG;
 
 import java.net.HttpURLConnection;
 import java.net.URI;

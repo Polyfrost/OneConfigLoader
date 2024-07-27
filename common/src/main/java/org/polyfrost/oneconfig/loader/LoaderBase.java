@@ -18,8 +18,8 @@ import java.util.Objects;
 @Getter
 public abstract class LoaderBase implements ILoader {
     protected static final String UNKNOWN_VERSION = "0.0.0+unknown";
-    private final @NotNull String name;
-    private final @NotNull String version;
+    private final @NotNull @Getter String name;
+    private final @NotNull @Getter String version;
     protected final @NotNull Capabilities capabilities;
 
     protected final org.apache.logging.log4j.Logger logger;

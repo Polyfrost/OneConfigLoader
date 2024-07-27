@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,6 +29,18 @@ public class IOUtils {
 
     private IOUtils() {
         throw new IllegalStateException("This class cannot be instantiated.");
+    }
+
+    public static void readInto(InputStream input, OutputStream output) throws IOException {
+        readInto(input, output, 1024);
+    }
+
+    public static void readInto(InputStream input, OutputStream output, int bufferSize) throws IOException {
+        byte[] buffer = new byte[bufferSize];
+        int bytesRead;
+        while ((bytesRead = input.read(buffer)) != -1) {
+            output.write(buffer, 0, bytesRead);
+        }
     }
 
     public static byte[] readAllBytes(InputStream inputStream) throws IOException {

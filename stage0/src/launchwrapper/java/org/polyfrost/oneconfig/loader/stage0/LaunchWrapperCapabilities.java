@@ -1,11 +1,11 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
-import net.minecraft.launchwrapper.Launch;
-import org.polyfrost.oneconfig.loader.ILoader;
-import org.polyfrost.oneconfig.loader.utils.EnumEntrypoint;
 import lombok.Data;
+import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 import org.jetbrains.annotations.NotNull;
+import org.polyfrost.oneconfig.loader.ILoader;
+import org.polyfrost.oneconfig.loader.utils.EnumEntrypoint;
 
 import java.net.URL;
 import java.nio.file.Path;

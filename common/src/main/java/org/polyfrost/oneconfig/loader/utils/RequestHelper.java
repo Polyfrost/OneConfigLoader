@@ -86,11 +86,11 @@ public class RequestHelper {
     private static IMetaHolder metaHolder;
     private static SSLSocketFactory sslSocketFactory;
 
-    protected URLConnection establishConnection(URL url) throws IOException {
+    public URLConnection establishConnection(URL url) throws IOException {
         return establishConnection(url, "application/json");
     }
 
-    protected URLConnection establishConnection(URL url, String requestedType) throws IOException {
+    public URLConnection establishConnection(URL url, String requestedType) throws IOException {
         URLConnection connection = url.openConnection();
         if (connection instanceof HttpsURLConnection) {
             ((HttpsURLConnection) connection).setSSLSocketFactory(

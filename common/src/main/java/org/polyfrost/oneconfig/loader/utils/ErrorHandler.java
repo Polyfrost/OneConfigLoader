@@ -1,10 +1,10 @@
 package org.polyfrost.oneconfig.loader.utils;
 
+import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.LogManager;
+import org.jetbrains.annotations.NotNull;
 import org.polyfrost.oneconfig.loader.ILoader;
 import org.polyfrost.oneconfig.loader.IMetaHolder;
-import lombok.extern.log4j.Log4j2;
-import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.awt.*;

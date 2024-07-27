@@ -1,6 +1,8 @@
 package org.polyfrost.oneconfig.loader.stage1.util;
 
 import lombok.Getter;
+import org.polyfrost.oneconfig.loader.utils.Lazy;
+import org.polyfrost.oneconfig.loader.utils.XDG;
 
 import java.io.File;
 import java.net.URI;

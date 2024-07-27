@@ -1,4 +1,4 @@
-package org.polyfrost.oneconfig.loader.stage1.util;
+package org.polyfrost.oneconfig.loader.utils;
 
 import java.util.function.Supplier;
 

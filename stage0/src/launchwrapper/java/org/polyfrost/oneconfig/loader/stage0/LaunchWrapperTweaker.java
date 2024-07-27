@@ -1,8 +1,8 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
-import org.polyfrost.oneconfig.loader.ILoader;
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.LaunchClassLoader;
+import org.polyfrost.oneconfig.loader.ILoader;
 
 import java.io.File;
 import java.util.List;
