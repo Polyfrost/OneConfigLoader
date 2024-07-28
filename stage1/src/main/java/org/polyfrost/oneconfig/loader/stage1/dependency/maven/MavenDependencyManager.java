@@ -34,13 +34,13 @@ import java.util.stream.Collectors;
 public class MavenDependencyManager implements DependencyManager<MavenArtifact, MavenArtifactDeclaration> {
     private final XDG.ApplicationStore store;
     private final URI repository;
+    private final RequestHelper requestHelper;
     private final CachingSolution cache;
 
-    private static final RequestHelper requestHelper = new RequestHelper();
-
-    public MavenDependencyManager(XDG.ApplicationStore store, URI repository) {
+    public MavenDependencyManager(XDG.ApplicationStore store, URI repository, RequestHelper requestHelper) {
         this.store = store;
         this.repository = repository;
+        this.requestHelper = requestHelper;
         this.cache = new MavenCachingSolution(store, repository);
     }
 
@@ -55,7 +55,7 @@ public class MavenDependencyManager implements DependencyManager<MavenArtifact, 
 
     @Override
     public MavenArtifactDeclaration resolveArtifact(MavenArtifact artifact) {
-        Path dataDir = store.getDataDir();
+        Path dataDir = this.store.getDataDir();
         Path localLibraries = dataDir.resolve("libraries");
 
         Path artifactRelativePath = artifact.getRelativePath();
@@ -63,10 +63,10 @@ public class MavenDependencyManager implements DependencyManager<MavenArtifact, 
         String pomPath = artifactRelativePath.toString().replace(artifact.getExtension(), "pom");
         Path localPomPath = localLibraries.resolve(pomPath);
         if (!localPomPath.toFile().exists()) {
-            URI remotePom = repository.resolve(pomPath);
+            URI remotePom = this.repository.resolve(pomPath);
 
             try {
-                HttpURLConnection httpURLConnection = (HttpURLConnection) requestHelper.establishConnection(remotePom.toURL());
+                HttpURLConnection httpURLConnection = (HttpURLConnection) this.requestHelper.establishConnection(remotePom.toURL());
                 IOUtils.readInto(httpURLConnection.getInputStream(), Files.newOutputStream(localPomPath));
             } catch (IOException e) {
                 throw new RuntimeException(e);
@@ -91,8 +91,11 @@ public class MavenDependencyManager implements DependencyManager<MavenArtifact, 
         URI resolved = repository.resolve(mavenArtifact.getDeclaration());
 
         try {
-            // assume resolved is URL
-            HttpURLConnection httpURLConnection = (HttpURLConnection) requestHelper.establishConnection(resolved.toURL());
+            if (!resolved.isAbsolute()) {
+                throw new RuntimeException("Could not createArtifactInputStream from " + resolved);
+            }
+
+            HttpURLConnection httpURLConnection = (HttpURLConnection) this.requestHelper.establishConnection(resolved.toURL());
             return httpURLConnection.getInputStream();
         } catch (IOException e) {
             throw new RuntimeException(e);

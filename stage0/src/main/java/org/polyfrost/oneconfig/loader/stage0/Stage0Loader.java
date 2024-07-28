@@ -33,9 +33,9 @@ public class Stage0Loader extends LoaderBase {
 
     public static final String DEF_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
 
-    private static final String STAGE1_CLASS_NAME = "org.polyfrost.oneconfig.loader.stage1.Stage1Loader";
-
     private final Attributes manifestAttributes;
+
+    private final RequestHelper requestHelper;
 
     Stage0Loader(Capabilities capabilities) {
         super(
@@ -51,6 +51,9 @@ public class Stage0Loader extends LoaderBase {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+
+        RequestHelper.tryInitialize(this);
+        this.requestHelper = new RequestHelper();
     }
 
     @SneakyThrows
@@ -59,55 +62,50 @@ public class Stage0Loader extends LoaderBase {
         JOptionPane.showMessageDialog(null, "Loading hook");
 
         // fetch settings
-        logger.info("Loading OneConfig settings");
+        this.logger.info("Loading OneConfig settings");
         String stage1Version = fetchStage1Version();
 
         // Fetch stage1 version info
-        logger.info("Fetching stage1 version info");
+        this.logger.info("Fetching stage1 version info");
         Supplier<String> stage1JarUrl = () -> MAVEN_URL + MAVEN_REPO + "/org/polyfrost/oneconfig/loader/stage1/" + stage1Version + "Stage1.jar";
 
         // Lookup stage1 in cache, handle downloading
-        logger.info("Getting stage1 from cache");
-        File stage1Jar = lookupStage1CacheOrDownload(stage1Version, stage1JarUrl);
+        this.logger.info("Getting stage1 from cache");
+        Path stage1Jar = lookupStage1CacheOrDownload(stage1Version, stage1JarUrl);
 
         // Load in classloader as a library
-        logger.info("Loading stage1 as a library");
-        capabilities.appendToClassPath(false, stage1Jar.toURI().toURL());
+        this.logger.info("Loading stage1 as a library");
+        this.capabilities.appendToClassPath(false, stage1Jar.toUri().toURL());
 
         // Delegate loading to stage1
-        logger.info("GO");
-        Class<?> stage1Class = capabilities.getClassLoader().loadClass(manifestAttributes.getValue("Stage1-Class"));
-        Object stage1Instance = stage1Class.getDeclaredConstructor(Capabilities.class).newInstance(capabilities);
+        this.logger.info("GO");
+        Class<?> stage1Class = this.capabilities
+                .getClassLoader()
+                .loadClass(this.manifestAttributes.getValue("OneConfig-Stage1-Class"));
+        Object stage1Instance = stage1Class
+                .getDeclaredConstructor(Capabilities.class, RequestHelper.class)
+                .newInstance(this.capabilities, this.requestHelper);
         stage1Class.getDeclaredMethod("load").invoke(stage1Instance);
     }
 
     private String fetchStage1Version() {
-        String value = manifestAttributes.getValue("OneConfig-Stage1-Version");
+        String value = this.manifestAttributes.getValue("OneConfig-Stage1-Version");
         return value != null ? value : System.getProperty("oneconfig.stage0.version");
     }
 
-    private File lookupStage1CacheOrDownload(String version, Supplier<String> downloadUrl) {
-        Path cache = XDG.provideCacheDir("OneConfig").resolve("loader");
+    private Path lookupStage1CacheOrDownload(String version, Supplier<String> downloadUrl) {
+        Path cache = XDG
+                .provideCacheDir("OneConfig")
+                .resolve("loader")
+                .resolve("stage0")
+                .resolve("OneConfigLoader-Stage0-" + version + ".jar");
         File cacheFile = cache.toFile();
 
         if (!cacheFile.exists()) {
             cacheFile.getParentFile().mkdirs();
 
-            LoaderBase instance = this;
-            RequestHelper.tryInitialize(new IMetaHolder() {
-                @Override
-                public String getName() {
-                    return instance.getName();
-                }
-
-                @Override
-                public String getVersion() {
-                    return instance.getVersion();
-                }
-            });
-
             try {
-                URLConnection urlConnection = new RequestHelper().establishConnection(new URL(downloadUrl.get()));
+                URLConnection urlConnection = this.requestHelper.establishConnection(new URL(downloadUrl.get()));
                 OutputStream outputStream = Files.newOutputStream(cache);
                 IOUtils.readInto(urlConnection.getInputStream(), outputStream);
             } catch (IOException e) {
@@ -115,6 +113,6 @@ public class Stage0Loader extends LoaderBase {
             }
         }
 
-        return cacheFile;
+        return cache;
     }
 }

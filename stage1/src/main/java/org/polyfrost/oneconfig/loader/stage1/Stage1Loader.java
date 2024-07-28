@@ -8,6 +8,7 @@ import org.polyfrost.oneconfig.loader.stage1.dependency.maven.MavenArtifactDecla
 import org.polyfrost.oneconfig.loader.stage1.dependency.maven.MavenDependencyManager;
 import org.polyfrost.oneconfig.loader.stage1.util.SystemProperties;
 import org.polyfrost.oneconfig.loader.utils.IOUtils;
+import org.polyfrost.oneconfig.loader.utils.RequestHelper;
 import org.polyfrost.oneconfig.loader.utils.XDG;
 
 import java.io.File;
@@ -26,23 +27,28 @@ import java.util.jar.JarFile;
 public class Stage1Loader extends LoaderBase {
     private final Attributes manifestAttributes;
 
+    private final RequestHelper requestHelper;
+
     private final XDG.ApplicationStore applicationStore;
     private final DependencyManager<MavenArtifact, MavenArtifactDeclaration> dependencyManager;
     private final String oneConfigVersion;
 
     @SneakyThrows
-    public Stage1Loader(Capabilities capabilities) {
+    public Stage1Loader(Capabilities capabilities, RequestHelper requestHelper) {
         super(
                 "stage1",
                 Stage1Loader.class.getPackage().getImplementationVersion(),
                 capabilities
         );
 
+        this.requestHelper = requestHelper;
+
         this.applicationStore = XDG.provideApplicationStore("Polyfrost/OneConfig/loader");
 
         this.dependencyManager = new MavenDependencyManager(
-                applicationStore,
-                SystemProperties.REPOSITORY_URL.get()
+                this.applicationStore,
+                SystemProperties.REPOSITORY_URL.get(),
+                this.requestHelper
         );
 
         try (JarFile jarFile = new JarFile(this.getClass().getProtectionDomain().getCodeSource().getLocation().toURI().getPath())) {
@@ -51,7 +57,7 @@ public class Stage1Loader extends LoaderBase {
             throw new RuntimeException(e);
         }
 
-        String oneConfigVersion = manifestAttributes.getValue("OneConfig-Version");
+        String oneConfigVersion = this.manifestAttributes.getValue("OneConfig-Version");
         if (oneConfigVersion == null) {
             throw new RuntimeException("OneConfig-Version option is not found in MANIFEST.MF");
         }
@@ -61,13 +67,13 @@ public class Stage1Loader extends LoaderBase {
     @Override
     public void load() {
         // Fetch oneConfig version info
-        MavenArtifact oneConfigArtifact = dependencyManager.buildArtifact("org.polyfrost", "oneconfig", oneConfigVersion);
+        MavenArtifact oneConfigArtifact = this.dependencyManager.buildArtifact("org.polyfrost", "oneconfig", this.oneConfigVersion);
 
         // Download to cache
         checkAndAppendArtifactToClasspath(oneConfigArtifact);
 
-        MavenArtifactDeclaration mavenArtifactDeclaration = dependencyManager.resolveArtifact(oneConfigArtifact);
-        mavenArtifactDeclaration.resolveDependencies(dependencyManager);
+        MavenArtifactDeclaration mavenArtifactDeclaration = this.dependencyManager.resolveArtifact(oneConfigArtifact);
+        mavenArtifactDeclaration.resolveDependencies(this.dependencyManager);
 
         mavenArtifactDeclaration
                 .getDependencies()
@@ -88,7 +94,7 @@ public class Stage1Loader extends LoaderBase {
             }
             this.capabilities
                     .getClassLoader()
-                    .loadClass(manifestAttributes.getValue(oneConfigMainClass))
+                    .loadClass(this.manifestAttributes.getValue(oneConfigMainClass))
                     // TODO: CHANGE PARAMETER
                     .getDeclaredMethod("init")
                     .invoke(null);
@@ -121,7 +127,7 @@ public class Stage1Loader extends LoaderBase {
     private void downloadArtifact(MavenArtifact mavenArtifact) {
         try {
             IOUtils.readInto(
-                    dependencyManager.createArtifactInputStream(mavenArtifact),
+                    this.dependencyManager.createArtifactInputStream(mavenArtifact),
                     Files.newOutputStream(provideLocalArtifactPath(mavenArtifact))
             );
         } catch (IOException e) {
