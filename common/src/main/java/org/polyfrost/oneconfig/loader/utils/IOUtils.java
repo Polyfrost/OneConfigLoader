@@ -32,7 +32,7 @@ public class IOUtils {
     }
 
     public static void readInto(InputStream input, OutputStream output) throws IOException {
-        readInto(input, output, 1024);
+        readInto(input, output, 8192);
     }
 
     public static void readInto(InputStream input, OutputStream output, int bufferSize) throws IOException {
