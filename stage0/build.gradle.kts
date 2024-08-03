@@ -65,7 +65,7 @@ sourceSets {
 }
 
 dependencies {
-    include(project(":common"))
+    include(projects.common)
 
     platforms.forEach { plat ->
         plat.dependencies.forEach { "${plat.name}CompileOnly"(it) }

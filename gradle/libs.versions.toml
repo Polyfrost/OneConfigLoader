@@ -1,0 +1,20 @@
+[versions]
+shadow = "8.1.1"
+lombok = "8.6"
+
+annotations = "24.1.0"
+log4j = "2.19.0" # real MC uses older versions of log4j but that doesn't really matter in this case
+gson = "2.2.4" # same for Gson, let's use the oldest version to ensure compatibility
+
+[plugins]
+shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
+lombok = { id = "io.freefair.lombok", version.ref = "lombok" }
+
+[libraries]
+annotations = { group = "org.jetbrains", name = "annotations", version.ref = "annotations" }
+log4j-api = { group = "org.apache.logging.log4j", name = "log4j-api", version.ref = "log4j" }
+log4j-core = { group = "org.apache.logging.log4j", name = "log4j-core", version.ref = "log4j" }
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+
+[bundles]
+subproject = ["annotations", "log4j-api", "log4j-core", "gson"]

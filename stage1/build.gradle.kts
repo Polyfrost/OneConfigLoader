@@ -10,7 +10,7 @@ sourceSets {
 }
 
 dependencies {
-    implementation(project(":common"))
+    implementation(projects.common)
     include("cc.polyfrost:polyio:0.0.13")
     "legacyCompileOnly"("net.minecraft:launchwrapper:1.12")
 }

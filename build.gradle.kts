@@ -3,11 +3,11 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
 plugins {
-    id("com.github.johnrengelman.shadow") version "8.+" apply false
-    id("io.freefair.lombok") version "8.+" apply false
+    alias(libs.plugins.shadow) apply(false)
+    alias(libs.plugins.lombok) apply(false)
 }
 
-group = "cc.polyfrost.oneconfig"
+group = "org.polyfrost.oneconfig"
 version = "1.1.0-alpha.4"
 
 allprojects {
@@ -47,8 +47,6 @@ subprojects {
     apply(plugin = "com.github.johnrengelman.shadow")
     apply(plugin = "io.freefair.lombok")
 
-    val isCommon = (project.name == "common")
-
     val compileOnly by configurations
     val include: Configuration by configurations.creating {
         compileOnly.extendsFrom(this)
@@ -66,17 +64,10 @@ subprojects {
     }
 
     dependencies {
-        compileOnly("org.jetbrains:annotations:20.1.0")
-
-        // real MC uses older versions of log4j but that doesn't really matter in this case
-        compileOnly("org.apache.logging.log4j:log4j-api:2.19.0")
-        compileOnly("org.apache.logging.log4j:log4j-core:2.19.0")
-
-        // same for Gson, let's use the oldest version to ensure compatibility
-        compileOnly("com.google.code.gson:gson:2.2.4")
+		compileOnly(rootProject.libs.bundles.subproject)
     }
 
-    if (!isCommon) {
+    if (project.name !== "common") {
         val main by sourceSets
         val mock by sourceSets.creating {
             compileClasspath += main.compileClasspath
@@ -92,7 +83,10 @@ subprojects {
                 "Specification-Version" to "2.0.0",
                 "Implementation-Title" to "loader-${project.name}",
                 "Implementation-Vendor" to project.group,
-                "Implementation-Version" to project.version
+                "Implementation-Version" to project.version,
+				"Implementation-License" to "GPL-3.0",
+				"Implementation-Source" to "https://github.com/Polyfrost/OneConfigLoader",
+				"Implementation-Website" to "https://polyfrost.org",
             )
         }
 
