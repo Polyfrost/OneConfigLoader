@@ -4,7 +4,7 @@ import lombok.Getter;
 import org.polyfrost.oneconfig.loader.stage1.dependency.DependencyManager;
 import org.polyfrost.oneconfig.loader.stage1.dependency.cache.CachingSolution;
 import org.polyfrost.oneconfig.loader.stage1.dependency.maven.cache.MavenCachingSolution;
-import org.polyfrost.oneconfig.loader.utils.IOUtils;
+import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDependency;
 import org.polyfrost.oneconfig.loader.utils.RequestHelper;
 import org.polyfrost.oneconfig.loader.utils.XDG;
 import org.w3c.dom.Document;
@@ -18,8 +18,8 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -36,12 +36,14 @@ public class MavenDependencyManager implements DependencyManager<MavenArtifact, 
     private final URI repository;
     private final RequestHelper requestHelper;
     private final CachingSolution cache;
+    private final Class<MavenArtifact> artifactClass = MavenArtifact.class;
+    private final Class<MavenArtifactDeclaration> artifactDeclarationClass = MavenArtifactDeclaration.class;
 
     public MavenDependencyManager(XDG.ApplicationStore store, URI repository, RequestHelper requestHelper) {
         this.store = store;
         this.repository = repository;
         this.requestHelper = requestHelper;
-        this.cache = new MavenCachingSolution(store, repository);
+        this.cache = new MavenCachingSolution(requestHelper, store, repository);
     }
 
     public MavenArtifact buildArtifact(String groupId, String artifactId, String version) {
@@ -54,7 +56,7 @@ public class MavenDependencyManager implements DependencyManager<MavenArtifact, 
     }
 
     @Override
-    public MavenArtifactDeclaration resolveArtifact(MavenArtifact artifact) {
+    public MavenArtifactDeclaration resolveArtifact(MavenArtifact artifact) throws IOException, ParserConfigurationException, SAXException {
         Path dataDir = this.store.getDataDir();
         Path localLibraries = dataDir.resolve("libraries");
 
@@ -65,76 +67,63 @@ public class MavenDependencyManager implements DependencyManager<MavenArtifact, 
         if (!localPomPath.toFile().exists()) {
             URI remotePom = this.repository.resolve(pomPath);
 
-            try {
-                HttpURLConnection httpURLConnection = (HttpURLConnection) this.requestHelper.establishConnection(remotePom.toURL());
-                IOUtils.readInto(httpURLConnection.getInputStream(), Files.newOutputStream(localPomPath));
-            } catch (IOException e) {
-                throw new RuntimeException(e);
+            try (InputStream inputStream = this.requestHelper.establishConnection(remotePom.toURL()).getInputStream()) {
+                Files.copy(inputStream, localPomPath);
             }
         }
 
-        try {
-            List<MavenArtifactDependency> dependencyList = this.getDependency(Files.newInputStream(localPomPath))
-                    .stream()
-                    .map((mavenArtifact) -> {
-                        MavenArtifactDependency mavenArtifactDependency = new MavenArtifactDependency();
-                        mavenArtifactDependency.setDeclaration(new MavenArtifactDeclaration(mavenArtifact, new ArrayList<>()));
-                        return mavenArtifactDependency;
-                    }).collect(Collectors.toList());
-            return new MavenArtifactDeclaration(artifact, dependencyList);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        List<ArtifactDependency> dependencyList = this.getDependency(Files.newInputStream(localPomPath))
+                .stream()
+                .map((mavenArtifact) -> {
+                    MavenArtifactDependency mavenArtifactDependency = new MavenArtifactDependency();
+                    mavenArtifactDependency.setDeclaration(new MavenArtifactDeclaration(mavenArtifact, new ArrayList<>()));
+                    return mavenArtifactDependency;
+                })
+                .collect(Collectors.toList());
+        return new MavenArtifactDeclaration(artifact, dependencyList);
     }
 
-    public InputStream createArtifactInputStream(MavenArtifact mavenArtifact) {
+    public InputStream createArtifactInputStream(MavenArtifact mavenArtifact) throws IOException {
         URI resolved = repository.resolve(mavenArtifact.getDeclaration());
 
-        try {
-            if (!resolved.isAbsolute()) {
-                throw new RuntimeException("Could not createArtifactInputStream from " + resolved);
-            }
-
-            HttpURLConnection httpURLConnection = (HttpURLConnection) this.requestHelper.establishConnection(resolved.toURL());
-            return httpURLConnection.getInputStream();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        if (!resolved.isAbsolute()) {
+            throw new RuntimeException("Could not createArtifactInputStream from " + resolved);
         }
+
+        URLConnection connection = this.requestHelper.establishConnection(resolved.toURL());
+        return connection.getInputStream();
     }
 
-    private List<MavenArtifact> getDependency(InputStream pom) {
-        try {
-            DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
-            documentBuilderFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
-            DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-            Document document = documentBuilder.parse(pom);
-            Element documentElement = document.getDocumentElement();
-            Element dependencies = (Element) documentElement.getElementsByTagName("dependencies").item(0);
-            NodeList dependencyList = dependencies.getElementsByTagName("dependency");
+    private List<MavenArtifact> getDependency(InputStream pom) throws ParserConfigurationException, IOException, SAXException {
+        DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
+        documentBuilderFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+        DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+        Document document = documentBuilder.parse(pom);
+        Element documentElement = document.getDocumentElement();
+        Element dependencies = (Element) documentElement.getElementsByTagName("dependencies").item(0);
+        NodeList dependencyList = dependencies.getElementsByTagName("dependency");
 
-            List<MavenArtifact> list = new ArrayList<>();
+        List<MavenArtifact> list = new ArrayList<>();
 
-            for (int i = 0; i < dependencyList.getLength(); i++) {
-                Element dependency = (Element) dependencyList.item(i);
+        for (int i = 0; i < dependencyList.getLength(); i++) {
+            Element dependency = (Element) dependencyList.item(i);
 
-                String groupId = dependency.getElementsByTagName("groupId").item(0).getTextContent();
-                String artifactId = dependency.getElementsByTagName("artifactId").item(0).getTextContent();
-                String version = dependency.getElementsByTagName("version").item(0).getTextContent();
+            String groupId = dependency.getElementsByTagName("groupId").item(0).getTextContent();
+            String artifactId = dependency.getElementsByTagName("artifactId").item(0).getTextContent();
+            String version = dependency.getElementsByTagName("version").item(0).getTextContent();
 
-                list.add(
-                        new MavenArtifact(
-                                groupId,
-                                artifactId,
-                                version,
-                                null,
-                                ".jar"
-                        )
-                );
-            }
-
-            return list;
-        } catch (ParserConfigurationException | IOException | SAXException e) {
-            throw new RuntimeException(e);
+            list.add(
+                    new MavenArtifact(
+                            groupId,
+                            artifactId,
+                            version,
+                            null,
+                            ".jar"
+                    )
+            );
         }
+
+        pom.close();
+        return list;
     }
 }

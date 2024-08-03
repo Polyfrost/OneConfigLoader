@@ -3,6 +3,7 @@ package org.polyfrost.oneconfig.loader.stage1.dependency.maven;
 import lombok.Data;
 import org.polyfrost.oneconfig.loader.stage1.dependency.DependencyManager;
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;
+import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDependency;
 
 import java.util.List;
 
@@ -12,14 +13,16 @@ import java.util.List;
  */
 public @Data class MavenArtifactDeclaration implements ArtifactDeclaration {
     private final MavenArtifact artifact;
-    private final List<MavenArtifactDependency> dependencies;
+    private final List<ArtifactDependency> dependencies;
 
-    public void resolveDependencies(DependencyManager<MavenArtifact, MavenArtifactDeclaration> dependencyManager) {
-        for (MavenArtifactDependency dependency : dependencies) {
-            MavenArtifactDeclaration declaration = dependency.getDeclaration();
+    public void resolveDependencies(DependencyManager<MavenArtifact, MavenArtifactDeclaration> dependencyManager) throws Exception {
+        for (ArtifactDependency dependency : dependencies) {
+            MavenArtifactDependency mavenDependency = (MavenArtifactDependency) dependency;
+            MavenArtifactDeclaration declaration = (MavenArtifactDeclaration) mavenDependency.getDeclaration();
             if (declaration == null) {
-                declaration = dependencyManager.resolveArtifact(dependency.getDeclaration().getArtifact());
-                dependency.setDeclaration(declaration);
+                //FIXME: ?
+                declaration = dependencyManager.resolveArtifact((MavenArtifact) mavenDependency.getDeclaration().getArtifact());
+                mavenDependency.setDeclaration(declaration);
                 declaration.resolveDependencies(dependencyManager);
             }
         }

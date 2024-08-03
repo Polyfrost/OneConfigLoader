@@ -1,5 +1,6 @@
 package org.polyfrost.oneconfig.loader.utils;
 
+import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 import org.polyfrost.oneconfig.loader.IMetaHolder;
 
@@ -28,6 +29,7 @@ import java.security.cert.CertificateException;
  * @author pauliesnug
  * @since 1.1.0
  */
+@RequiredArgsConstructor
 public class RequestHelper {
     /**
      * <p>As minecraft 1.8.9 is very old, an unfortunate consequence is that the java version is
@@ -83,8 +85,9 @@ public class RequestHelper {
      */
     private static final String SSL_STORE_PATH = "/assets/oneconfig-loader/ssl/polyfrost.jks";
     private static final String CONNECTION_IDENTIFIER = "oneconfig-loader";
-    private static IMetaHolder metaHolder;
     private static SSLSocketFactory sslSocketFactory;
+
+    private final IMetaHolder metaHolder;
 
     public URLConnection establishConnection(URL url) throws IOException {
         return establishConnection(url, "application/json");
@@ -109,21 +112,16 @@ public class RequestHelper {
         return connection;
     }
 
-    public static void tryInitialize(IMetaHolder metaHolder) {
+    public static RequestHelper tryInitialize(IMetaHolder metaHolder) {
         try {
-            initialize();
-            RequestHelper.metaHolder = metaHolder;
+            if (sslSocketFactory == null) {
+                sslSocketFactory = createSSLSocketFactory();
+            }
         } catch (RuntimeException e) {
             LogManager.getLogger(RequestHelper.class).error(e);
-            ErrorHandler.displayError(metaHolder, e.getMessage());
+            ErrorHandler.displayError(metaHolder, "An error occured while constructing SSLSocketFactory");
         }
-    }
-
-    private static void initialize() {
-        if (sslSocketFactory != null) {
-            return;
-        }
-        sslSocketFactory = createSSLSocketFactory();
+        return new RequestHelper(metaHolder);
     }
 
     /**

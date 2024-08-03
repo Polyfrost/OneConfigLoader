@@ -1,7 +1,6 @@
 package org.polyfrost.oneconfig.loader.utils;
 
 import lombok.extern.log4j.Log4j2;
-import org.apache.logging.log4j.LogManager;
 import org.jetbrains.annotations.NotNull;
 import org.polyfrost.oneconfig.loader.ILoader;
 import org.polyfrost.oneconfig.loader.IMetaHolder;
@@ -54,11 +53,11 @@ public class ErrorHandler {
         formattedMessage = "<html><body>" + maybeCenter + formattedMessage.replaceAll("\n", "<br/>");
 
         Runnable exitCallback = () -> exit(errorCode);
+        log.error(formattedTitle);
+        log.error(message);
         try {
             showFrameDialog(formattedTitle, formattedMessage, exitCallback);
-        } catch (HeadlessException exception) {
-            log.error(formattedTitle);
-            log.error(message);
+        } catch (HeadlessException ignored) {
         }
         exitCallback.run();
     }
@@ -144,7 +143,12 @@ public class ErrorHandler {
             // Try and default to Metal UI
             UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
         } catch (Throwable e) {
-            LogManager.getLogger(ErrorHandler.class).error("Failed to set Metal UI.", e);
+            log.warn("Failed to set Metal UI.", e);
+            try {
+                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+            } catch (Throwable e1) {
+                log.warn("Failed to set System UI.", e1);
+            }
         }
 
         UIManager.put("OptionPane.background", GRAY_900);

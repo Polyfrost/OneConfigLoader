@@ -5,6 +5,7 @@ import org.polyfrost.oneconfig.loader.stage1.dependency.cache.CachingSolution;
 import org.polyfrost.oneconfig.loader.utils.RequestHelper;
 import org.polyfrost.oneconfig.loader.utils.XDG;
 
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
@@ -16,8 +17,9 @@ import java.nio.file.Path;
  * @since 1.1.0
  */
 @RequiredArgsConstructor
-public class MavenCachingSolution extends RequestHelper implements CachingSolution {
+public class MavenCachingSolution implements CachingSolution {
     private static final String[] CHECKSUM_EXT = new String[]{"sha512", "sha256", "sha1", "md5"};
+    private final RequestHelper requestHelper;
     private final XDG.ApplicationStore store;
     private final URI remoteUrl;
 
@@ -49,16 +51,16 @@ public class MavenCachingSolution extends RequestHelper implements CachingSoluti
 
     private boolean urlExists(URL url) {
         try {
-            URLConnection connection = establishConnection(url);
-            connection.connect();
-            long contentLength = connection.getContentLengthLong();
-            int responseCode = 200;
-            if (connection instanceof HttpURLConnection) {
-                responseCode = ((HttpURLConnection) connection).getResponseCode();
+            URLConnection connection = requestHelper.establishConnection(url);
+            try (InputStream ignored = connection.getInputStream()) {
+                connection.getOutputStream().close();
+                long contentLength = connection.getContentLengthLong();
+                int responseCode = 200;
+                if (connection instanceof HttpURLConnection) {
+                    responseCode = ((HttpURLConnection) connection).getResponseCode();
+                }
+                return (responseCode >= 200 && responseCode < 300) && contentLength > 0;
             }
-            connection.getInputStream().close();
-            connection.getOutputStream().close();
-            return (responseCode >= 200 && responseCode < 300) && contentLength > 0;
         } catch (Exception e) {
             return false;
         }

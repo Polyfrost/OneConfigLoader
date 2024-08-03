@@ -1,20 +1,18 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
 import lombok.SneakyThrows;
-import org.polyfrost.oneconfig.loader.IMetaHolder;
 import org.polyfrost.oneconfig.loader.LoaderBase;
 import org.polyfrost.oneconfig.loader.utils.IOUtils;
 import org.polyfrost.oneconfig.loader.utils.RequestHelper;
 import org.polyfrost.oneconfig.loader.utils.XDG;
 
 import javax.swing.*;
-import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
+import java.io.InputStream;
 import java.net.URL;
-import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.function.Supplier;
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
@@ -22,7 +20,8 @@ import java.util.jar.Manifest;
 /**
  * The first stage of the OneConfig Loader.
  * <p>
- * TODO: Documentation
+ * This class is loaded via the platform-dependant entrypoint (e.g. the LaunchWrapper tweaker),
+ * and is responsible for lookup and loading of the stage1 loader.
  *
  * @author xtrm
  * @since 1.1.0
@@ -31,11 +30,7 @@ public class Stage0Loader extends LoaderBase {
     private static final String MAVEN_URL = "https://repo.polyfrost.org/";
     private static final String MAVEN_REPO = "releases";
 
-    public static final String DEF_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
-
     private final Attributes manifestAttributes;
-
-    private final RequestHelper requestHelper;
 
     Stage0Loader(Capabilities capabilities) {
         super(
@@ -51,9 +46,6 @@ public class Stage0Loader extends LoaderBase {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
-        RequestHelper.tryInitialize(this);
-        this.requestHelper = new RequestHelper();
     }
 
     @SneakyThrows
@@ -93,23 +85,18 @@ public class Stage0Loader extends LoaderBase {
         return value != null ? value : System.getProperty("oneconfig.stage0.version");
     }
 
-    private Path lookupStage1CacheOrDownload(String version, Supplier<String> downloadUrl) {
+    private Path lookupStage1CacheOrDownload(String version, Supplier<String> downloadUrl) throws IOException {
         Path cache = XDG
                 .provideCacheDir("OneConfig")
                 .resolve("loader")
                 .resolve("stage0")
                 .resolve("OneConfigLoader-Stage0-" + version + ".jar");
-        File cacheFile = cache.toFile();
 
-        if (!cacheFile.exists()) {
-            cacheFile.getParentFile().mkdirs();
+        if (!Files.exists(cache)) {
+            Files.createDirectories(cache.getParent());
 
-            try {
-                URLConnection urlConnection = this.requestHelper.establishConnection(new URL(downloadUrl.get()));
-                OutputStream outputStream = Files.newOutputStream(cache);
-                IOUtils.readInto(urlConnection.getInputStream(), outputStream);
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to download Stage1 jar", e);
+            try (InputStream inputStream = this.requestHelper.establishConnection(new URL(downloadUrl.get())).getInputStream()) {
+                Files.copy(inputStream, cache, StandardCopyOption.REPLACE_EXISTING);
             }
         }
 

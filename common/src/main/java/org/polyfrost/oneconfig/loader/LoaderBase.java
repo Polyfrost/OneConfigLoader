@@ -2,9 +2,9 @@ package org.polyfrost.oneconfig.loader;
 
 import lombok.Getter;
 import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.LogEvent;
-import org.apache.logging.log4j.core.Logger;
 import org.apache.logging.log4j.core.config.Configuration;
 import org.apache.logging.log4j.core.filter.AbstractFilter;
 import org.jetbrains.annotations.NotNull;
@@ -21,8 +21,9 @@ public abstract class LoaderBase implements ILoader {
     private final @NotNull @Getter String name;
     private final @NotNull @Getter String version;
     protected final @NotNull Capabilities capabilities;
+    protected final RequestHelper requestHelper;
 
-    protected final org.apache.logging.log4j.Logger logger;
+    protected final Logger logger;
 
     protected LoaderBase(
             @NotNull String name,
@@ -33,7 +34,7 @@ public abstract class LoaderBase implements ILoader {
         this.version = version;
         this.capabilities = capabilities;
 
-        Logger log = (Logger) LogManager.getLogger(getClass());
+        Logger log = LogManager.getLogger(getClass());
 
         if (version.equalsIgnoreCase(UNKNOWN_VERSION)) {
             log.warn("Jar version is unknown, please report this.");
@@ -44,7 +45,7 @@ public abstract class LoaderBase implements ILoader {
             if (!appender.isStarted()) {
                 appender.start();
             }
-            Configuration config = log.getContext().getConfiguration();
+            Configuration config = ((org.apache.logging.log4j.core.Logger) log).getContext().getConfiguration();
             config.getLoggerConfig(log.getName()).addAppender(appender, null, new AbstractFilter() {
                 @Override
                 public Result filter(LogEvent event) {
@@ -56,18 +57,8 @@ public abstract class LoaderBase implements ILoader {
             });
         }
         this.logger = log;
+        this.logger.info("Initializing oneconfig-loader/{} v{} for {}", name, version, capabilities.getEntrypointType().getId());
 
-        this.logger.info("Initializing oneconfig-loader/" + name + " v" + version + " for " + capabilities.getEntrypointType().getId());
-
-        if (appender != null) {
-            // c'mon a little suspense never killed anybody
-            // plus we're on forge, it's not like a second of waiting is gonna affect game launch speeds
-            try {
-                Thread.sleep(750);
-            } catch (InterruptedException ignored) {
-            }
-        }
-
-        RequestHelper.tryInitialize(this);
+        this.requestHelper = RequestHelper.tryInitialize(this);
     }
 }

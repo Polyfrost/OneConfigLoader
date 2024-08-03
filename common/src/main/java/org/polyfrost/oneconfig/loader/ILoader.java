@@ -31,12 +31,11 @@ public interface ILoader extends IMetaHolder {
      * @since 1.1.0
      */
     interface Capabilities {
-        //TODO(@xtrm): probably refactor to pass an entire version object
         EnumEntrypoint getEntrypointType();
 
         void appendToClassPath(boolean mod, @NotNull URL @NotNull... urls);
 
-        @Nullable ClassLoader getClassLoader();
+        ClassLoader getClassLoader();
 
         Path getGameDir();
 
