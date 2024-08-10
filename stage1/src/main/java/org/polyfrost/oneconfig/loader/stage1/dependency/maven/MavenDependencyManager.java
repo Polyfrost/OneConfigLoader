@@ -72,7 +72,7 @@ public class MavenDependencyManager implements DependencyManager<MavenArtifact, 
             }
         }
 
-        List<ArtifactDependency> dependencyList = this.getDependency(Files.newInputStream(localPomPath))
+        List<MavenArtifactDependency> dependencyList = this.getDependency(Files.newInputStream(localPomPath))
                 .stream()
                 .map((mavenArtifact) -> {
                     MavenArtifactDependency mavenArtifactDependency = new MavenArtifactDependency();

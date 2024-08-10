@@ -1,5 +1,7 @@
 package org.polyfrost.oneconfig.loader.stage1.dependency.model;
 
+import org.polyfrost.oneconfig.loader.stage1.dependency.maven.MavenArtifactDependency;
+
 import java.util.List;
 
 /**
@@ -9,7 +11,7 @@ import java.util.List;
  * @since 1.1.0
  */
 public interface ArtifactDeclaration {
-    Artifact getArtifact();
+	Artifact getArtifact();
 
-    List<ArtifactDependency> getDependencies();
+	List<MavenArtifactDependency> getDependencies();
 }
