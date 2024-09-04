@@ -2,8 +2,7 @@ package org.polyfrost.oneconfig.loader.utils;
 
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
-import org.polyfrost.oneconfig.loader.ILoader;
-import org.polyfrost.oneconfig.loader.IMetaHolder;
+import org.polyfrost.oneconfig.loader.base.LoaderBase;
 
 import javax.swing.*;
 import java.awt.*;
@@ -36,15 +35,15 @@ public class ErrorHandler {
         throw new IllegalStateException("This class cannot be instantiated.");
     }
 
-    public static void displayError(IMetaHolder meta, String message) {
-        displayError(meta, message, 1);
+    public static void displayError(LoaderBase loader, String message) {
+        displayError(loader, message, 1);
     }
 
-    public static void displayError(IMetaHolder meta, String message, int errorCode) {
+    public static void displayError(LoaderBase loader, String message, int errorCode) {
         setSwingStyle();
 
-        String loaderName = meta.getName();
-        String loaderVersion = meta.getVersion();
+        String loaderName = loader.getName();
+        String loaderVersion = loader.getVersion();
         String formattedTitle = String.format(TITLE, loaderName + "/" + loaderVersion);
 
         String messageBody = "An unexpected error occured.\n" + "\n" + "%s\n" + "\n" + "We recommend you join our Discord Server\nfor support, or try again later.";
@@ -77,7 +76,7 @@ public class ErrorHandler {
 
         Icon icon = null;
         try {
-            URL url = ILoader.class.getResource("/assets/oneconfig-loader/icon.png");
+            URL url = LoaderBase.class.getResource("/assets/oneconfig-loader/icon.png");
             if (url != null) {
                 icon = new ImageIcon(Toolkit.getDefaultToolkit().createImage(url).getScaledInstance(ICON_SIZE, ICON_SIZE, Image.SCALE_SMOOTH), "Polyfrost Logo");
             }

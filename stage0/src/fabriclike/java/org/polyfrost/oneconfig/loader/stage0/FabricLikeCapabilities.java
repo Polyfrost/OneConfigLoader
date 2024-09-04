@@ -4,7 +4,7 @@ import lombok.Data;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.impl.launch.FabricLauncherBase;
 import org.jetbrains.annotations.NotNull;
-import org.polyfrost.oneconfig.loader.ILoader;
+import org.polyfrost.oneconfig.loader.base.LoaderBase;
 import org.polyfrost.oneconfig.loader.utils.EnumEntrypoint;
 import org.quiltmc.loader.impl.launch.common.QuiltLauncherBase;
 
@@ -20,7 +20,7 @@ import java.util.function.Consumer;
  * @author xtrm
  * @since 1.1.0
  */
-public @Data class FabricLikeCapabilities implements ILoader.Capabilities {
+public @Data class FabricLikeCapabilities implements LoaderBase.Capabilities {
     private final EnumEntrypoint entrypointType = EnumEntrypoint.FABRICLIKE;
     private final ClassLoader classLoader;
     private Consumer<URL> appender;
@@ -40,7 +40,15 @@ public @Data class FabricLikeCapabilities implements ILoader.Capabilities {
         return FabricLoader.getInstance().getGameDir();
     }
 
-    @SuppressWarnings("deprecation")
+	public String getModLoaderName() {
+		return "fabric";
+	}
+
+	public String getGameVersion() {
+		return FabricLoader.getInstance().getModContainer("minecraft").orElseThrow(() -> new RuntimeException("Minecraft mod container not found")).getMetadata().getVersion().getFriendlyString();
+	}
+
+	@SuppressWarnings("deprecation")
     private void initializeAppender() {
         //TODO: In the future, use a Quilt Loader Plugin for this shit
         Consumer<Path> appenderMiddleware;

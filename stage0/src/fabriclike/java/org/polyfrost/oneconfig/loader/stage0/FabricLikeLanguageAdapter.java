@@ -2,7 +2,7 @@ package org.polyfrost.oneconfig.loader.stage0;
 
 import net.fabricmc.loader.api.LanguageAdapter;
 import net.fabricmc.loader.api.ModContainer;
-import org.polyfrost.oneconfig.loader.ILoader;
+import org.polyfrost.oneconfig.loader.base.LoaderBase;
 
 /**
  * @author xtrm
@@ -10,7 +10,7 @@ import org.polyfrost.oneconfig.loader.ILoader;
  */
 public class FabricLikeLanguageAdapter implements LanguageAdapter {
     static {
-        ILoader.Capabilities capabilities = new FabricLikeCapabilities(
+        LoaderBase.Capabilities capabilities = new FabricLikeCapabilities(
                 FabricLikeLanguageAdapter.class.getClassLoader()
         );
         new Stage0Loader(capabilities).load();

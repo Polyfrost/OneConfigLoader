@@ -9,7 +9,7 @@ import net.neoforged.fml.loading.progress.StartupNotificationManager;
 import org.apache.logging.log4j.core.Appender;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.polyfrost.oneconfig.loader.ILoader;
+import org.polyfrost.oneconfig.loader.base.LoaderBase;
 import org.polyfrost.oneconfig.loader.utils.EnumEntrypoint;
 
 import java.net.URL;
@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
  * @since 1.1.0
  */
 @Log4j2
-public @Data class ModLauncherCapabilities implements ILoader.Capabilities {
+public @Data class ModLauncherCapabilities implements LoaderBase.Capabilities {
     static final int MODLAUNCHER_VERSION;
     private final EnumEntrypoint entrypointType = EnumEntrypoint.MODLAUNCHER;
 
@@ -45,7 +45,15 @@ public @Data class ModLauncherCapabilities implements ILoader.Capabilities {
                 ));
     }
 
-    @Override
+	public String getModLoaderName() {
+		throw new UnsupportedOperationException("Not implemented");
+	}
+
+	public String getGameVersion() {
+		throw new UnsupportedOperationException("Not implemented");
+	}
+
+	@Override
     public @Nullable Appender provideLogAppender() {
         try {
             return StartupNotificationManager.modLoaderConsumer()

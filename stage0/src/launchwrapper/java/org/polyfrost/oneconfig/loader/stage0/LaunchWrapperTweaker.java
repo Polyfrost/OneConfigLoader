@@ -2,7 +2,7 @@ package org.polyfrost.oneconfig.loader.stage0;
 
 import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.LaunchClassLoader;
-import org.polyfrost.oneconfig.loader.ILoader;
+import org.polyfrost.oneconfig.loader.base.LoaderBase;
 
 import java.io.File;
 import java.util.List;
@@ -16,7 +16,9 @@ import java.util.List;
 public class LaunchWrapperTweaker implements ITweaker {
     @Override
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {
-        ILoader.Capabilities capabilities = new LaunchWrapperCapabilities(classLoader);
+		classLoader.addClassLoaderExclusion("org.polyfrost.oneconfig.loader.base.");
+
+        LoaderBase.Capabilities capabilities = new LaunchWrapperCapabilities(classLoader);
         new Stage0Loader(capabilities).load();
     }
 

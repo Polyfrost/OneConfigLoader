@@ -77,6 +77,8 @@ dependencies {
 
 tasks {
     named<Jar>(sourceSets.main.get().sourcesJarTaskName) {
+		manifest.attributes("OneConfig-Stage1-Class" to "org.polyfrost.oneconfig.loader.stage1.Stage1Loader")
+
         platforms.forEach { platform ->
             from(platform.sourceSet!!.allSource)
             platform.j9Platform?.let { j9 ->
@@ -112,4 +114,16 @@ tasks {
     named<ShadowJar>("shadowJar") {
         enabled = true
     }
+}
+
+configure<PublishingExtension> {
+	publications {
+		named("mavenJava", MavenPublication::class.java) {
+			platforms.forEach { platform ->
+				artifact(tasks.named<ShadowJar>(platform.sourceSet!!.jarTaskName)) {
+					classifier = platform.sourceSet!!.name
+				}
+			}
+		}
+	}
 }

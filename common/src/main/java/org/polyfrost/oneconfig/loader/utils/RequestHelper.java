@@ -2,7 +2,8 @@ package org.polyfrost.oneconfig.loader.utils;
 
 import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
-import org.polyfrost.oneconfig.loader.IMetaHolder;
+
+import org.polyfrost.oneconfig.loader.base.LoaderBase;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -87,13 +88,15 @@ public class RequestHelper {
     private static final String CONNECTION_IDENTIFIER = "oneconfig-loader";
     private static SSLSocketFactory sslSocketFactory;
 
-    private final IMetaHolder metaHolder;
+    private final LoaderBase loader;
 
     public URLConnection establishConnection(URL url) throws IOException {
         return establishConnection(url, "application/json");
     }
 
     public URLConnection establishConnection(URL url, String requestedType) throws IOException {
+		System.out.println("Creating connection to " + url);
+
         URLConnection connection = url.openConnection();
         if (connection instanceof HttpsURLConnection) {
             ((HttpsURLConnection) connection).setSSLSocketFactory(
@@ -107,21 +110,22 @@ public class RequestHelper {
         connection.setReadTimeout(15000);
         connection.setUseCaches(false);
         connection.setRequestProperty("Accept", requestedType);
-        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (" + CONNECTION_IDENTIFIER + " " + metaHolder.getName() + "/" + metaHolder.getVersion() + ")");
+        connection.setRequestProperty("User-Agent", "Mozilla/5.0 (" + CONNECTION_IDENTIFIER + " " + loader.getName() + "/" + loader.getVersion() + ")");
         connection.setRequestProperty("Cache-Control", "no-cache");
         return connection;
     }
 
-    public static RequestHelper tryInitialize(IMetaHolder metaHolder) {
+    public static RequestHelper tryInitialize(LoaderBase loader) {
         try {
             if (sslSocketFactory == null) {
                 sslSocketFactory = createSSLSocketFactory();
             }
         } catch (RuntimeException e) {
             LogManager.getLogger(RequestHelper.class).error(e);
-            ErrorHandler.displayError(metaHolder, "An error occured while constructing SSLSocketFactory");
+            ErrorHandler.displayError(loader, "An error occured while constructing SSLSocketFactory");
         }
-        return new RequestHelper(metaHolder);
+
+        return new RequestHelper(loader);
     }
 
     /**

@@ -8,11 +8,12 @@ plugins {
 }
 
 group = "org.polyfrost.oneconfig"
-version = "1.1.0-alpha.4"
+version = "1.1.0-alpha.5"
 
 allprojects {
     apply(plugin = "maven-publish")
 
+	group = rootProject.group
     version = rootProject.version
 
     repositories {
@@ -23,6 +24,8 @@ allprojects {
 
     configure<PublishingExtension> {
         repositories {
+			mavenLocal()
+
             mapOf(
                 "releases" to "basic",
                 "snapshots" to "basic",
@@ -56,7 +59,7 @@ subprojects {
 
     configure<JavaPluginExtension> {
         withSourcesJar()
-        withJavadocJar()
+//        withJavadocJar()
 
         toolchain {
             languageVersion.set(JavaLanguageVersion.of(8))
@@ -75,7 +78,21 @@ subprojects {
         main.compileClasspath += mock.output
     }
 
+	configure<PublishingExtension> {
+		publications {
+			create<MavenPublication>("mavenJava") {
+				artifactId = project.name
+				group = project.group
+				version = project.version.toString()
+
+				artifact(tasks.named("shadowJar"))
+				artifact(tasks.named("sourcesJar"))
+			}
+		}
+	}
+
     tasks {
+
         named<Jar>("jar") {
             manifest.attributes += mapOf(
                 "Specification-Title" to "OneConfig Loader",
@@ -102,35 +119,6 @@ subprojects {
         withType(JavaCompile::class) {
             options.encoding = "UTF-8"
         }
-    }
-}
 
-configure<PublishingExtension> {
-    publications {
-        create<MavenPublication>(project.name) {
-            artifactId = this.name
-            group = project.group
-            version = project.version.toString()
-
-            artifacts {
-                subprojects.forEach { proj ->
-                    proj.tasks.withType(ShadowJar::class) {
-                        artifact(this) {
-                            classifier = project.name +
-                                    if (classifier.isNullOrBlank()) ""
-                                    else "-$classifier"
-                        }
-                    }
-                    proj.tasks.withType(Jar::class) {
-                        if (this is ShadowJar) return@withType
-                        artifact(this) {
-                            classifier = project.name +
-                                    if (classifier.isNullOrBlank()) ""
-                                    else "-$classifier"
-                        }
-                    }
-                }
-            }
-        }
     }
 }

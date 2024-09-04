@@ -4,7 +4,7 @@ import lombok.Data;
 import net.minecraft.launchwrapper.Launch;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.polyfrost.oneconfig.loader.ILoader.Capabilities;
+import org.polyfrost.oneconfig.loader.base.LoaderBase.Capabilities;
 import org.polyfrost.oneconfig.loader.utils.EnumEntrypoint;
 
 import java.net.URL;
