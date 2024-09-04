@@ -2,17 +2,18 @@ package org.polyfrost.oneconfig.loader.stage0;
 
 import net.fabricmc.loader.api.LanguageAdapter;
 import net.fabricmc.loader.api.ModContainer;
-import org.polyfrost.oneconfig.loader.base.LoaderBase;
+
+import org.polyfrost.oneconfig.loader.base.Capabilities;
 
 /**
  * @author xtrm
  * @since 1.1.0
  */
+@SuppressWarnings("unused")
 public class FabricLikeLanguageAdapter implements LanguageAdapter {
     static {
-        LoaderBase.Capabilities capabilities = new FabricLikeCapabilities(
-                FabricLikeLanguageAdapter.class.getClassLoader()
-        );
+		ClassLoader classLoader = FabricLikeLanguageAdapter.class.getClassLoader();
+        Capabilities capabilities = new FabricLikeCapabilities(classLoader);
         new Stage0Loader(capabilities).load();
     }
 

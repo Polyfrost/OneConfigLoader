@@ -1,11 +1,5 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
-import cpw.mods.modlauncher.LaunchPluginHandler;
-import cpw.mods.modlauncher.Launcher;
-import cpw.mods.modlauncher.api.IEnvironment;
-import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
-import lombok.extern.log4j.Log4j2;
-
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Field;
@@ -16,6 +10,13 @@ import java.security.CodeSource;
 import java.security.ProtectionDomain;
 import java.util.HashMap;
 import java.util.Map;
+
+import cpw.mods.modlauncher.LaunchPluginHandler;
+import cpw.mods.modlauncher.Launcher;
+import cpw.mods.modlauncher.api.IEnvironment;
+import cpw.mods.modlauncher.serviceapi.ILaunchPluginService;
+import lombok.extern.log4j.Log4j2;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * Bunch of hooks into ModLauncher.
@@ -60,19 +61,8 @@ public enum ModLauncherHijack {
                         modData.put("name", service.name());
                         modData.put("type", "PLUGINSERVICE");
                         try {
-                            ProtectionDomain protectionDomain = service.getClass().getProtectionDomain();
-                            if (protectionDomain == null) {
-                                throw new IllegalStateException("Protection domain is null");
-                            }
-                            CodeSource codeSource = protectionDomain.getCodeSource();
-                            if (codeSource == null) {
-                                throw new IllegalStateException("Code source is null");
-                            }
-                            URL url = codeSource.getLocation();
-                            if (url == null) {
-                                throw new IllegalStateException("URL is null");
-                            }
-                            Path path = Paths.get(url.toURI());
+							URL url = getServiceUrl(service);
+							Path path = Paths.get(url.toURI());
                             modData.put("file", path.getFileName().toString());
                         } catch (Throwable ignored) {
                             modData.put("file", "MISSING FILE");
@@ -90,7 +80,23 @@ public enum ModLauncherHijack {
                 ));
     }
 
-    private <T> MethodHandle findGetter(Class<?> targetClass, String... names) {
+	private static @NotNull URL getServiceUrl(ILaunchPluginService service) {
+		ProtectionDomain protectionDomain = service.getClass().getProtectionDomain();
+		if (protectionDomain == null) {
+			throw new IllegalStateException("Protection domain is null");
+		}
+		CodeSource codeSource = protectionDomain.getCodeSource();
+		if (codeSource == null) {
+			throw new IllegalStateException("Code source is null");
+		}
+		URL url = codeSource.getLocation();
+		if (url == null) {
+			throw new IllegalStateException("URL is null");
+		}
+		return url;
+	}
+
+	private MethodHandle findGetter(Class<?> targetClass, String... names) {
         if (names.length == 0) {
             throw new IllegalArgumentException("No names provided");
         }

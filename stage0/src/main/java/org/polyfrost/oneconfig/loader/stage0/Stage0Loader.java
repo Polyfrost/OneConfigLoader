@@ -1,12 +1,5 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
-import lombok.SneakyThrows;
-
-import org.polyfrost.oneconfig.loader.base.LoaderBase;
-import org.polyfrost.oneconfig.loader.utils.IOUtils;
-import org.polyfrost.oneconfig.loader.utils.XDG;
-
-import javax.swing.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
@@ -17,6 +10,15 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Properties;
 import java.util.function.Supplier;
+
+import javax.swing.*;
+
+import lombok.SneakyThrows;
+
+import org.polyfrost.oneconfig.loader.base.Capabilities;
+import org.polyfrost.oneconfig.loader.base.LoaderBase;
+import org.polyfrost.oneconfig.loader.utils.IOUtils;
+import org.polyfrost.oneconfig.loader.utils.XDG;
 
 /**
  * The first stage of the OneConfig Loader.
@@ -54,13 +56,17 @@ public class Stage0Loader extends LoaderBase {
     public void load() {
         JOptionPane.showMessageDialog(null, "Loading hook");
 
+		Capabilities capabilities = this.getCapabilities();
+		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
+//		Capabilities.GameMetadata gameMetadata = capabilities.getGameMetadata();
+
 		String stage1ClassName = fetchStage1ClassName();
 		if (stage1ClassName == null) {
 			throw new IllegalStateException("Stage1 class name not found");
 		}
 
         // fetch settings
-        this.getLogger().info("Loading OneConfig settings");
+        logger.info("Loading OneConfig settings");
         String stage1Version = fetchStage1Version();
 		if (stage1Version == null) {
 			throw new IllegalStateException("Stage1 version not found");
@@ -75,23 +81,21 @@ public class Stage0Loader extends LoaderBase {
 		mavenUrl = mavenUrl.replace('\\', '/');
 
         // Fetch stage1 version info
-        this.getLogger().info("Fetching stage1 version info");
+        logger.info("Fetching stage1 version info");
 		String finalMavenUrl = mavenUrl;
 		Supplier<String> stage1JarUrl = () -> finalMavenUrl + "org/polyfrost/oneconfig/stage1/" + stage1Version + "/stage1-" + stage1Version + "-all.jar";
 
         // Lookup stage1 in cache, handle downloading
-        this.getLogger().info("Getting stage1 from cache");
+        logger.info("Getting stage1 from cache");
         Path stage1Jar = lookupStage1CacheOrDownload(stage1Version, stage1JarUrl);
 
         // Load in classloader as a library
-        this.getLogger().info("Loading stage1 as a library");
-        this.getCapabilities().appendToClassPath(false, stage1Jar.toUri().toURL());
+        logger.info("Loading stage1 as a library");
+        runtimeAccess.appendToClassPath(false, stage1Jar.toUri().toURL());
 
         // Delegate loading to stage1
-        this.getLogger().info("GO");
-        Class<?> stage1Class = this.getCapabilities()
-                .getClassLoader()
-                .loadClass(stage1ClassName);
+        logger.info("GO");
+        Class<?> stage1Class = runtimeAccess.getClassLoader().loadClass(stage1ClassName);
 		System.out.println("Loaded class " + stage1Class.getName());
 		Constructor<?>[] constructors = stage1Class.getDeclaredConstructors();
 		System.out.println("Constructors:");
@@ -99,9 +103,12 @@ public class Stage0Loader extends LoaderBase {
 			System.out.println("- Constructor: " + constructor);
 		}
 
-        Object stage1Instance = stage1Class
-                .getDeclaredConstructor(Capabilities.class)
-                .newInstance(this.getCapabilities());
+		Constructor<?> constructor = stage1Class.getDeclaredConstructor(Capabilities.class);
+		try {
+			constructor.setAccessible(true);
+		} catch (Throwable ignored) {
+		}
+        Object stage1Instance = constructor.newInstance(capabilities);
 		System.out.println("Created instance of " + stage1Instance.getClass().getName());
         stage1Class.getDeclaredMethod("load").invoke(stage1Instance);
     }

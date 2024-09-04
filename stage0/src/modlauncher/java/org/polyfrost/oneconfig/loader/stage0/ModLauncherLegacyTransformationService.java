@@ -1,17 +1,16 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
-import cpw.mods.modlauncher.api.IEnvironment;
-import cpw.mods.modlauncher.api.ITransformationService;
-import cpw.mods.modlauncher.api.ITransformer;
-import cpw.mods.modlauncher.api.IncompatibleEnvironmentException;
-import org.jetbrains.annotations.NotNull;
-import org.polyfrost.oneconfig.loader.base.LoaderBase;
-
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import cpw.mods.modlauncher.api.IEnvironment;
+import cpw.mods.modlauncher.api.ITransformationService;
+import cpw.mods.modlauncher.api.ITransformer;
+import cpw.mods.modlauncher.api.IncompatibleEnvironmentException;
+import org.jetbrains.annotations.NotNull;
 
 /**
  * A ModLauncher transformation service provided by oneconfig-loader/stage0.
@@ -27,8 +26,7 @@ public class ModLauncherLegacyTransformationService implements ITransformationSe
 
     @Override
     public void run() {
-        LoaderBase.Capabilities capabilities = new ModLauncherCapabilities();
-        new Stage0Loader(capabilities).load();
+        new Stage0Loader(ModLauncherCapabilities.INSTANCE).load();
     }
 
     @Override

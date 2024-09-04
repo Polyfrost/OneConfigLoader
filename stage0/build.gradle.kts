@@ -16,7 +16,8 @@ data class J9Platform(
 val platforms = setOf(
     Platform(
         "launchwrapper",
-        setOf("net.minecraft:launchwrapper:1.12"),
+		// also depend on fabric-loader since it *can* be used with launchwrapper
+        setOf("net.minecraft:launchwrapper:1.12", "net.fabricmc:fabric-loader:0.13.3"),
         extraAttributes = mapOf(
             "TweakClass" to "org.polyfrost.oneconfig.loader.stage0.LaunchWrapperTweaker",
         )

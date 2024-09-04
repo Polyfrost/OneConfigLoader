@@ -1,81 +1,55 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
+import java.util.function.Consumer;
+import java.util.regex.Pattern;
+
 import cpw.mods.modlauncher.Launcher;
 import cpw.mods.modlauncher.api.IEnvironment;
-import lombok.Data;
-import lombok.extern.log4j.Log4j2;
+import lombok.Getter;
 import net.minecraftforge.fml.loading.progress.StartupMessageManager;
 import net.neoforged.fml.loading.progress.StartupNotificationManager;
+import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.core.Appender;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.polyfrost.oneconfig.loader.base.LoaderBase;
-import org.polyfrost.oneconfig.loader.utils.EnumEntrypoint;
 
-import java.net.URL;
-import java.nio.file.Path;
-import java.util.regex.Pattern;
+import org.polyfrost.oneconfig.loader.base.Capabilities;
 
 /**
  * @author xtrm
  * @since 1.1.0
  */
-@Log4j2
-public @Data class ModLauncherCapabilities implements LoaderBase.Capabilities {
+@Getter
+public enum ModLauncherCapabilities implements Capabilities {
+	INSTANCE;
+
     static final int MODLAUNCHER_VERSION;
-    private final EnumEntrypoint entrypointType = EnumEntrypoint.MODLAUNCHER;
-
-    @Override
-    public void appendToClassPath(boolean mod, @NotNull URL @NotNull ... urls) {
-        //TODO: Add to a list/set that's passed on to the TransformationService's runScan thingy
-        throw new UnsupportedOperationException("Not implemented");
-    }
-
-    @Override
-    public @Nullable ClassLoader getClassLoader() {
-        return ModLauncherCapabilities.class.getClassLoader();
-    }
-
-    @Override
-    public Path getGameDir() {
-        return Launcher.INSTANCE.environment()
-                .getProperty(IEnvironment.Keys.GAMEDIR.get())
-                .orElseThrow(() -> new IllegalStateException(
-                        "Game directory key not found in ModLauncher environment"
-                ));
-    }
-
-	public String getModLoaderName() {
-		throw new UnsupportedOperationException("Not implemented");
-	}
-
-	public String getGameVersion() {
-		throw new UnsupportedOperationException("Not implemented");
-	}
+	private final RuntimeAccess runtimeAccess = new ModLauncherRuntimeAccess();
+	private final GameMetadata gameMetadata = ModLauncherGameMetadata.INSTANCE;
 
 	@Override
-    public @Nullable Appender provideLogAppender() {
+    public void provideLogAppender(Consumer<Appender> appenderConsumer) {
+		Appender appender;
         try {
-            return StartupNotificationManager.modLoaderConsumer()
+            appender = StartupNotificationManager.modLoaderConsumer()
                     .map(consumer -> new BaseAppender("neoforged", consumer))
                     .orElse(null);
         } catch (NoClassDefFoundError ignored) {
             try {
-                return StartupMessageManager.modLoaderConsumer()
+                appender = StartupMessageManager.modLoaderConsumer()
                         .map(consumer -> new BaseAppender("fml", consumer))
                         .orElse(null);
             } catch (NoClassDefFoundError ignored2) {
                 try {
-                    return net.minecraftforge.fml.loading.progress.StartupNotificationManager.modLoaderConsumer()
+                    appender = net.minecraftforge.fml.loading.progress.StartupNotificationManager.modLoaderConsumer()
                             .map(consumer -> new BaseAppender("fml", consumer))
                             .orElse(null);
                 } catch (NoClassDefFoundError ignored3) {
                     // might be 1.13.x
-                    log.warn("No startup message manager found");
-                    return null;
+                    LogManager.getLogger(getClass()).warn("No startup message manager found");
+					return;
                 }
             }
         }
+		appenderConsumer.accept(appender);
     }
 
     static {

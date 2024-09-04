@@ -1,11 +1,10 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
-import net.minecraft.launchwrapper.ITweaker;
-import net.minecraft.launchwrapper.LaunchClassLoader;
-import org.polyfrost.oneconfig.loader.base.LoaderBase;
-
 import java.io.File;
 import java.util.List;
+
+import net.minecraft.launchwrapper.ITweaker;
+import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
  * A {@link net.minecraft.launchwrapper.Launch LaunchWrapper}
@@ -13,13 +12,13 @@ import java.util.List;
  *
  * @author xtrm
  */
+@SuppressWarnings("unused")
 public class LaunchWrapperTweaker implements ITweaker {
     @Override
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {
 		classLoader.addClassLoaderExclusion("org.polyfrost.oneconfig.loader.base.");
 
-        LoaderBase.Capabilities capabilities = new LaunchWrapperCapabilities(classLoader);
-        new Stage0Loader(capabilities).load();
+        new Stage0Loader(new LaunchWrapperCapabilities()).load();
     }
 
     //@formatter:off
