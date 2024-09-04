@@ -1,4 +1,4 @@
-package org.polyfrost.oneconfig.loader.stage1.dependency.maven.cache;
+package org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.cache;
 
 import lombok.RequiredArgsConstructor;
 import org.polyfrost.oneconfig.loader.stage1.dependency.cache.CachingSolution;

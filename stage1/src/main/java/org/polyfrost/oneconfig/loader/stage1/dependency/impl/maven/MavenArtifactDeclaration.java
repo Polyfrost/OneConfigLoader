@@ -1,16 +1,19 @@
-package org.polyfrost.oneconfig.loader.stage1.dependency.maven;
-
-import lombok.Data;
-import org.polyfrost.oneconfig.loader.stage1.dependency.model.Artifact;
+package org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+
+import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;
 
 /**
  * @author xtrm
  * @since 1.1.0
  */
-public @Data class MavenArtifact implements Artifact {
+@AllArgsConstructor
+public @Data class MavenArtifactDeclaration implements ArtifactDeclaration {
     private final String groupId;
     private final String artifactId;
     private final String version;

@@ -1,10 +1,9 @@
-package org.polyfrost.oneconfig.loader.stage1.dependency.maven;
+package org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven;
 
 import lombok.Getter;
-import org.polyfrost.oneconfig.loader.stage1.dependency.DependencyManager;
+import org.polyfrost.oneconfig.loader.stage1.dependency.ArtifactManager;
 import org.polyfrost.oneconfig.loader.stage1.dependency.cache.CachingSolution;
-import org.polyfrost.oneconfig.loader.stage1.dependency.maven.cache.MavenCachingSolution;
-import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDependency;
+import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.cache.MavenCachingSolution;
 import org.polyfrost.oneconfig.loader.utils.RequestHelper;
 import org.polyfrost.oneconfig.loader.utils.XDG;
 import org.w3c.dom.Document;
@@ -31,32 +30,32 @@ import java.util.stream.Collectors;
  * @since 1.1.0
  */
 @Getter
-public class MavenDependencyManager implements DependencyManager<MavenArtifact, MavenArtifactDeclaration> {
+public class MavenArtifactManager implements ArtifactManager<MavenArtifactDeclaration, MavenArtifact> {
     private final XDG.ApplicationStore store;
     private final URI repository;
     private final RequestHelper requestHelper;
     private final CachingSolution cache;
-    private final Class<MavenArtifact> artifactClass = MavenArtifact.class;
-    private final Class<MavenArtifactDeclaration> artifactDeclarationClass = MavenArtifactDeclaration.class;
+    private final Class<MavenArtifactDeclaration> artifactClass = MavenArtifactDeclaration.class;
+    private final Class<MavenArtifact> artifactDeclarationClass = MavenArtifact.class;
 
-    public MavenDependencyManager(XDG.ApplicationStore store, URI repository, RequestHelper requestHelper) {
+    public MavenArtifactManager(XDG.ApplicationStore store, URI repository, RequestHelper requestHelper) {
         this.store = store;
         this.repository = repository;
         this.requestHelper = requestHelper;
         this.cache = new MavenCachingSolution(requestHelper, store, repository);
     }
 
-    public MavenArtifact buildArtifact(String groupId, String artifactId, String version) {
-        return this.buildArtifact(groupId, artifactId, version, null, "jar");
+    public MavenArtifactDeclaration buildArtifactDeclaration(String groupId, String artifactId, String version) {
+        return this.buildArtifactDeclaration(groupId, artifactId, version, null, "jar");
     }
 
     @Override
-    public MavenArtifact buildArtifact(String groupId, String artifactId, String version, String classifier, String extension) {
-        return new MavenArtifact(groupId, artifactId, version, classifier, extension);
+    public MavenArtifactDeclaration buildArtifactDeclaration(String groupId, String artifactId, String version, String classifier, String extension) {
+        return new MavenArtifactDeclaration(groupId, artifactId, version, classifier, extension);
     }
 
     @Override
-    public MavenArtifactDeclaration resolveArtifact(MavenArtifact artifact) throws IOException, ParserConfigurationException, SAXException {
+    public MavenArtifact resolveArtifact(MavenArtifactDeclaration artifact) throws IOException, ParserConfigurationException, SAXException {
         Path dataDir = this.store.getDataDir();
         Path localLibraries = dataDir.resolve("libraries");
 
@@ -76,14 +75,14 @@ public class MavenDependencyManager implements DependencyManager<MavenArtifact, 
                 .stream()
                 .map((mavenArtifact) -> {
                     MavenArtifactDependency mavenArtifactDependency = new MavenArtifactDependency();
-                    mavenArtifactDependency.setDeclaration(new MavenArtifactDeclaration(mavenArtifact, new ArrayList<>()));
+                    mavenArtifactDependency.setDeclaration(new MavenArtifact(mavenArtifact, new ArrayList<>()));
                     return mavenArtifactDependency;
                 })
                 .collect(Collectors.toList());
-        return new MavenArtifactDeclaration(artifact, dependencyList);
+        return new MavenArtifact(artifact, dependencyList);
     }
 
-    public InputStream createArtifactInputStream(MavenArtifact mavenArtifact) throws IOException {
+    public InputStream createArtifactInputStream(MavenArtifactDeclaration mavenArtifact) throws IOException {
         URI resolved = repository.resolve(mavenArtifact.getDeclaration());
 
         if (!resolved.isAbsolute()) {
@@ -94,7 +93,7 @@ public class MavenDependencyManager implements DependencyManager<MavenArtifact, 
         return connection.getInputStream();
     }
 
-    private List<MavenArtifact> getDependency(InputStream pom) throws ParserConfigurationException, IOException, SAXException {
+    private List<MavenArtifactDeclaration> getDependency(InputStream pom) throws ParserConfigurationException, IOException, SAXException {
         DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
         documentBuilderFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
         DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
@@ -103,7 +102,7 @@ public class MavenDependencyManager implements DependencyManager<MavenArtifact, 
         Element dependencies = (Element) documentElement.getElementsByTagName("dependencies").item(0);
         NodeList dependencyList = dependencies.getElementsByTagName("dependency");
 
-        List<MavenArtifact> list = new ArrayList<>();
+        List<MavenArtifactDeclaration> list = new ArrayList<>();
 
         for (int i = 0; i < dependencyList.getLength(); i++) {
             Element dependency = (Element) dependencyList.item(i);
@@ -113,7 +112,7 @@ public class MavenDependencyManager implements DependencyManager<MavenArtifact, 
             String version = dependency.getElementsByTagName("version").item(0).getTextContent();
 
             list.add(
-                    new MavenArtifact(
+                    new MavenArtifactDeclaration(
                             groupId,
                             artifactId,
                             version,

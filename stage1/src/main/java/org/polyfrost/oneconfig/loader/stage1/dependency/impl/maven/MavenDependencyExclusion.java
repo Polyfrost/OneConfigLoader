@@ -1,4 +1,4 @@
-package org.polyfrost.oneconfig.loader.stage1.dependency.maven;
+package org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven;
 
 import lombok.Getter;
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.Artifact;

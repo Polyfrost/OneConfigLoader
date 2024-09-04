@@ -2,21 +2,25 @@ package org.polyfrost.oneconfig.loader.stage1;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import lombok.SneakyThrows;
 
 import org.polyfrost.oneconfig.loader.base.Capabilities;
 import org.polyfrost.oneconfig.loader.base.LoaderBase;
-import org.polyfrost.oneconfig.loader.stage1.dependency.DependencyManager;
-import org.polyfrost.oneconfig.loader.stage1.dependency.maven.MavenArtifact;
-import org.polyfrost.oneconfig.loader.stage1.dependency.maven.MavenArtifactDeclaration;
-import org.polyfrost.oneconfig.loader.stage1.dependency.maven.MavenDependencyManager;
+import org.polyfrost.oneconfig.loader.stage1.dependency.ArtifactManager;
+import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactManager;
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.Artifact;
-import org.polyfrost.oneconfig.loader.stage1.util.SystemProperties;
+import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;
+import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDependency;
 import org.polyfrost.oneconfig.loader.utils.ErrorHandler;
 import org.polyfrost.oneconfig.loader.utils.XDG;
 
@@ -24,12 +28,11 @@ import org.polyfrost.oneconfig.loader.utils.XDG;
  * @author xtrm
  * @since 1.1.0
  */
+@SuppressWarnings({"rawtypes", "unchecked"})
 public class Stage1Loader extends LoaderBase {
-	private final Properties stage1Properties;
-
-	private final XDG.ApplicationStore applicationStore;
-	private final DependencyManager<MavenArtifact, MavenArtifactDeclaration> dependencyManager;
-	private final String oneConfigVersion;
+	private static final String PROPERTIES_FILE_PATH = "/assets/oneconfig-loader/metadata/stage1.properties";
+	private final ArtifactManager artifactManager;
+	private final Properties stage1Properties = new Properties();
 
 	@SneakyThrows
 	public Stage1Loader(Capabilities capabilities) {
@@ -39,27 +42,22 @@ public class Stage1Loader extends LoaderBase {
 				capabilities
 		);
 
-		this.applicationStore = XDG.provideApplicationStore("OneConfig");
-
-		this.dependencyManager = new MavenDependencyManager(
-				this.applicationStore,
-				SystemProperties.REPOSITORY_URL.get(),
-				this.getRequestHelper()
-		);
-
-		try (InputStream inputStream = this.getClass().getResourceAsStream("/polyfrost/stage1.properties")) {
-			this.stage1Properties = new Properties();
+		try (InputStream inputStream = this.getClass().getResourceAsStream(PROPERTIES_FILE_PATH)) {
 			this.stage1Properties.load(inputStream);
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new UncheckedIOException(e);
 		}
 
-		String oneConfigVersion = this.stage1Properties.getProperty("oneconfig-version");
-		if (oneConfigVersion == null) {
-			throw new RuntimeException("oneconfig-version option is not found in stage1.properties");
+		String repository = this.stage1Properties.getProperty("oneconfig-repository");
+		if (repository == null) {
+			throw new RuntimeException("oneconfig-repository option is not found in stage1.properties");
 		}
-
-		this.oneConfigVersion = oneConfigVersion;
+		URI repositoryURI = URI.create(repository);
+		this.artifactManager = new MavenArtifactManager(
+				XDG.provideApplicationStore("OneConfig"),
+				repositoryURI,
+				getRequestHelper()
+		);
 	}
 
 	@Override
@@ -68,36 +66,60 @@ public class Stage1Loader extends LoaderBase {
 		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
 		Capabilities.GameMetadata gameMetadata = capabilities.getGameMetadata();
 
-		// Get platform info
+		String oneConfigVersion = this.stage1Properties.getProperty("oneconfig-version");
+		if (oneConfigVersion == null) {
+			throw new RuntimeException("oneconfig-version option is not found in stage1.properties");
+		}
 		String targetSpecifier = gameMetadata.getTargetSpecifier();
 
 		// Fetch oneConfig version info
-		MavenArtifact oneConfigArtifact = this.dependencyManager.buildArtifact("org.polyfrost.oneconfig", targetSpecifier, this.oneConfigVersion);
+		String artifactSpecifier = "org.polyfrost.oneconfig:" + targetSpecifier + ":" + oneConfigVersion;
+		final Set<ArtifactDeclaration> resolveQueue = new HashSet<>();
+		final Set<Artifact> resolvedArtifacts = new HashSet<>();
+		ArtifactDeclaration oneConfigDeclaration = this.artifactManager.buildArtifactDeclaration(artifactSpecifier);
+		resolveQueue.add(oneConfigDeclaration);
 
-		// Download to cache
-		checkAndAppendArtifactToClasspath(runtimeAccess, oneConfigArtifact);
-
-		MavenArtifactDeclaration mavenArtifactDeclaration;
-		try {
-			mavenArtifactDeclaration = this.dependencyManager.resolveArtifact(oneConfigArtifact);
-		} catch (Exception e) {
-			logger.fatal("Could not resolve artifact {}", oneConfigArtifact.getDeclaration(), e);
-			ErrorHandler.displayError(this, "Error while resolving artifact: " + oneConfigArtifact.getDeclaration());
-			return;
+		while (!resolveQueue.isEmpty()) {
+			ArtifactDeclaration artifactDeclaration = resolveQueue.iterator().next();
+			resolveQueue.remove(artifactDeclaration);
+			Artifact resolvedArtifact;
+			try {
+				resolvedArtifact = this.artifactManager.resolveArtifact(artifactDeclaration);
+			} catch (Exception e) {
+				throw new RuntimeException(e);
+			}
+			if (resolvedArtifact != null) {
+				resolvedArtifacts.add(resolvedArtifact);
+				resolveQueue.addAll(resolvedArtifact.getDependencies().stream().map(ArtifactDependency::getDeclaration).collect(Collectors.toSet()));
+				resolveQueue.removeIf(it -> resolvedArtifact.getDependencies().stream().anyMatch(dependency -> it.equals(dependency.getDeclaration())));
+			}
 		}
-		try {
-			mavenArtifactDeclaration.resolveDependencies(this.dependencyManager);
-		} catch (Exception e) {
-			logger.fatal("Could not resolve dependencies", e);
-			ErrorHandler.displayError(this, "Error while resolving dependencies");
-			return;
-		}
+		resolvedArtifacts.forEach(artifact -> checkAndAppendArtifactToClasspath(runtimeAccess, artifact));
 
-		mavenArtifactDeclaration
-				.getDependencies()
-				.stream()
-				.flatMap((dependency) -> dependency.getDeclaration().getDependencies().stream())
-				.forEach((dependency) -> checkAndAppendArtifactToClasspath(runtimeAccess, dependency.getDeclaration().getArtifact()));
+////		// Download to cache
+////		checkAndAppendArtifactToClasspath(runtimeAccess, oneConfigDeclaration);
+//
+//		Artifact mavenArtifactDeclaration;
+//		try {
+//			mavenArtifactDeclaration = this.artifactManager.resolveArtifact(oneConfigDeclaration);
+//		} catch (Exception e) {
+//			logger.fatal("Could not resolve artifact {}", oneConfigDeclaration.getDeclaration(), e);
+//			ErrorHandler.displayError(this, "Error while resolving artifact: " + oneConfigDeclaration.getDeclaration());
+//			return;
+//		}
+//		try {
+//			mavenArtifactDeclaration.resolveDependencies(this.artifactManager);
+//		} catch (Exception e) {
+//			logger.fatal("Could not resolve dependencies", e);
+//			ErrorHandler.displayError(this, "Error while resolving dependencies");
+//			return;
+//		}
+//
+//		mavenArtifactDeclaration
+//				.getDependencies()
+//				.stream()
+//				.flatMap((dependency) -> dependency.getDeclaration().getDependencies().stream())
+//				.forEach((dependency) -> checkAndAppendArtifactToClasspath(runtimeAccess, dependency.getDeclaration().getArtifact()));
 
 		try {
 			ClassLoader classLoader = runtimeAccess.getClassLoader();
@@ -127,7 +149,7 @@ public class Stage1Loader extends LoaderBase {
 				.resolve(XDG
 						.provideCacheDir("OneConfig")
 						.resolve("loader")
-						.resolve(mavenArtifact.getRelativePath())
+						.resolve(mavenArtifact.getDeclaration().getRelativePath())
 				);
 	}
 
@@ -135,7 +157,7 @@ public class Stage1Loader extends LoaderBase {
 		Path artifactFile = provideLocalArtifactPath(artifact);
 
 		if (!Files.exists(artifactFile)) {
-			try (InputStream inputStream = this.dependencyManager.createArtifactInputStream(this.dependencyManager.getArtifactClass().cast(artifact))) {
+			try (InputStream inputStream = this.artifactManager.createArtifactInputStream(artifact)) {
 				Files.copy(inputStream, provideLocalArtifactPath(artifact));
 			} catch (IOException e) {
 				logger.fatal("Could not download artifact {}", artifact.getDeclaration(), e);
