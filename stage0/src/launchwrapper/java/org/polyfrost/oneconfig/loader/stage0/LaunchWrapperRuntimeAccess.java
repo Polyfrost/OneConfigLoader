@@ -12,8 +12,8 @@ import org.polyfrost.oneconfig.loader.base.Capabilities;
  * @author xtrm
  * @since 1.1.0
  */
-public enum LaunchWrapperRuntimeAccess implements Capabilities.RuntimeAccess {
-	INSTANCE;
+public class LaunchWrapperRuntimeAccess implements Capabilities.RuntimeAccess {
+	public static final LaunchWrapperRuntimeAccess INSTANCE = new LaunchWrapperRuntimeAccess();
 
 	@Override
 	public void appendToClassPath(boolean mod, @NotNull URL @NotNull ... urls) {

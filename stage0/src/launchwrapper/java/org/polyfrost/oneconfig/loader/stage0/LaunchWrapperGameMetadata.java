@@ -18,8 +18,8 @@ import org.polyfrost.oneconfig.loader.base.Capabilities;
  * @since 1.1.0
  */
 @Getter
-public enum LaunchWrapperGameMetadata implements Capabilities.GameMetadata {
-	INSTANCE;
+public class LaunchWrapperGameMetadata implements Capabilities.GameMetadata {
+	public static final LaunchWrapperGameMetadata INSTANCE = new LaunchWrapperGameMetadata();
 
 	private final String loaderName;
 	private final String gameVersion;

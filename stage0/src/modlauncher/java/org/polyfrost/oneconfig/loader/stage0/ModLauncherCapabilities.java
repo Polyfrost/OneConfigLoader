@@ -18,8 +18,8 @@ import org.polyfrost.oneconfig.loader.base.Capabilities;
  * @since 1.1.0
  */
 @Getter
-public enum ModLauncherCapabilities implements Capabilities {
-	INSTANCE;
+public class ModLauncherCapabilities implements Capabilities {
+	public static final ModLauncherCapabilities INSTANCE = new ModLauncherCapabilities();
 
     static final int MODLAUNCHER_VERSION;
 	private final RuntimeAccess runtimeAccess = new ModLauncherRuntimeAccess();

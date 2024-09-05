@@ -25,8 +25,8 @@ import org.jetbrains.annotations.NotNull;
  * @since 1.1.0
  */
 @Log4j2
-public enum ModLauncherHijack {
-    INSTANCE;
+public class ModLauncherHijack {
+	public static final ModLauncherHijack INSTANCE = new ModLauncherHijack();
 
     private final MethodHandle getLaunchService;
     private final MethodHandle getPluginsMap;

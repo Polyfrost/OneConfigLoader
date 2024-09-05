@@ -16,8 +16,8 @@ import org.polyfrost.oneconfig.loader.base.Capabilities;
  * @since 1.1.0
  */
 @Getter
-public enum FabricLikeGameMetadata implements Capabilities.GameMetadata {
-	INSTANCE;
+public class FabricLikeGameMetadata implements Capabilities.GameMetadata {
+	public static final FabricLikeGameMetadata INSTANCE = new FabricLikeGameMetadata();
 
 	private final String loaderName;
 	private final String gameVersion;

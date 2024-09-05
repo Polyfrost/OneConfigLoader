@@ -13,8 +13,8 @@ import org.polyfrost.oneconfig.loader.base.Capabilities;
  * @author xtrm
  * @since 1.1.0
  */
-public enum ModLauncherGameMetadata implements Capabilities.GameMetadata {
-	INSTANCE;
+public class ModLauncherGameMetadata implements Capabilities.GameMetadata {
+	public static final ModLauncherGameMetadata INSTANCE = new ModLauncherGameMetadata();
 
 	@Override
 	public Path getGameDir() {
