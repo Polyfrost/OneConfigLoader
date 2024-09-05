@@ -4,7 +4,7 @@ package org.polyfrost.oneconfig.loader.stage1.dependency.model;
  * @author xtrm
  * @since 1.1.0
  */
-public interface DependencyExclusion {
+public interface DependencyExclusion<A extends Artifact<?, ?>> {
     /**
      * @return the group being excluded, null if not specified, or a {@code *} wildcard
      */
@@ -22,5 +22,5 @@ public interface DependencyExclusion {
      *
      * @return {@code true} if the artifact matches the exclusion, {@code false} otherwise
      */
-    boolean matches(Artifact artifact);
+    boolean matches(A artifact);
 }

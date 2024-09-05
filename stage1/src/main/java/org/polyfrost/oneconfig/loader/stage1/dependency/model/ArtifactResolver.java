@@ -7,5 +7,5 @@ import java.net.URI;
  * @since 1.1.0
  */
 public interface ArtifactResolver {
-    URI resolve(Artifact artifact);
+    URI resolve(Artifact<?, ?> artifact);
 }

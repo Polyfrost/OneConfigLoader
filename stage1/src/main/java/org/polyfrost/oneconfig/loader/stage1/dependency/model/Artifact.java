@@ -8,8 +8,8 @@ import java.util.List;
  * @author xtrm
  * @since 1.1.0
  */
-public interface Artifact {
-	ArtifactDeclaration getDeclaration();
+public interface Artifact<DECLARATION extends ArtifactDeclaration, DEPENDENCY extends ArtifactDependency> {
+	DECLARATION getDeclaration();
 
-	List<ArtifactDependency> getDependencies();
+	List<DEPENDENCY> getDependencies();
 }

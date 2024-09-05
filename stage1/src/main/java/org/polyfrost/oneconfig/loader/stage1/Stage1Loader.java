@@ -17,6 +17,7 @@ import lombok.SneakyThrows;
 import org.polyfrost.oneconfig.loader.base.Capabilities;
 import org.polyfrost.oneconfig.loader.base.LoaderBase;
 import org.polyfrost.oneconfig.loader.stage1.dependency.ArtifactManager;
+import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactDependency;
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactManager;
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.Artifact;
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;
@@ -82,12 +83,14 @@ public class Stage1Loader extends LoaderBase {
 		while (!resolveQueue.isEmpty()) {
 			ArtifactDeclaration artifactDeclaration = resolveQueue.iterator().next();
 			resolveQueue.remove(artifactDeclaration);
-			Artifact resolvedArtifact;
+			Artifact<ArtifactDeclaration, ArtifactDependency> resolvedArtifact;
+
 			try {
 				resolvedArtifact = this.artifactManager.resolveArtifact(artifactDeclaration);
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
+
 			if (resolvedArtifact != null) {
 				resolvedArtifacts.add(resolvedArtifact);
 				resolveQueue.addAll(resolvedArtifact.getDependencies().stream().map(ArtifactDependency::getDeclaration).collect(Collectors.toSet()));

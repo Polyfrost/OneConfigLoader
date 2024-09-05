@@ -17,6 +17,7 @@ public class LaunchWrapperTweaker implements ITweaker {
     @Override
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {
 		classLoader.addClassLoaderExclusion("org.polyfrost.oneconfig.loader.base.");
+		classLoader.addClassLoaderExclusion("org.polyfrost.oneconfig.loader.utils.");
 
         new Stage0Loader(new LaunchWrapperCapabilities()).load();
     }

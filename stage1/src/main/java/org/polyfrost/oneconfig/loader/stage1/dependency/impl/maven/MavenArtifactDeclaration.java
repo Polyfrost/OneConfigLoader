@@ -6,6 +6,8 @@ import java.nio.file.Paths;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
+import lombok.Getter;
+
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;
 
 /**
@@ -14,10 +16,14 @@ import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaratio
  */
 @AllArgsConstructor
 public @Data class MavenArtifactDeclaration implements ArtifactDeclaration {
-    private final String groupId;
-    private final String artifactId;
-    private final String version;
+	@Getter
+	private final String groupId;
+	@Getter
+	private final String artifactId;
+	@Getter
+	private final String version;
     private final String classifier;
+	@Getter
     private final String extension;
 
     @Override
@@ -45,4 +51,5 @@ public @Data class MavenArtifactDeclaration implements ArtifactDeclaration {
                 + (classifier == null ? "" : "-" + classifier)
                 + "." + (extension == null ? "jar" : extension);
     }
+
 }

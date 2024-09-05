@@ -1,5 +1,7 @@
 package org.polyfrost.oneconfig.loader.stage1.dependency.model;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.nio.file.Path;
 
 /**
@@ -9,30 +11,15 @@ import java.nio.file.Path;
  * @since 1.1.0
  */
 public interface ArtifactDeclaration {
-//    /**
-//     * @return the artifact's group ID
-//     */
-//    String getGroupId();
-//
-//    /**
-//     * @return the artifact's name/ID
-//     */
-//    String getArtifactId();
-//
-//    /**
-//     * @return the artifact's version
-//     */
-//    String getVersion();
-//
-//    /**
-//     * @return the artifact's classifier (usually {@code null})
-//     */
-//    @Nullable String getClassifier();
-//
-//    /**
-//     * @return the artifact's extension (usually {@code jar})
-//     */
-//    String getExtension();
+    /**
+     * @return the artifact's classifier (usually {@code null})
+     */
+    @Nullable String getClassifier();
+
+    /**
+     * @return the artifact's extension (usually {@code jar})
+     */
+    String getExtension();
 
     /**
      * @return a service-specific declaration of the artifact
