@@ -92,13 +92,6 @@ public class Stage1Loader extends LoaderBase {
 			}
 
 			if (resolvedArtifact != null) {
-//				resolvedArtifacts.add(resolvedArtifact);
-//				System.out.println("Resolve queue 1: " + resolveQueue);
-//				resolveQueue.addAll(resolvedArtifact.getDependencies().stream().map(ArtifactDependency::getDeclaration).collect(Collectors.toSet()));
-//				System.out.println("Resolve queue 2: " + resolveQueue);
-//				resolveQueue.removeIf(it -> resolvedArtifact.getDependencies().stream().anyMatch(dependency -> it.equals(dependency.getDeclaration())));
-//				System.out.println("Resolve queue 3: " + resolveQueue);
-
 				resolvedArtifacts.add(resolvedArtifact);
 
 				Set<ArtifactDeclaration> newDependencies = resolvedArtifact
