@@ -3,8 +3,6 @@ package org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven;
 import java.util.List;
 
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.Artifact;
-import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;
-import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDependency;
 
 /**
  * @author xtrm

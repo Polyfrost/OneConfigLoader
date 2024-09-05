@@ -6,16 +6,6 @@ package org.polyfrost.oneconfig.loader.stage1.dependency.model;
  */
 public interface DependencyExclusion<A extends Artifact<?, ?>> {
     /**
-     * @return the group being excluded, null if not specified, or a {@code *} wildcard
-     */
-    String getGroupId();
-
-    /**
-     * @return the artifact id being excluded, null if not specified, or a {@code *} wildcard
-     */
-    String getArtifactId();
-
-    /**
      * Performs a match against the given artifact.
      *
      * @param artifact the artifact to match against
