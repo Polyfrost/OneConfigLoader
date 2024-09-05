@@ -28,11 +28,18 @@ public @Data class MavenArtifactDeclaration implements ArtifactDeclaration {
 
 	@Override
     public String getDeclaration() {
-        return String.format(
-                "%s:%s:%s",
-                groupId, artifactId, actualVersion
-        ) + (classifier == null ? "" : ":" + classifier)
-                + (extension == null ? "" : "@" + extension);
+		StringBuilder builder = new StringBuilder();
+		builder.append(groupId).append(":").append(artifactId).append(":").append(actualVersion);
+
+		if (classifier != null) {
+			builder.append(":").append(classifier);
+		}
+
+		if (extension != null) {
+			builder.append("@").append(extension);
+		}
+
+		return builder.toString();
     }
 
     @Override

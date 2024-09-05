@@ -1,5 +1,6 @@
 package org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -47,6 +48,8 @@ public class MavenArtifactManager implements ArtifactManager<MavenArtifact, Mave
 	public MavenArtifactManager(XDG.ApplicationStore store, URI repository, RequestHelper requestHelper) {
 		this.store = store;
 		this.repository = repository;
+		System.out.println("Repository: " + repository);
+		System.out.println("Snapshots: " + repository.resolve("test"));
 		this.requestHelper = requestHelper;
 		this.cache = new MavenCachingSolution(store, repository, requestHelper);
 		this.documentBuilderFactory = DocumentBuilderFactory.newInstance();
@@ -128,13 +131,18 @@ public class MavenArtifactManager implements ArtifactManager<MavenArtifact, Mave
 
 		if (!localArtifactPath.toFile().exists()) {
 			URI remoteArtifact = this.repository.resolve(artifactRelativePath.toString().replace('\\', '/'));
+			System.out.println("Remote Artifact: " + remoteArtifact);
 
 			try (InputStream inputStream = this.requestHelper.establishConnection(remoteArtifact.toURL()).getInputStream()) {
+				// Ensure parent directories exist
+				Files.createDirectories(localArtifactPath.getParent());
+
 				Files.copy(inputStream, localArtifactPath);
 			}
 		}
 
 		try (InputStream inputStream = Files.newInputStream(localArtifactPath)) {
+			System.out.println("Local Artifact Path: " + localArtifactPath);
 			List<MavenArtifactDependency> dependencyList = this.getDependency(inputStream)
 					.stream()
 					.map((mavenArtifactDeclaration) -> new MavenArtifactDependency(mavenArtifactDeclaration, Scope.RUNTIME, new ArrayList<>()))
@@ -150,15 +158,21 @@ public class MavenArtifactManager implements ArtifactManager<MavenArtifact, Mave
 		};
 		for (String path : paths) {
 			Path metadataPath = Paths.get(declaration.getGroupId().replace('.', '/'), declaration.getArtifactId(), path);
-			URI metadataUri = this.repository.resolve(metadataPath.toString());
+			URI metadataUri = this.repository.resolve(metadataPath.toString().replace('\\', '/'));
+			System.out.println("Metadata URI: " + metadataUri);
 			try (InputStream inputStream = this.requestHelper.establishConnection(metadataUri.toURL()).getInputStream()) {
 				String latestVersion = this.getLatestVersion(inputStream);
+				System.out.println("Latest Version: " + latestVersion);
 				if (latestVersion != null) {
 					declaration.setActualVersion(latestVersion);
 					return;
 				}
 			} catch (IOException | ParserConfigurationException | SAXException e) {
-				//TODO: need to ignore if connection cannot be established, unsure which subset of IOExceptions is thrown
+				// Ignore if this is a FileNotFoundException since we check multiple paths
+				if (e instanceof FileNotFoundException) {
+					continue;
+				}
+
 				throw new RuntimeException("Error while parsing the latest version of " + declaration.getDeclaration(), e);
 			}
 		}
@@ -167,7 +181,8 @@ public class MavenArtifactManager implements ArtifactManager<MavenArtifact, Mave
 
 	@Override
 	public InputStream createArtifactInputStream(MavenArtifact artifact) throws IOException {
-		URI resolved = this.repository.resolve(artifact.getDeclaration().getRelativePath().toString());
+		URI resolved = this.repository.resolve(artifact.getDeclaration().getRelativePath().toString().replace('\\', '/'));
+		System.out.println("Resolved: " + resolved);
 
 		if (!resolved.isAbsolute()) {
 			throw new RuntimeException("Could not createArtifactInputStream from " + resolved);

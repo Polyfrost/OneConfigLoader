@@ -30,7 +30,7 @@ import org.polyfrost.oneconfig.loader.utils.XDG;
  * @since 1.1.0
  */
 public class Stage0Loader extends LoaderBase {
-    private static final String DEFAULT_MAVEN_BASE_URL = "https://repo.polyfrost.org/";
+    private static final String DEFAULT_MAVEN_BASE_URL = "https://repo.polyfrost.org/releases/";
 
     private final Properties stage0Properties;
 

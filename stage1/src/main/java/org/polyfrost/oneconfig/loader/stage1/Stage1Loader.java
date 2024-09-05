@@ -52,6 +52,8 @@ public class Stage1Loader extends LoaderBase {
 		if (repository == null) {
 			throw new RuntimeException("oneconfig-repository option is not found in stage1.properties");
 		}
+
+		System.out.println("Repository: " + repository);
 		URI repositoryURI = URI.create(repository);
 		this.artifactManager = new MavenArtifactManager(
 				XDG.provideApplicationStore("OneConfig"),

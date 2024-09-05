@@ -6,21 +6,13 @@ import org.apache.logging.log4j.LogManager;
 import org.polyfrost.oneconfig.loader.base.LoaderBase;
 
 import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManagerFactory;
+
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.KeyManagementException;
-import java.security.KeyStore;
-import java.security.KeyStoreException;
-import java.security.NoSuchAlgorithmException;
-import java.security.cert.CertificateException;
 
 /**
  * A helper class for establishing connections to remote resources.
@@ -134,29 +126,33 @@ public class RequestHelper {
      */
     private static SSLSocketFactory createSSLSocketFactory() {
         // Initialize a keystore with the java installation's default CA certificates
-        KeyStore keyStore;
-        try {
-            keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
-            Path keyStorePath = Paths.get(System.getProperty("java.home"), "lib", "security", "cacerts");
-            keyStore.load(Files.newInputStream(keyStorePath), null);
-        } catch (IOException | KeyStoreException | CertificateException | NoSuchAlgorithmException e) {
-            throw new RuntimeException("An error occurred while initializing the Polyfrost keystore with default certificates.", e);
-        }
-        // Add all the custom CA certificates to the keystore
-        try {
-            keyStore.load(RequestHelper.class.getResourceAsStream(SSL_STORE_PATH), "polyfrost".toCharArray());
-        } catch (CertificateException | IOException | NoSuchAlgorithmException e) {
-            throw new RuntimeException("An error occurred while adding non-default certificates to the Polyfrost keystore.", e);
-        }
-        // Turn the keystore into a factory that can be used with HTTPS requests
-        try {
-            TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
-            trustManagerFactory.init(keyStore);
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, trustManagerFactory.getTrustManagers(), null);
-            return sslContext.getSocketFactory();
-        } catch (NoSuchAlgorithmException | KeyStoreException | KeyManagementException e) {
-            throw new RuntimeException("An error occurred while initializing the Polyfrost SSL context.", e);
-        }
+//        KeyStore keyStore;
+//
+//        try {
+//            keyStore = KeyStore.getInstance(KeyStore.getDefaultType());
+//            Path keyStorePath = Paths.get(System.getProperty("java.home"), "lib", "security", "cacerts");
+//            keyStore.load(Files.newInputStream(keyStorePath), null);
+//			System.out.println("Loaded default keystore");
+//        } catch (IOException | KeyStoreException | CertificateException | NoSuchAlgorithmException e) {
+//            throw new RuntimeException("An error occurred while initializing the Polyfrost keystore with default certificates.", e);
+//        }
+//
+		// Turn the keystore into a factory that can be used with HTTPS requests
+//        try {
+//            TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+//            trustManagerFactory.init(keyStore);
+//            SSLContext sslContext = SSLContext.getInstance("TLS");
+//            sslContext.init(null, trustManagerFactory.getTrustManagers(), null);
+//            return sslContext.getSocketFactory();
+//        } catch (NoSuchAlgorithmException | KeyStoreException | KeyManagementException e) {
+//            throw new RuntimeException("An error occurred while initializing the Polyfrost SSL context.", e);
+//        }
+
+		// Deftu - Stolen from some of my other projects because y'all's code was NOT working.
+
+		SslLoader sslLoader = new SslLoader();
+		sslLoader.loadPath(Paths.get(System.getProperty("java.home"), "lib", "security", "cacerts").toAbsolutePath());
+		sslLoader.loadResource(SSL_STORE_PATH);
+		return sslLoader.create().getSocketFactory();
     }
 }
