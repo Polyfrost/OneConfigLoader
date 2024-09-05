@@ -48,8 +48,6 @@ public class MavenArtifactManager implements ArtifactManager<MavenArtifact, Mave
 	public MavenArtifactManager(XDG.ApplicationStore store, URI repository, RequestHelper requestHelper) {
 		this.store = store;
 		this.repository = repository;
-		System.out.println("Repository: " + repository);
-		System.out.println("Snapshots: " + repository.resolve("test"));
 		this.requestHelper = requestHelper;
 		this.cache = new MavenCachingSolution(store, repository, requestHelper);
 		this.documentBuilderFactory = DocumentBuilderFactory.newInstance();
@@ -129,9 +127,21 @@ public class MavenArtifactManager implements ArtifactManager<MavenArtifact, Mave
 		Path artifactRelativePath = declaration.getRelativePath();
 		Path localArtifactPath = localLibraries.resolve(artifactRelativePath);
 
+		String rawPomPath = artifactRelativePath.toString().replace(declaration.getExtension(), "pom");
+		Path pomPath = localLibraries.resolve(rawPomPath);
+		if (!pomPath.toFile().exists()) {
+			URI remotePom = this.repository.resolve(rawPomPath.replace('\\', '/'));
+
+			try (InputStream inputStream = this.requestHelper.establishConnection(remotePom.toURL()).getInputStream()) {
+				// Ensure parent directories exist
+				Files.createDirectories(pomPath.getParent());
+
+				Files.copy(inputStream, pomPath);
+			}
+		}
+
 		if (!localArtifactPath.toFile().exists()) {
 			URI remoteArtifact = this.repository.resolve(artifactRelativePath.toString().replace('\\', '/'));
-			System.out.println("Remote Artifact: " + remoteArtifact);
 
 			try (InputStream inputStream = this.requestHelper.establishConnection(remoteArtifact.toURL()).getInputStream()) {
 				// Ensure parent directories exist
@@ -141,9 +151,8 @@ public class MavenArtifactManager implements ArtifactManager<MavenArtifact, Mave
 			}
 		}
 
-		try (InputStream inputStream = Files.newInputStream(localArtifactPath)) {
-			System.out.println("Local Artifact Path: " + localArtifactPath);
-			List<MavenArtifactDependency> dependencyList = this.getDependency(inputStream)
+		try (InputStream inputStream = Files.newInputStream(pomPath)) {
+			List<MavenArtifactDependency> dependencyList = this.getDependencies(inputStream)
 					.stream()
 					.map((mavenArtifactDeclaration) -> new MavenArtifactDependency(mavenArtifactDeclaration, Scope.RUNTIME, new ArrayList<>()))
 					.collect(Collectors.toList());
@@ -159,10 +168,8 @@ public class MavenArtifactManager implements ArtifactManager<MavenArtifact, Mave
 		for (String path : paths) {
 			Path metadataPath = Paths.get(declaration.getGroupId().replace('.', '/'), declaration.getArtifactId(), path);
 			URI metadataUri = this.repository.resolve(metadataPath.toString().replace('\\', '/'));
-			System.out.println("Metadata URI: " + metadataUri);
 			try (InputStream inputStream = this.requestHelper.establishConnection(metadataUri.toURL()).getInputStream()) {
 				String latestVersion = this.getLatestVersion(inputStream);
-				System.out.println("Latest Version: " + latestVersion);
 				if (latestVersion != null) {
 					declaration.setActualVersion(latestVersion);
 					return;
@@ -182,7 +189,6 @@ public class MavenArtifactManager implements ArtifactManager<MavenArtifact, Mave
 	@Override
 	public InputStream createArtifactInputStream(MavenArtifact artifact) throws IOException {
 		URI resolved = this.repository.resolve(artifact.getDeclaration().getRelativePath().toString().replace('\\', '/'));
-		System.out.println("Resolved: " + resolved);
 
 		if (!resolved.isAbsolute()) {
 			throw new RuntimeException("Could not createArtifactInputStream from " + resolved);
@@ -211,16 +217,18 @@ public class MavenArtifactManager implements ArtifactManager<MavenArtifact, Mave
 		return latest.getTextContent();
 	}
 
-	private List<MavenArtifactDeclaration> getDependency(InputStream pom) throws ParserConfigurationException, IOException, SAXException {
+	private List<MavenArtifactDeclaration> getDependencies(InputStream pom) throws ParserConfigurationException, IOException, SAXException {
 		DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
 		Document document = documentBuilder.parse(pom);
 		Element documentElement = document.getDocumentElement();
 		Element dependencies = (Element) documentElement.getElementsByTagName("dependencies").item(0);
 		NodeList dependencyList = dependencies.getElementsByTagName("dependency");
+		System.out.println("Found " + dependencyList.getLength() + " dependencies:");
 
 		List<MavenArtifactDeclaration> list = new ArrayList<>();
 		for (int i = 0; i < dependencyList.getLength(); i++) {
 			Element dependency = (Element) dependencyList.item(i);
+			System.out.println("- " + dependency.getElementsByTagName("artifactId").item(0).getTextContent());
 
 			String groupId = dependency.getElementsByTagName("groupId").item(0).getTextContent();
 			String artifactId = dependency.getElementsByTagName("artifactId").item(0).getTextContent();

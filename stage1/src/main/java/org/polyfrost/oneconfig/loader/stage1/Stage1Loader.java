@@ -53,7 +53,6 @@ public class Stage1Loader extends LoaderBase {
 			throw new RuntimeException("oneconfig-repository option is not found in stage1.properties");
 		}
 
-		System.out.println("Repository: " + repository);
 		URI repositoryURI = URI.create(repository);
 		this.artifactManager = new MavenArtifactManager(
 				XDG.provideApplicationStore("OneConfig"),
@@ -93,9 +92,22 @@ public class Stage1Loader extends LoaderBase {
 			}
 
 			if (resolvedArtifact != null) {
+//				resolvedArtifacts.add(resolvedArtifact);
+//				System.out.println("Resolve queue 1: " + resolveQueue);
+//				resolveQueue.addAll(resolvedArtifact.getDependencies().stream().map(ArtifactDependency::getDeclaration).collect(Collectors.toSet()));
+//				System.out.println("Resolve queue 2: " + resolveQueue);
+//				resolveQueue.removeIf(it -> resolvedArtifact.getDependencies().stream().anyMatch(dependency -> it.equals(dependency.getDeclaration())));
+//				System.out.println("Resolve queue 3: " + resolveQueue);
+
 				resolvedArtifacts.add(resolvedArtifact);
-				resolveQueue.addAll(resolvedArtifact.getDependencies().stream().map(ArtifactDependency::getDeclaration).collect(Collectors.toSet()));
-				resolveQueue.removeIf(it -> resolvedArtifact.getDependencies().stream().anyMatch(dependency -> it.equals(dependency.getDeclaration())));
+
+				Set<ArtifactDeclaration> newDependencies = resolvedArtifact
+						.getDependencies()
+						.stream()
+						.map(ArtifactDependency::getDeclaration)
+						.filter(it -> resolvedArtifacts.stream().noneMatch(artifact -> artifact.getDeclaration().equals(it)))
+						.collect(Collectors.toSet());
+				resolveQueue.addAll(newDependencies);
 			}
 		}
 		resolvedArtifacts.forEach(artifact -> checkAndAppendArtifactToClasspath(runtimeAccess, artifact));
@@ -127,9 +139,9 @@ public class Stage1Loader extends LoaderBase {
 
 		try {
 			ClassLoader classLoader = runtimeAccess.getClassLoader();
-			classLoader.loadClass("org.spongepowered.asm.mixin.Mixins")
-					.getDeclaredMethod("addConfigurations", String[].class)
-					.invoke(null, (Object) new String[]{"mixins.oneconfig.json"});
+			//classLoader.loadClass("org.spongepowered.asm.mixin.Mixins")
+			//		.getDeclaredMethod("addConfigurations", String[].class)
+			//		.invoke(null, (Object) new String[]{ "mixins.oneconfig.json" });
 
 			String oneConfigMainClass = this.stage1Properties.getProperty("oneconfig-main-class");
 			if (oneConfigMainClass == null) {
@@ -161,8 +173,16 @@ public class Stage1Loader extends LoaderBase {
 		Path artifactFile = provideLocalArtifactPath(artifact);
 
 		if (!Files.exists(artifactFile)) {
+			try {
+				Files.createDirectories(artifactFile.getParent());
+			} catch (IOException e) {
+				logger.fatal("Could not create directories for artifact {}", artifact.getDeclaration(), e);
+				ErrorHandler.displayError(this, "Error while creating directories for artifact: " + artifact.getDeclaration());
+				return;
+			}
+
 			try (InputStream inputStream = this.artifactManager.createArtifactInputStream(artifact)) {
-				Files.copy(inputStream, provideLocalArtifactPath(artifact));
+				Files.copy(inputStream, artifactFile);
 			} catch (IOException e) {
 				logger.fatal("Could not download artifact {}", artifact.getDeclaration(), e);
 				ErrorHandler.displayError(this, "Error while downloading artifact: " + artifact.getDeclaration());

@@ -87,8 +87,6 @@ public class RequestHelper {
     }
 
     public URLConnection establishConnection(URL url, String requestedType) throws IOException {
-		System.out.println("Creating connection to " + url);
-
         URLConnection connection = url.openConnection();
         if (connection instanceof HttpsURLConnection) {
             ((HttpsURLConnection) connection).setSSLSocketFactory(
