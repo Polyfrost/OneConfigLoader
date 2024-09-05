@@ -17,7 +17,6 @@ import lombok.SneakyThrows;
 import org.polyfrost.oneconfig.loader.base.Capabilities;
 import org.polyfrost.oneconfig.loader.base.LoaderBase;
 import org.polyfrost.oneconfig.loader.stage1.dependency.ArtifactManager;
-import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactDependency;
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactManager;
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.Artifact;
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;

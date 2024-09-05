@@ -3,10 +3,7 @@ package org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-import lombok.AllArgsConstructor;
 import lombok.Data;
-
-import lombok.Getter;
 
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;
 
@@ -14,23 +11,26 @@ import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaratio
  * @author xtrm
  * @since 1.1.0
  */
-@AllArgsConstructor
 public @Data class MavenArtifactDeclaration implements ArtifactDeclaration {
-	@Getter
 	private final String groupId;
-	@Getter
 	private final String artifactId;
-	@Getter
 	private final String version;
+	private String actualVersion;
     private final String classifier;
-	@Getter
     private final String extension;
 
-    @Override
+	public String getVersion() {
+		if (actualVersion == null) {
+			return version;
+		}
+		return actualVersion;
+	}
+
+	@Override
     public String getDeclaration() {
         return String.format(
                 "%s:%s:%s",
-                groupId, artifactId, version
+                groupId, artifactId, actualVersion
         ) + (classifier == null ? "" : ":" + classifier)
                 + (extension == null ? "" : "@" + extension);
     }
@@ -40,14 +40,14 @@ public @Data class MavenArtifactDeclaration implements ArtifactDeclaration {
         return Paths.get(
                 groupId.replace('.', '/'),
                 artifactId,
-                version,
+                actualVersion,
                 getFileName()
         );
     }
 
     @Override
     public String getFileName() {
-        return artifactId + "-" + version
+        return artifactId + "-" + actualVersion
                 + (classifier == null ? "" : "-" + classifier)
                 + "." + (extension == null ? "jar" : extension);
     }

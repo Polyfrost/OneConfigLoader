@@ -5,11 +5,14 @@ import java.util.List;
 /**
  * A resolved declaration of an artifact, with its hard-referenced dependencies and other properties.
  *
+ * @param <T> the declaration type
+ * @param <S> the dependency type
+ *
  * @author xtrm
  * @since 1.1.0
  */
-public interface Artifact<DECLARATION extends ArtifactDeclaration, DEPENDENCY extends ArtifactDependency> {
-	DECLARATION getDeclaration();
+public interface Artifact<T extends ArtifactDeclaration, S extends ArtifactDependency> {
+	T getDeclaration();
 
-	List<DEPENDENCY> getDependencies();
+	List<S> getDependencies();
 }

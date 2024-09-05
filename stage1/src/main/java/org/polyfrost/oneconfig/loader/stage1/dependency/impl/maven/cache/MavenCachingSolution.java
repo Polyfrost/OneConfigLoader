@@ -1,16 +1,17 @@
 package org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.cache;
 
-import lombok.RequiredArgsConstructor;
-import org.polyfrost.oneconfig.loader.stage1.dependency.cache.CachingSolution;
-import org.polyfrost.oneconfig.loader.utils.RequestHelper;
-import org.polyfrost.oneconfig.loader.utils.XDG;
-
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Path;
+
+import lombok.RequiredArgsConstructor;
+
+import org.polyfrost.oneconfig.loader.stage1.dependency.cache.CachingSolution;
+import org.polyfrost.oneconfig.loader.utils.RequestHelper;
+import org.polyfrost.oneconfig.loader.utils.XDG;
 
 /**
  * @author xtrm
@@ -19,9 +20,9 @@ import java.nio.file.Path;
 @RequiredArgsConstructor
 public class MavenCachingSolution implements CachingSolution {
     private static final String[] CHECKSUM_EXT = new String[]{"sha512", "sha256", "sha1", "md5"};
-    private final RequestHelper requestHelper;
     private final XDG.ApplicationStore store;
     private final URI remoteUrl;
+	private final RequestHelper requestHelper;
 
     @Override
     public boolean canBeCached(Path path) {
