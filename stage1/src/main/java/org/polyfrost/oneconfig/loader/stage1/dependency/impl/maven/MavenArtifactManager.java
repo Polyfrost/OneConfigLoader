@@ -276,7 +276,7 @@ public class MavenArtifactManager implements ArtifactManager<MavenArtifact, Mave
 					log.warn("Snapshot version {} in {} @ {}", snapshotVersion, path, repository);
 					if (snapshotVersion != null) {
 						declaration.setSnapshot(true);
-						declaration.setSnapshotVersion(declaration.getVersion().replace("-SNAPSHOT", snapshotVersion));
+						declaration.setSnapshotVersion(declaration.getVersion().replace("SNAPSHOT", snapshotVersion));
 
 						return;
 					}
