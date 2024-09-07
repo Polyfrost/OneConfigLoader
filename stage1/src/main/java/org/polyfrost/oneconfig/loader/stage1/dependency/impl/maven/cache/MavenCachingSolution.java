@@ -21,7 +21,7 @@ import org.polyfrost.oneconfig.loader.utils.XDG;
 public class MavenCachingSolution implements CachingSolution {
     private static final String[] CHECKSUM_EXT = new String[]{"sha512", "sha256", "sha1", "md5"};
     private final XDG.ApplicationStore store;
-    private final URI remoteUrl;
+    private final URI[] remoteUrls;
 	private final RequestHelper requestHelper;
 
     @Override
@@ -30,22 +30,27 @@ public class MavenCachingSolution implements CachingSolution {
         if (!fileName.endsWith(".pom") && !fileName.endsWith(".jar")) {
             return false;
         }
+
         // check on the remote server if any signature file exist
-        for (String checksumExtension : CHECKSUM_EXT) {
-            Path checksumPath = path.resolveSibling(fileName + "." + checksumExtension);
-            URI checksumUri = remoteUrl.resolve(checksumPath.toString());
-            // if the checksum file exists, then the file can be cached
-            URL url;
-            try {
-                url = checksumUri.toURL();
-            } catch (Exception e) {
-                continue;
-            }
-            if (urlExists(url)) {
-                System.out.println("File " + path + " can be cached (found " + url + ")");
-                return true;
-            }
-        }
+		for (URI remoteUrl : remoteUrls) {
+			for (String checksumExtension : CHECKSUM_EXT) {
+				Path checksumPath = path.resolveSibling(fileName + "." + checksumExtension);
+				URI checksumUri = remoteUrl.resolve(checksumPath.toString());
+				// if the checksum file exists, then the file can be cached
+				URL url;
+				try {
+					url = checksumUri.toURL();
+				} catch (Exception e) {
+					continue;
+				}
+
+				if (urlExists(url)) {
+					System.out.println("File " + path + " can be cached (found " + url + ")");
+					return true;
+				}
+			}
+		}
+
         System.out.println("File " + path + " cannot be cached");
         return false;
     }

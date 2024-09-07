@@ -7,12 +7,15 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 import lombok.SneakyThrows;
+
+import lombok.extern.log4j.Log4j2;
 
 import org.polyfrost.oneconfig.loader.base.Capabilities;
 import org.polyfrost.oneconfig.loader.base.LoaderBase;
@@ -28,6 +31,7 @@ import org.polyfrost.oneconfig.loader.utils.XDG;
  * @author xtrm
  * @since 1.1.0
  */
+@Log4j2
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class Stage1Loader extends LoaderBase {
 	private static final String PROPERTIES_FILE_PATH = "/assets/oneconfig-loader/metadata/stage1.properties";
@@ -48,16 +52,23 @@ public class Stage1Loader extends LoaderBase {
 			throw new UncheckedIOException(e);
 		}
 
-		String repository = this.stage1Properties.getProperty("oneconfig-repository");
-		if (repository == null) {
-			throw new RuntimeException("oneconfig-repository option is not found in stage1.properties");
+		String rawRepositories = this.stage1Properties.getProperty("oneconfig-repositories");
+		if (rawRepositories == null) {
+			throw new RuntimeException("oneconfig-repositories option is not found in stage1.properties");
 		}
 
-		URI repositoryURI = URI.create(repository);
+		URI[] repositories = Arrays.stream(rawRepositories.split(",")).map(rawRepository -> {
+			// If the repository does not end with a slash, add it
+			if (!rawRepository.endsWith("/")) {
+				rawRepository += "/";
+			}
+
+			return URI.create(rawRepository);
+		}).distinct().toArray(URI[]::new);
 		this.artifactManager = new MavenArtifactManager(
 				XDG.provideApplicationStore("OneConfig"),
-				repositoryURI,
-				getRequestHelper()
+				getRequestHelper(),
+				repositories
 		);
 	}
 
@@ -71,6 +82,7 @@ public class Stage1Loader extends LoaderBase {
 		if (oneConfigVersion == null) {
 			throw new RuntimeException("oneconfig-version option is not found in stage1.properties");
 		}
+
 		String targetSpecifier = gameMetadata.getTargetSpecifier();
 
 		// Fetch oneConfig version info
@@ -87,6 +99,7 @@ public class Stage1Loader extends LoaderBase {
 
 			try {
 				resolvedArtifact = this.artifactManager.resolveArtifact(artifactDeclaration);
+				log.warn("Resolved: {}", resolvedArtifact);
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
@@ -100,41 +113,18 @@ public class Stage1Loader extends LoaderBase {
 						.map(ArtifactDependency::getDeclaration)
 						.filter(it -> resolvedArtifacts.stream().noneMatch(artifact -> artifact.getDeclaration().equals(it)))
 						.collect(Collectors.toSet());
+				log.warn("New dependencies: {}", newDependencies);
 				resolveQueue.addAll(newDependencies);
 			}
 		}
-		resolvedArtifacts.forEach(artifact -> checkAndAppendArtifactToClasspath(runtimeAccess, artifact));
 
-////		// Download to cache
-////		checkAndAppendArtifactToClasspath(runtimeAccess, oneConfigDeclaration);
-//
-//		Artifact mavenArtifactDeclaration;
-//		try {
-//			mavenArtifactDeclaration = this.artifactManager.resolveArtifact(oneConfigDeclaration);
-//		} catch (Exception e) {
-//			logger.fatal("Could not resolve artifact {}", oneConfigDeclaration.getDeclaration(), e);
-//			ErrorHandler.displayError(this, "Error while resolving artifact: " + oneConfigDeclaration.getDeclaration());
-//			return;
-//		}
-//		try {
-//			mavenArtifactDeclaration.resolveDependencies(this.artifactManager);
-//		} catch (Exception e) {
-//			logger.fatal("Could not resolve dependencies", e);
-//			ErrorHandler.displayError(this, "Error while resolving dependencies");
-//			return;
-//		}
-//
-//		mavenArtifactDeclaration
-//				.getDependencies()
-//				.stream()
-//				.flatMap((dependency) -> dependency.getDeclaration().getDependencies().stream())
-//				.forEach((dependency) -> checkAndAppendArtifactToClasspath(runtimeAccess, dependency.getDeclaration().getArtifact()));
+		resolvedArtifacts.forEach(artifact -> checkAndAppendArtifactToClasspath(runtimeAccess, artifact));
 
 		try {
 			ClassLoader classLoader = runtimeAccess.getClassLoader();
-			//classLoader.loadClass("org.spongepowered.asm.mixin.Mixins")
-			//		.getDeclaredMethod("addConfigurations", String[].class)
-			//		.invoke(null, (Object) new String[]{ "mixins.oneconfig.json" });
+			classLoader.loadClass("org.spongepowered.asm.mixin.Mixins")
+					.getDeclaredMethod("addConfigurations", String[].class)
+					.invoke(null, (Object) new String[]{ "mixins.oneconfig.json" });
 
 			String oneConfigMainClass = this.stage1Properties.getProperty("oneconfig-main-class");
 			if (oneConfigMainClass == null) {
@@ -142,9 +132,8 @@ public class Stage1Loader extends LoaderBase {
 			}
 
 			classLoader.loadClass(oneConfigMainClass)
-					// TODO: CHANGE PARAMETER
 					.getDeclaredMethod("init")
-					.invoke(capabilities);
+					.invoke(null);
 		} catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException |
 				 IllegalAccessException e) {
 			throw new RuntimeException(e);

@@ -1,33 +1,46 @@
 package org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-
 import lombok.Data;
 
+import lombok.Getter;
+
+import lombok.RequiredArgsConstructor;
+
+import lombok.Setter;
+
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Objects;
 
 /**
  * @author xtrm
  * @since 1.1.0
  */
-public @Data class MavenArtifactDeclaration implements ArtifactDeclaration {
+@Getter
+@RequiredArgsConstructor
+public class MavenArtifactDeclaration implements ArtifactDeclaration {
+
+	@Setter
+	private boolean isSnapshot = false;
+
+	@Setter
+	private String snapshotVersion;
+
+	@Setter
+	private String actualVersion;
+
 	private final String groupId;
 	private final String artifactId;
 	private final String version;
-	private String actualVersion;
     private final String classifier;
     private final String extension;
 
-	public String getVersion() {
-		if (actualVersion == null) {
-			return version;
-		}
-		return actualVersion;
-	}
-
 	@Override
     public String getDeclaration() {
+		ensureVersion();
+
 		StringBuilder builder = new StringBuilder();
 		builder.append(groupId).append(":").append(artifactId).append(":").append(actualVersion);
 
@@ -42,21 +55,64 @@ public @Data class MavenArtifactDeclaration implements ArtifactDeclaration {
 		return builder.toString();
     }
 
-    @Override
-    public Path getRelativePath() {
-        return Paths.get(
-                groupId.replace('.', '/'),
-                artifactId,
-                actualVersion,
-                getFileName()
-        );
-    }
+	public Path getRelativePath() {
+		ensureVersion();
 
-    @Override
+		System.out.println("groupId: " + groupId);
+		System.out.println("artifactId: " + artifactId);
+		System.out.println("actualVersion: " + actualVersion);
+		System.out.println("getFileName: " + getFileName());
+		return Paths.get(
+				groupId.replace('.', '/'),
+				artifactId,
+				actualVersion,
+				getFileName()
+		);
+	}
+
+	@Override
     public String getFileName() {
-        return artifactId + "-" + actualVersion
-                + (classifier == null ? "" : "-" + classifier)
-                + "." + (extension == null ? "jar" : extension);
+		ensureVersion();
+
+		StringBuilder builder = new StringBuilder();
+		builder.append(artifactId).append("-");
+
+		if (isSnapshot) {
+			builder.append(snapshotVersion);
+		} else {
+			builder.append(actualVersion);
+		}
+
+		if (classifier != null) {
+			builder.append("-").append(classifier);
+		}
+
+		if (extension != null) {
+			builder.append(".").append(extension);
+		} else {
+			builder.append(".jar");
+		}
+
+		return builder.toString();
     }
 
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) return true;
+		if (o == null || getClass() != o.getClass()) return false;
+		MavenArtifactDeclaration that = (MavenArtifactDeclaration) o;
+		ensureVersion();
+		return Objects.equals(groupId, that.groupId) && Objects.equals(artifactId, that.artifactId) && Objects.equals(actualVersion, that.actualVersion) && Objects.equals(classifier, that.classifier) && Objects.equals(extension, that.extension);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(groupId, artifactId, version, classifier, extension);
+	}
+
+	private void ensureVersion() {
+		if (actualVersion == null) {
+			actualVersion = !isSnapshot ? version : snapshotVersion;
+		}
+	}
 }

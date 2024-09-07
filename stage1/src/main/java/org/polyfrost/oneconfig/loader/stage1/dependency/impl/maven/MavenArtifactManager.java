@@ -1,5 +1,7 @@
 package org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,6 +22,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
 import lombok.Getter;
+import lombok.extern.log4j.Log4j2;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -37,19 +40,26 @@ import org.polyfrost.oneconfig.loader.utils.XDG;
  * @since 1.1.0
  */
 @Getter
+@Log4j2
 public class MavenArtifactManager implements ArtifactManager<MavenArtifact, MavenArtifactDeclaration> {
+
+	private static final String[] MAVEN_METADATA_NAMES = new String[] {
+			"maven-metadata-local.xml",
+			"maven-metadata.xml",
+	};
+
 	private final XDG.ApplicationStore store;
-	private final URI repository;
+	private final URI[] repositories;
 	private final RequestHelper requestHelper;
 	private final CachingSolution cache;
 
 	private final DocumentBuilderFactory documentBuilderFactory;
 
-	public MavenArtifactManager(XDG.ApplicationStore store, URI repository, RequestHelper requestHelper) {
+	public MavenArtifactManager(XDG.ApplicationStore store, RequestHelper requestHelper, URI... repositories) {
 		this.store = store;
-		this.repository = repository;
 		this.requestHelper = requestHelper;
-		this.cache = new MavenCachingSolution(store, repository, requestHelper);
+		this.repositories = repositories;
+		this.cache = new MavenCachingSolution(store, this.repositories, requestHelper);
 		this.documentBuilderFactory = DocumentBuilderFactory.newInstance();
 		try {
 			this.documentBuilderFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true);
@@ -120,6 +130,9 @@ public class MavenArtifactManager implements ArtifactManager<MavenArtifact, Mave
 
 		if (declaration.getVersion().equals("+")) {
 			resolveLatestVersion(declaration);
+		} else if (declaration.getVersion().endsWith("-SNAPSHOT")) {
+			log.warn("Resolving snapshot version for {}", declaration.getDeclaration());
+			resolveSnapshotVersion(declaration);
 		} else {
 			declaration.setActualVersion(declaration.getVersion());
 		}
@@ -129,73 +142,180 @@ public class MavenArtifactManager implements ArtifactManager<MavenArtifact, Mave
 
 		String rawPomPath = artifactRelativePath.toString().replace(declaration.getExtension(), "pom");
 		Path pomPath = localLibraries.resolve(rawPomPath);
-		if (!pomPath.toFile().exists()) {
-			URI remotePom = this.repository.resolve(rawPomPath.replace('\\', '/'));
+		for (URI repository : repositories) {
+			if (!pomPath.toFile().exists()) {
+				URI remotePom = repository.resolve(rawPomPath.replace('\\', '/'));
 
-			try (InputStream inputStream = this.requestHelper.establishConnection(remotePom.toURL()).getInputStream()) {
-				// Ensure parent directories exist
-				Files.createDirectories(pomPath.getParent());
+				try (InputStream inputStream = this.requestHelper.establishConnection(remotePom.toURL()).getInputStream()) {
+					// Ensure parent directories exist
+					Files.createDirectories(pomPath.getParent());
 
-				Files.copy(inputStream, pomPath);
+					Files.copy(inputStream, pomPath);
+				} catch (Throwable t) {
+					// If we can't find the POM, we can't find the artifact
+
+					t.printStackTrace();
+
+					continue;
+				}
+			}
+
+			if (!localArtifactPath.toFile().exists()) {
+				URI remoteArtifact = repository.resolve(artifactRelativePath.toString().replace('\\', '/'));
+
+				try (InputStream inputStream = this.requestHelper.establishConnection(remoteArtifact.toURL()).getInputStream()) {
+					// Ensure parent directories exist
+					Files.createDirectories(localArtifactPath.getParent());
+
+					Files.copy(inputStream, localArtifactPath);
+				} catch (Throwable t) {
+					// If we can't find the artifact, this might be a BOM or something. Simply warn and move on
+					log.warn("Could not find artifact {} at {}", declaration.getDeclaration(), remoteArtifact);
+				}
+			}
+
+			try (InputStream inputStream = Files.newInputStream(pomPath)) {
+				List<MavenArtifactDependency> dependencyList = this.getDependencies(inputStream)
+						.stream()
+						.map((mavenArtifactDeclaration) -> new MavenArtifactDependency(mavenArtifactDeclaration, Scope.RUNTIME, new ArrayList<>()))
+						.collect(Collectors.toList());
+				return new MavenArtifact(declaration, dependencyList);
+			} catch (Throwable t) {
+				// If we can't find the dependencies, we can't find the artifact
+				t.printStackTrace();
 			}
 		}
 
-		if (!localArtifactPath.toFile().exists()) {
-			URI remoteArtifact = this.repository.resolve(artifactRelativePath.toString().replace('\\', '/'));
+		throw new RuntimeException("Could not resolve artifact " + declaration.getDeclaration());
+	}
 
-			try (InputStream inputStream = this.requestHelper.establishConnection(remoteArtifact.toURL()).getInputStream()) {
-				// Ensure parent directories exist
-				Files.createDirectories(localArtifactPath.getParent());
-
-				Files.copy(inputStream, localArtifactPath);
+	private String getLatestVersion(InputStream mavenMetadata) throws ParserConfigurationException, IOException, SAXException {
+		try {
+			DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			Document document = documentBuilder.parse(mavenMetadata);
+			Element documentElement = document.getDocumentElement();
+			Element versioning = (Element) documentElement.getElementsByTagName("versioning").item(0);
+			if (versioning == null) {
+				return null;
 			}
-		}
 
-		try (InputStream inputStream = Files.newInputStream(pomPath)) {
-			List<MavenArtifactDependency> dependencyList = this.getDependencies(inputStream)
-					.stream()
-					.map((mavenArtifactDeclaration) -> new MavenArtifactDependency(mavenArtifactDeclaration, Scope.RUNTIME, new ArrayList<>()))
-					.collect(Collectors.toList());
-			return new MavenArtifact(declaration, dependencyList);
+			Element latest = (Element) versioning.getElementsByTagName("latest").item(0);
+			if (latest == null) {
+				return null;
+			}
+
+			return latest.getTextContent();
+		} catch (Throwable t) {
+			return null;
+		}
+	}
+
+	private String getSnapshotVersion(InputStream mavenMetadata) throws ParserConfigurationException, IOException, SAXException {
+		try {
+			DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			Document document = documentBuilder.parse(mavenMetadata);
+			Element versioning = (Element) document.getElementsByTagName("versioning").item(0);
+			if (versioning == null) {
+				return null;
+			}
+
+			Element snapshot = (Element) versioning.getElementsByTagName("snapshot").item(0);
+			if (snapshot == null) {
+				return null;
+			}
+
+			Element timestamp = (Element) snapshot.getElementsByTagName("timestamp").item(0);
+			if (timestamp == null) {
+				return null;
+			}
+
+			Element buildNumber = (Element) snapshot.getElementsByTagName("buildNumber").item(0);
+			if (buildNumber == null) {
+				return null;
+			}
+
+			return timestamp.getTextContent() + "-" + buildNumber.getTextContent();
+		} catch (Throwable t) {
+			return null;
 		}
 	}
 
 	private void resolveLatestVersion(MavenArtifactDeclaration declaration) {
-		String[] paths = new String[]{
-				"maven-metadata-local.xml",
-				"maven-metadata.xml",
-		};
-		for (String path : paths) {
-			Path metadataPath = Paths.get(declaration.getGroupId().replace('.', '/'), declaration.getArtifactId(), path);
-			URI metadataUri = this.repository.resolve(metadataPath.toString().replace('\\', '/'));
-			try (InputStream inputStream = this.requestHelper.establishConnection(metadataUri.toURL()).getInputStream()) {
-				String latestVersion = this.getLatestVersion(inputStream);
-				if (latestVersion != null) {
-					declaration.setActualVersion(latestVersion);
-					return;
+		for (URI repository : repositories) {
+			for (String path : MAVEN_METADATA_NAMES) {
+				Path metadataPath = Paths.get(declaration.getGroupId().replace('.', '/'), declaration.getArtifactId(), path);
+				URI metadataUri = repository.resolve(metadataPath.toString().replace('\\', '/'));
+				try (InputStream inputStream = this.requestHelper.establishConnection(metadataUri.toURL()).getInputStream()) {
+					String latestVersion = this.getLatestVersion(inputStream);
+					if (latestVersion != null) {
+						declaration.setActualVersion(latestVersion);
+						return;
+					}
+				} catch (IOException | ParserConfigurationException | SAXException e) {
+					// Ignore if this is a FileNotFoundException since we check multiple paths
+					if (e instanceof FileNotFoundException) {
+						continue;
+					}
+
+					throw new RuntimeException("Error while parsing the latest version of " + declaration.getDeclaration(), e);
 				}
-			} catch (IOException | ParserConfigurationException | SAXException e) {
+			}
+		}
+
+		throw new RuntimeException("Could not resolve latest version of " + declaration.getDeclaration());
+	}
+
+	private void resolveSnapshotVersion(MavenArtifactDeclaration declaration) {
+		for (URI repository : repositories) {
+			for (String path : MAVEN_METADATA_NAMES) {
+				Path metadataPath = Paths.get(declaration.getGroupId().replace('.', '/'), declaration.getArtifactId(), declaration.getVersion(), path);
+				URI metadataUri = repository.resolve(metadataPath.toString().replace('\\', '/'));
+				try (InputStream inputStream = this.requestHelper.establishConnection(metadataUri.toURL()).getInputStream()) {
+					log.error(metadataUri);
+					String snapshotVersion = this.getSnapshotVersion(inputStream);
+					log.warn("Snapshot version {} in {} @ {}", snapshotVersion, path, repository);
+					if (snapshotVersion != null) {
+						declaration.setSnapshot(true);
+						declaration.setSnapshotVersion(declaration.getVersion().replace("-SNAPSHOT", snapshotVersion));
+
+						return;
+					}
+				} catch (IOException | ParserConfigurationException | SAXException e) {
+					// Ignore if this is a FileNotFoundException since we check multiple paths
+					if (e instanceof FileNotFoundException) {
+						continue;
+					}
+
+					throw new RuntimeException("Error while parsing the snapshot version of " + declaration.getDeclaration(), e);
+				}
+			}
+		}
+
+		throw new RuntimeException("Could not resolve snapshot version of " + declaration.getDeclaration());
+	}
+
+	@Override
+	public InputStream createArtifactInputStream(MavenArtifact artifact) {
+		for (URI repository : repositories) {
+			try {
+				URI resolved = repository.resolve(artifact.getDeclaration().getRelativePath().toString().replace('\\', '/'));
+				if (!resolved.isAbsolute()) {
+					throw new RuntimeException("Could not createArtifactInputStream from " + resolved);
+				}
+
+				URLConnection connection = this.requestHelper.establishConnection(resolved.toURL());
+				return connection.getInputStream();
+			} catch (IOException e) {
 				// Ignore if this is a FileNotFoundException since we check multiple paths
 				if (e instanceof FileNotFoundException) {
 					continue;
 				}
 
-				throw new RuntimeException("Error while parsing the latest version of " + declaration.getDeclaration(), e);
+				throw new RuntimeException("Error while creating input stream for " + artifact.getDeclaration(), e);
 			}
 		}
-		throw new RuntimeException("Could not resolve latest version of " + declaration.getDeclaration());
-	}
 
-	@Override
-	public InputStream createArtifactInputStream(MavenArtifact artifact) throws IOException {
-		URI resolved = this.repository.resolve(artifact.getDeclaration().getRelativePath().toString().replace('\\', '/'));
-
-		if (!resolved.isAbsolute()) {
-			throw new RuntimeException("Could not createArtifactInputStream from " + resolved);
-		}
-
-		URLConnection connection = this.requestHelper.establishConnection(resolved.toURL());
-		return connection.getInputStream();
+		throw new RuntimeException("Could not create input stream for " + artifact.getDeclaration());
 	}
 
 	@Override
@@ -208,42 +328,67 @@ public class MavenArtifactManager implements ArtifactManager<MavenArtifact, Mave
 		return MavenArtifactDeclaration.class;
 	}
 
-	private String getLatestVersion(InputStream mavenMetadata) throws ParserConfigurationException, IOException, SAXException {
-		DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-		Document document = documentBuilder.parse(mavenMetadata);
-		Element documentElement = document.getDocumentElement();
-		Element versioning = (Element) documentElement.getElementsByTagName("versioning").item(0);
-		Element latest = (Element) versioning.getElementsByTagName("latest").item(0);
-		return latest.getTextContent();
-	}
+	private List<MavenArtifactDeclaration> getDependencies(InputStream inputStream) throws ParserConfigurationException, IOException, SAXException {
+		ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+		{
+			byte[] buffer = new byte[1024];
+			int read;
+			while ((read = inputStream.read(buffer)) != -1) {
+				byteStream.write(buffer, 0, read);
+			}
 
-	private List<MavenArtifactDeclaration> getDependencies(InputStream pom) throws ParserConfigurationException, IOException, SAXException {
-		DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
-		Document document = documentBuilder.parse(pom);
-		Element documentElement = document.getDocumentElement();
-		Element dependencies = (Element) documentElement.getElementsByTagName("dependencies").item(0);
-		NodeList dependencyList = dependencies.getElementsByTagName("dependency");
-		System.out.println("Found " + dependencyList.getLength() + " dependencies:");
-
-		List<MavenArtifactDeclaration> list = new ArrayList<>();
-		for (int i = 0; i < dependencyList.getLength(); i++) {
-			Element dependency = (Element) dependencyList.item(i);
-			System.out.println("- " + dependency.getElementsByTagName("artifactId").item(0).getTextContent());
-
-			String groupId = dependency.getElementsByTagName("groupId").item(0).getTextContent();
-			String artifactId = dependency.getElementsByTagName("artifactId").item(0).getTextContent();
-			String version = dependency.getElementsByTagName("version").item(0).getTextContent();
-
-			list.add(
-					new MavenArtifactDeclaration(
-							groupId,
-							artifactId,
-							version,
-							null,
-							".jar"
-					)
-			);
+			byteStream.flush();
+			inputStream.close();
 		}
-		return list;
+
+		try {
+			InputStream pomStream = new ByteArrayInputStream(byteStream.toByteArray());
+
+			DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
+			Document document = documentBuilder.parse(pomStream);
+			Element documentElement = document.getDocumentElement();
+			Element dependencies = (Element) documentElement.getElementsByTagName("dependencies").item(0);
+			if (dependencies == null) {
+				return new ArrayList<>();
+			}
+
+			NodeList dependencyList = dependencies.getElementsByTagName("dependency");
+			log.error("Found {} dependencies:", dependencyList.getLength());
+
+			List<MavenArtifactDeclaration> list = new ArrayList<>();
+			for (int i = 0; i < dependencyList.getLength(); i++) {
+				Element dependency = (Element) dependencyList.item(i);
+				log.error("- {}", dependency.getElementsByTagName("artifactId").item(0).getTextContent());
+
+				String groupId = dependency.getElementsByTagName("groupId").item(0).getTextContent();
+				String artifactId = dependency.getElementsByTagName("artifactId").item(0).getTextContent();
+				String version = dependency.getElementsByTagName("version").item(0).getTextContent();
+
+				list.add(
+						new MavenArtifactDeclaration(
+								groupId,
+								artifactId,
+								version,
+								null,
+								"jar"
+						)
+				);
+			}
+
+			return list;
+		} catch (Throwable t) {
+			t.printStackTrace();
+
+			// Print out the POM file using log4j2
+			try (InputStream pomStream = new ByteArrayInputStream(byteStream.toByteArray())) {
+				byte[] buffer = new byte[1024];
+				int read;
+				while ((read = pomStream.read(buffer)) != -1) {
+					log.error(new String(buffer, 0, read));
+				}
+			}
+
+			throw t;
+		}
 	}
 }
