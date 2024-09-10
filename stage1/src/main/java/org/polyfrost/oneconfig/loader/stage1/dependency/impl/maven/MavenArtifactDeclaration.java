@@ -58,10 +58,6 @@ public class MavenArtifactDeclaration implements ArtifactDeclaration {
 	public Path getRelativePath() {
 		ensureVersion();
 
-		System.out.println("groupId: " + groupId);
-		System.out.println("artifactId: " + artifactId);
-		System.out.println("actualVersion: " + actualVersion);
-		System.out.println("getFileName: " + getFileName());
 		return Paths.get(
 				groupId.replace('.', '/'),
 				artifactId,
@@ -108,6 +104,11 @@ public class MavenArtifactDeclaration implements ArtifactDeclaration {
 	@Override
 	public int hashCode() {
 		return Objects.hash(groupId, artifactId, version, classifier, extension);
+	}
+
+	@Override
+	public String toString() {
+		return getDeclaration();
 	}
 
 	private void ensureVersion() {

@@ -1,11 +1,12 @@
 package org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven;
 
+import lombok.Data;
 import lombok.Getter;
 
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.DependencyExclusion;
 
 @Getter
-public class MavenDependencyExclusion implements DependencyExclusion<MavenArtifact> {
+public @Data class MavenDependencyExclusion implements DependencyExclusion<MavenArtifact> {
     private final String groupId;
     private final String artifactId;
 

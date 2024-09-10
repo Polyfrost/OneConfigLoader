@@ -6,6 +6,7 @@ import java.util.Map;
 
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.Artifact;
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;
+import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactResolver;
 
 /**
  * @param <A> {@link Artifact} type
@@ -14,12 +15,10 @@ import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaratio
  * @author xtrm
  * @since 1.1.0
  */
-public interface ArtifactManager<A extends Artifact, D extends ArtifactDeclaration> {
+public interface ArtifactManager<A extends Artifact<?, ?>, D extends ArtifactDeclaration, R extends ArtifactResolver<A, D>> {
+	R getArtifactResolver();
+
     D buildArtifactDeclaration(String stringDeclaration);
-
-    D buildArtifactDeclaration(Map<String, String> elements);
-
-    A resolveArtifact(D declaration) throws Exception;
 
 	InputStream createArtifactInputStream(A artifact) throws IOException;
 

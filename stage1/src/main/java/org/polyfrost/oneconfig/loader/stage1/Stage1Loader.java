@@ -98,8 +98,7 @@ public class Stage1Loader extends LoaderBase {
 			Artifact<ArtifactDeclaration, ArtifactDependency> resolvedArtifact;
 
 			try {
-				resolvedArtifact = this.artifactManager.resolveArtifact(artifactDeclaration);
-				log.warn("Resolved: {}", resolvedArtifact);
+				resolvedArtifact = this.artifactManager.getArtifactResolver().resolveArtifact(artifactDeclaration);
 			} catch (Exception e) {
 				throw new RuntimeException(e);
 			}
@@ -113,19 +112,19 @@ public class Stage1Loader extends LoaderBase {
 						.map(ArtifactDependency::getDeclaration)
 						.filter(it -> resolvedArtifacts.stream().noneMatch(artifact -> artifact.getDeclaration().equals(it)))
 						.collect(Collectors.toSet());
-				log.warn("New dependencies: {}", newDependencies);
+				log.info("Resolved artifact {} with dependencies {}", resolvedArtifact, newDependencies);
 				resolveQueue.addAll(newDependencies);
+			} else {
+				logger.warn("Could not resolve artifact {}", artifactDeclaration);
 			}
 		}
+
+		log.info("Found {} artifacts to load", resolvedArtifacts.size());
 
 		resolvedArtifacts.forEach(artifact -> checkAndAppendArtifactToClasspath(runtimeAccess, artifact));
 
 		try {
 			ClassLoader classLoader = runtimeAccess.getClassLoader();
-			classLoader.loadClass("org.spongepowered.asm.mixin.Mixins")
-					.getDeclaredMethod("addConfigurations", String[].class)
-					.invoke(null, (Object) new String[]{ "mixins.oneconfig.json" });
-
 			String oneConfigMainClass = this.stage1Properties.getProperty("oneconfig-main-class");
 			if (oneConfigMainClass == null) {
 				throw new RuntimeException("oneconfig-main-class option is not found in stage1.properties");
@@ -172,6 +171,7 @@ public class Stage1Loader extends LoaderBase {
 		}
 
 		try {
+			logger.info("Appending artifact {} to class path", artifact.getDeclaration());
 			runtimeAccess.appendToClassPath(false, artifactFile.toUri().toURL());
 		} catch (IOException e) {
 			throw new RuntimeException("Failed to append artifact to class path", e);
