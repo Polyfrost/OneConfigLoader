@@ -5,6 +5,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URLConnection;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.regex.Pattern;
 
 import lombok.Getter;
@@ -89,26 +91,20 @@ public class MavenArtifactManager implements ArtifactManager<MavenArtifact, Mave
 
 	@Override
 	public InputStream createArtifactInputStream(MavenArtifact artifact) {
-		for (URI repository : repositories) {
+		Path dataDir = this.store.getDataDir();
+		Path localLibraries = dataDir.resolve("libraries");
+		Path artifactRelativePath = artifact.getDeclaration().getRelativePath();
+		Path localArtifactPath = localLibraries.resolve(artifactRelativePath);
+
+		if (Files.exists(localArtifactPath)) {
 			try {
-				URI resolved = repository.resolve(FileUtils.encodePath(artifact.getDeclaration().getRelativePath().toString().replace('\\', '/')));
-				if (!resolved.isAbsolute()) {
-					throw new RuntimeException("Could not createArtifactInputStream from " + resolved);
-				}
-
-				URLConnection connection = this.requestHelper.establishConnection(resolved.toURL());
-				return connection.getInputStream();
+				return Files.newInputStream(localArtifactPath);
 			} catch (IOException e) {
-				// Ignore if this is a FileNotFoundException since we check multiple paths
-				if (e instanceof FileNotFoundException) {
-					continue;
-				}
-
-				throw new RuntimeException("Error while creating input stream for " + artifact.getDeclaration(), e);
+				log.error("Error while creating input stream for " + artifact.getDeclaration(), e);
 			}
 		}
 
-		throw new RuntimeException("Could not create input stream for " + artifact.getDeclaration());
+		return null;
 	}
 
 	@Override

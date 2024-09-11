@@ -1,7 +1,5 @@
 package org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven;
 
-import lombok.Data;
-
 import lombok.Getter;
 
 import lombok.RequiredArgsConstructor;
@@ -21,6 +19,9 @@ import java.util.Objects;
 @Getter
 @RequiredArgsConstructor
 public class MavenArtifactDeclaration implements ArtifactDeclaration {
+
+	@Setter
+	private boolean shouldValidate = false;
 
 	@Setter
 	private boolean isSnapshot = false;

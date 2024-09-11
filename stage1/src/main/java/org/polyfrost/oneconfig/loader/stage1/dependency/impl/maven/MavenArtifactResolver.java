@@ -14,7 +14,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
-import org.xml.sax.SAXParseException;
 
 import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
@@ -32,7 +31,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -42,6 +47,8 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 			"maven-metadata-local.xml",
 			"maven-metadata.xml",
 	};
+
+	private static final ExecutorService REPOSITORY_DOWNLOAD_EXECUTOR = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
 	private final XDG.ApplicationStore store;
 	private final RequestHelper requestHelper;
@@ -78,136 +85,208 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 
 		Path artifactRelativePath = declaration.getRelativePath();
 		Path localArtifactPath = localLibraries.resolve(artifactRelativePath);
-
 		String sha1Path = artifactRelativePath + ".sha1";
-
 		String rawPomPath = artifactRelativePath.toString().replace(declaration.getExtension(), "pom");
 		Path pomPath = localLibraries.resolve(rawPomPath);
 
-		boolean resolved = false;
-		long startTime = System.currentTimeMillis();
-		for (URI repository : repositories) {
-			if (resolved) {
-				break;
-			}
+		List<CompletableFuture<MavenArtifact>> futures = Arrays.stream(repositories)
+				.map(repository -> CompletableFuture.supplyAsync(() -> {
+					try {
+						return resolveArtifactFromRepository(repository, declaration, localArtifactPath, artifactRelativePath, sha1Path, pomPath, rawPomPath);
+					} catch (Throwable t) {
+						return null;
+					}
+				})).collect(Collectors.toList());
 
+		return resolveFirstNonNull(futures).get();
+	}
+
+	private CompletableFuture<MavenArtifact> resolveFirstNonNull(List<CompletableFuture<MavenArtifact>> futures) {
+		return CompletableFuture.anyOf(futures.toArray(new CompletableFuture[0]))
+				.thenCompose(result -> {
+					if (result instanceof MavenArtifact) {
+						return CompletableFuture.completedFuture((MavenArtifact) result); // Return first non-null result
+					} else {
+						// Remove the completed future and continue with the rest
+						List<CompletableFuture<MavenArtifact>> remainingFutures = futures.stream()
+								.filter(future -> !future.isDone() || future.join() != null) // Keep only unfinished or non-null futures
+								.collect(Collectors.toList());
+
+						if (remainingFutures.isEmpty()) {
+							return CompletableFuture.completedFuture(null); // All futures are done or null
+						}
+
+						// Recurse with the remaining futures
+						return resolveFirstNonNull(remainingFutures);
+					}
+				});
+	}
+
+	private MavenArtifact resolveArtifactFromRepository(
+			URI repository,
+			MavenArtifactDeclaration declaration,
+			Path localArtifactPath,
+			Path artifactRelativePath,
+			String sha1Path,
+			Path pomPath,
+			String rawPomPath
+	) {
+		long startTime = System.currentTimeMillis();
+		if (declaration.isShouldValidate()) {
 			URI remoteSha1 = repository.resolve(FileUtils.encodePath(sha1Path.replace('\\', '/')));
-			long sha1StartTime = System.currentTimeMillis();
 			try (InputStream inputStream = this.requestHelper.establishConnection(remoteSha1.toURL()).getInputStream()) {
 				ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-				{
-					byte[] buffer = new byte[1024];
-					int read;
-					while ((read = inputStream.read(buffer)) != -1) {
-						byteStream.write(buffer, 0, read);
-					}
-
-					byteStream.flush();
-					inputStream.close();
+				byte[] buffer = new byte[1024];
+				int read;
+				while ((read = inputStream.read(buffer)) != -1) {
+					byteStream.write(buffer, 0, read);
 				}
-
-				log.info("Resolved SHA1 for {} in {}ms", declaration.getDeclaration(), System.currentTimeMillis() - sha1StartTime);
+				byteStream.flush();
 				String sha1 = byteStream.toString().trim();
 				if (sha1.isEmpty()) {
-					continue;
+					log.warn("Did NOT receive SHA1 (repository: {}, took {}ms)", repository, System.currentTimeMillis() - startTime);
+					return null;
 				}
 
 				Pattern validSha1Pattern = Pattern.compile("[a-fA-F0-9]{40}");
 				if (!validSha1Pattern.matcher(sha1).matches()) {
-					continue;
+					log.warn("Invalid SHA1 (repository: {}, took {}ms): {}", repository, System.currentTimeMillis() - startTime, sha1);
+					return null;
 				}
 
 				if (localArtifactPath.toFile().exists()) {
-					long sha1CheckStartTime = System.currentTimeMillis();
-					String artifactSha1 = this.getHash(localArtifactPath);
+					String artifactSha1 = getHash(localArtifactPath);
 					if (sha1.equals(artifactSha1)) {
-						log.info("{} matched SHA1 in {}, resolving", localArtifactPath, System.currentTimeMillis() - sha1CheckStartTime);
-						long pomStartTime = System.currentTimeMillis();
-						try (InputStream pomStream = Files.newInputStream(pomPath)) {
-							log.info("Checked SHA1 for artifact {} in {}ms", declaration.getDeclaration(), System.currentTimeMillis() - pomStartTime);
-							List<MavenArtifactDependency> dependencyList = this.getDependencies(declaration, pomStream)
-									.stream()
-									.map((mavenArtifactDeclaration) -> new MavenArtifactDependency(mavenArtifactDeclaration, Scope.RUNTIME, new ArrayList<>()))
-									.collect(Collectors.toList());
-							log.info("Resolved CACHED artifact {} in {}ms", declaration.getDeclaration(), System.currentTimeMillis() - startTime);
-							resolved = true;
-							return new MavenArtifact(declaration, dependencyList);
-						} catch (Throwable t) {
-							// If we can't find the dependencies, we can't find the artifact
-							t.printStackTrace();
-						}
+						log.info("SHA1 matches for {} (repository: {}, took {}ms)", declaration.getDeclaration(), repository, System.currentTimeMillis() - startTime);
+						return loadArtifact(declaration, pomPath); // Load from local
 					} else {
-						log.info("{} does not match SHA1, updating", localArtifactPath);
+						if (!pomPath.toFile().exists()) {
+							downloadPom(repository, rawPomPath, pomPath);
+						}
+
+						if (downloadArtifact(repository, artifactRelativePath.toString(), localArtifactPath)) {
+							log.info("Resolved (updated) artifact {} (repository: {}, took {}ms)", declaration.getDeclaration(), repository, System.currentTimeMillis() - startTime);
+							return loadArtifact(declaration, pomPath);
+						}
 					}
 				} else {
-					log.info("{} does not exist, downloading", localArtifactPath);
-				}
-			} catch (Throwable t) {
-				// Ignore if this is a FileNotFoundException since we check multiple paths
-				if (t instanceof FileNotFoundException) {
-					continue;
+					if (!pomPath.toFile().exists()) {
+						downloadPom(repository, rawPomPath, pomPath);
+					}
+
+					if (downloadArtifact(repository, artifactRelativePath.toString(), localArtifactPath)) {
+						log.info("Resolved (validated + downloaded) artifact {} (repository: {}, took {}ms)", declaration.getDeclaration(), repository, System.currentTimeMillis() - startTime);
+						return loadArtifact(declaration, pomPath);
+					}
 				}
 
+				if (!pomPath.toFile().exists()) {
+					downloadPom(repository, rawPomPath, pomPath);
+				}
+
+				log.info("Resolved artifact {} (repository: {}, took {}ms)", declaration.getDeclaration(), repository, System.currentTimeMillis() - startTime);
+				return loadArtifact(declaration, pomPath);
+			} catch (FileNotFoundException e) {
+				return null; // Ignore and continue
+			} catch (Throwable t) {
 				throw new RuntimeException("Error while checking SHA1 of " + declaration.getDeclaration(), t);
-			}
-
-			if (!pomPath.toFile().exists()) {
-				URI remotePom = repository.resolve(FileUtils.encodePath(rawPomPath.replace('\\', '/')));
-
-				try (InputStream inputStream = this.requestHelper.establishConnection(remotePom.toURL()).getInputStream()) {
-					// Ensure parent directories exist
-					Files.createDirectories(pomPath.getParent());
-
-					Files.copy(inputStream, pomPath);
-				} catch (Throwable t) {
-					// If we can't find the POM, we can't find the artifact
-
-					t.printStackTrace();
-
-					continue;
-				}
-			}
-
-			if (!localArtifactPath.toFile().exists()) {
-				URI remoteArtifact = repository.resolve(FileUtils.encodePath(artifactRelativePath.toString().replace('\\', '/')));
-
-				try (InputStream inputStream = this.requestHelper.establishConnection(remoteArtifact.toURL()).getInputStream()) {
-					// Ensure parent directories exist
-					Files.createDirectories(localArtifactPath.getParent());
-
-					Files.copy(inputStream, localArtifactPath);
-				} catch (Throwable t) {
-					// If we can't find the artifact, this might be a BOM or something. Simply warn and move on
-					log.warn("Could not find artifact {} at {}", declaration.getDeclaration(), remoteArtifact);
-				}
-			}
-
-			try (InputStream inputStream = Files.newInputStream(pomPath)) {
-				List<MavenArtifactDependency> dependencyList = this.getDependencies(declaration, inputStream)
-						.stream()
-						.map((mavenArtifactDeclaration) -> new MavenArtifactDependency(mavenArtifactDeclaration, Scope.RUNTIME, new ArrayList<>()))
-						.collect(Collectors.toList());
-				log.info("Resolved artifact {} in {}ms", declaration.getDeclaration(), System.currentTimeMillis() - startTime);
-				resolved = true;
-				return new MavenArtifact(declaration, dependencyList);
-			} catch (Throwable t) {
-				// If we can't find the dependencies, we can't find the artifact
-				t.printStackTrace();
 			}
 		}
 
-		log.info("Could not resolve artifact {} in {}ms", declaration.getDeclaration(), System.currentTimeMillis() - startTime);
+		try {
+			if (!pomPath.toFile().exists()) {
+				downloadPom(repository, rawPomPath, pomPath);
+			}
+		} catch (Throwable t) {
+			if (t instanceof FileNotFoundException) {
+				return null; // Ignore
+			}
+
+			throw new RuntimeException("Error while resolving " + declaration.getDeclaration(), t);
+		}
+
+		try {
+			if (localArtifactPath.toFile().exists()) {
+				log.warn("Resolved (local) artifact {} (repository: {}, took {}ms)", declaration.getDeclaration(), repository, System.currentTimeMillis() - startTime);
+				return loadArtifact(declaration, pomPath); // Load from local
+			} else {
+				if (downloadArtifact(repository, artifactRelativePath.toString(), localArtifactPath)) {
+					log.info("Resolved (downloaded) artifact {} (repository: {}, took {}ms)", declaration.getDeclaration(), repository, System.currentTimeMillis() - startTime);
+					return loadArtifact(declaration, pomPath);
+				}
+			}
+		} catch (Throwable t) {
+			if (t instanceof FileNotFoundException) {
+				return null; // Ignore
+			}
+
+			throw new RuntimeException("Error while resolving " + declaration.getDeclaration(), t);
+		}
+
+		log.warn("Could not resolve artifact {}", declaration.getDeclaration());
 		return null;
 	}
 
+	private MavenArtifact loadArtifact(MavenArtifactDeclaration declaration, Path pomPath) throws IOException, ParserConfigurationException, SAXException {
+		try (InputStream inputStream = Files.newInputStream(pomPath)) {
+			List<MavenArtifactDependency> dependencyList = this.getDependencies(declaration, inputStream)
+					.stream()
+					.map((mavenArtifactDeclaration) -> new MavenArtifactDependency(mavenArtifactDeclaration, Scope.RUNTIME, new ArrayList<>()))
+					.collect(Collectors.toList());
+			return new MavenArtifact(declaration, dependencyList);
+		}
+	}
+
+	private boolean downloadArtifact(URI repository, String artifactRelativePath, Path localArtifactPath) throws IOException {
+		URI remoteArtifact = repository.resolve(FileUtils.encodePath(artifactRelativePath.replace('\\', '/')));
+		try (InputStream inputStream = this.requestHelper.establishConnection(remoteArtifact.toURL()).getInputStream()) {
+			// This is so incredibly suboptimal, oh my god
+			ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+			byte[] buffer = new byte[1024];
+			int read;
+			while ((read = inputStream.read(buffer)) != -1) {
+				byteStream.write(buffer, 0, read);
+			}
+			byteStream.flush();
+
+			// Check if the file is actually a JAR file
+			byte[] bytes = byteStream.toByteArray();
+			if (bytes.length > 4 && bytes[0] == 0x50 && bytes[1] == 0x4B && bytes[2] == 0x03 && bytes[3] == 0x04) {
+				// This is a ZIP file, which is the same as a JAR file
+				Files.createDirectories(localArtifactPath.getParent());
+				Files.write(localArtifactPath, bytes);
+				return true;
+			} else {
+				return false;
+			}
+		}
+	}
+
+	private void downloadPom(URI repository, String rawPomPath, Path pomPath) throws IOException {
+		URI remotePom = repository.resolve(FileUtils.encodePath(rawPomPath.replace('\\', '/')));
+		try (InputStream inputStream = this.requestHelper.establishConnection(remotePom.toURL()).getInputStream()) {
+			// This is so incredibly suboptimal, oh my god
+			ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
+			byte[] buffer = new byte[1024];
+			int read;
+			while ((read = inputStream.read(buffer)) != -1) {
+				byteStream.write(buffer, 0, read);
+			}
+			byteStream.flush();
+
+			if (!byteStream.toString().contains("<html")) {
+				Files.createDirectories(pomPath.getParent());
+				Files.write(pomPath, byteStream.toByteArray());
+			}
+		}
+	}
+
 	private String getHash(Path path) {
-		long startTime = System.currentTimeMillis();
 		try {
 			byte[] bytes = Files.readAllBytes(path);
 			byte[] hashed = PolyHashing.hash(bytes, PolyHashing.SHA1);
 			BigInteger bigInt = new BigInteger(1, hashed);
 			String hash = bigInt.toString(16);
-			log.info("Hashed {} in {}ms", path, System.currentTimeMillis() - startTime);
 			return hash;
 		} catch (Throwable t) {
 			throw new RuntimeException("Error while hashing " + path, t);
@@ -335,8 +414,7 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 		try {
 			String pomContent = byteStream.toString();
 			if (pomContent.contains("<html")) {
-				log.warn("Skipping POM returned for {} (received HTML)", declaration.getDeclaration());
-				return new ArrayList<>();
+				return new ArrayList<>(); // Ignore HTML files
 			}
 
 			InputStream pomStream = new ByteArrayInputStream(byteStream.toByteArray());
@@ -345,10 +423,8 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 			Document document = documentBuilder.parse(pomStream);
 			Element documentElement = document.getDocumentElement();
 
-			// Skip HTML files
 			if (document.getElementsByTagName("html").getLength() > 0) {
-				log.warn("Skipping POM returned for {} (received HTML)", declaration.getDeclaration());
-				return new ArrayList<>();
+				return new ArrayList<>(); // Ignore HTML files
 			}
 
 			Element dependencies = (Element) documentElement.getElementsByTagName("dependencies").item(0);
@@ -361,15 +437,26 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 			for (int i = 0; i < dependencyList.getLength(); i++) {
 				Element dependency = (Element) dependencyList.item(i);
 
-				String groupId = dependency.getElementsByTagName("groupId").item(0).getTextContent();
-				String artifactId = dependency.getElementsByTagName("artifactId").item(0).getTextContent();
-				String version = dependency.getElementsByTagName("version").item(0).getTextContent();
+				Element groupIdElement = (Element) dependency.getElementsByTagName("groupId").item(0);
+				if (groupIdElement == null) {
+					continue;
+				}
+
+				Element artifactIdElement = (Element) dependency.getElementsByTagName("artifactId").item(0);
+				if (artifactIdElement == null) {
+					continue;
+				}
+
+				Element versionElement = (Element) dependency.getElementsByTagName("version").item(0);
+				if (versionElement == null) {
+					continue;
+				}
 
 				list.add(
 						new MavenArtifactDeclaration(
-								groupId,
-								artifactId,
-								version,
+								groupIdElement.getTextContent(),
+								artifactIdElement.getTextContent(),
+								versionElement.getTextContent(),
 								null,
 								"jar"
 						)

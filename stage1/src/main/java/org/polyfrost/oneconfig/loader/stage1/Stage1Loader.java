@@ -19,7 +19,9 @@ import lombok.extern.log4j.Log4j2;
 
 import org.polyfrost.oneconfig.loader.base.Capabilities;
 import org.polyfrost.oneconfig.loader.base.LoaderBase;
-import org.polyfrost.oneconfig.loader.stage1.dependency.ArtifactManager;
+import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifact;
+import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactDeclaration;
+import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactDependency;
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactManager;
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.Artifact;
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;
@@ -35,7 +37,7 @@ import org.polyfrost.oneconfig.loader.utils.XDG;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class Stage1Loader extends LoaderBase {
 	private static final String PROPERTIES_FILE_PATH = "/assets/oneconfig-loader/metadata/stage1.properties";
-	private final ArtifactManager artifactManager;
+	private final MavenArtifactManager artifactManager;
 	private final Properties stage1Properties = new Properties();
 
 	@SneakyThrows
@@ -87,15 +89,16 @@ public class Stage1Loader extends LoaderBase {
 
 		// Fetch oneConfig version info
 		String artifactSpecifier = "org.polyfrost.oneconfig:" + targetSpecifier + ":" + oneConfigVersion;
-		final Set<ArtifactDeclaration> resolveQueue = new HashSet<>();
-		final Set<Artifact> resolvedArtifacts = new HashSet<>();
-		ArtifactDeclaration oneConfigDeclaration = this.artifactManager.buildArtifactDeclaration(artifactSpecifier);
+		final Set<MavenArtifactDeclaration> resolveQueue = new HashSet<>();
+		final Set<MavenArtifact> resolvedArtifacts = new HashSet<>();
+		MavenArtifactDeclaration oneConfigDeclaration = this.artifactManager.buildArtifactDeclaration(artifactSpecifier);
+		oneConfigDeclaration.setShouldValidate(true);
 		resolveQueue.add(oneConfigDeclaration);
 
 		while (!resolveQueue.isEmpty()) {
-			ArtifactDeclaration artifactDeclaration = resolveQueue.iterator().next();
+			MavenArtifactDeclaration artifactDeclaration = resolveQueue.iterator().next();
 			resolveQueue.remove(artifactDeclaration);
-			Artifact<ArtifactDeclaration, ArtifactDependency> resolvedArtifact;
+			MavenArtifact resolvedArtifact;
 
 			try {
 				resolvedArtifact = this.artifactManager.getArtifactResolver().resolveArtifact(artifactDeclaration);
@@ -106,13 +109,12 @@ public class Stage1Loader extends LoaderBase {
 			if (resolvedArtifact != null) {
 				resolvedArtifacts.add(resolvedArtifact);
 
-				Set<ArtifactDeclaration> newDependencies = resolvedArtifact
+				Set<MavenArtifactDeclaration> newDependencies = resolvedArtifact
 						.getDependencies()
 						.stream()
-						.map(ArtifactDependency::getDeclaration)
+						.map(MavenArtifactDependency::getDeclaration)
 						.filter(it -> resolvedArtifacts.stream().noneMatch(artifact -> artifact.getDeclaration().equals(it)))
 						.collect(Collectors.toSet());
-				log.info("Resolved artifact {} with dependencies {}", resolvedArtifact, newDependencies);
 				resolveQueue.addAll(newDependencies);
 			} else {
 				logger.warn("Could not resolve artifact {}", artifactDeclaration);
@@ -150,19 +152,16 @@ public class Stage1Loader extends LoaderBase {
 				);
 	}
 
-	private void checkAndAppendArtifactToClasspath(Capabilities.RuntimeAccess runtimeAccess, Artifact artifact) {
+	private void checkAndAppendArtifactToClasspath(Capabilities.RuntimeAccess runtimeAccess, MavenArtifact artifact) {
 		Path artifactFile = provideLocalArtifactPath(artifact);
 
 		if (!Files.exists(artifactFile)) {
-			try {
-				Files.createDirectories(artifactFile.getParent());
-			} catch (IOException e) {
-				logger.fatal("Could not create directories for artifact {}", artifact.getDeclaration(), e);
-				ErrorHandler.displayError(this, "Error while creating directories for artifact: " + artifact.getDeclaration());
-				return;
-			}
-
 			try (InputStream inputStream = this.artifactManager.createArtifactInputStream(artifact)) {
+				if (inputStream == null) {
+					return; // Skip if the artifact is not found
+				}
+
+				Files.createDirectories(artifactFile.getParent());
 				Files.copy(inputStream, artifactFile);
 			} catch (IOException e) {
 				logger.fatal("Could not download artifact {}", artifact.getDeclaration(), e);
