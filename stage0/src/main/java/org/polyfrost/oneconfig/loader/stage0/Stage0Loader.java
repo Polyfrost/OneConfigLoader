@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Properties;
 import java.util.function.Supplier;
@@ -106,24 +107,42 @@ public class Stage0Loader extends LoaderBase {
     }
 
 	private String fetchStage1ClassName() {
-		String value = this.stage0Properties.getProperty("oneconfig-stage1-class");
-		return value != null ? value : System.getProperty("oneconfig.stage1.class");
-	}
-
-    private String fetchStage1Version() {
-        String value = this.stage0Properties.getProperty("oneconfig-stage1-version");
-        return value != null ? value : System.getProperty("oneconfig.stage1.version");
-    }
-
-	private String fetchMavenUrl() {
-		String value = this.stage0Properties.getProperty("oneconfig-maven-uri");
+		String value = System.getProperty("oneconfig.stage1.class");
 		if (value != null) {
 			return value;
 		}
 
-		String mavenUrl = System.getProperty("oneconfig.maven.uri");
-		if (mavenUrl != null) {
-			return mavenUrl;
+		value = this.stage0Properties.getProperty("oneconfig-stage1-class");
+		if (value != null) {
+			return value;
+		}
+
+		throw new IllegalStateException("Stage1 class name not found");
+	}
+
+    private String fetchStage1Version() {
+		String value = System.getProperty("oneconfig.stage1.version");
+		if (value != null) {
+			return value;
+		}
+
+		value = this.stage0Properties.getProperty("oneconfig-stage1-version");
+		if (value != null) {
+			return value;
+		}
+
+		throw new IllegalStateException("Stage1 version not found");
+    }
+
+	private String fetchMavenUrl() {
+		String value = System.getProperty("oneconfig.maven.uri");
+		if (value != null) {
+			return value;
+		}
+
+		value = this.stage0Properties.getProperty("oneconfig-maven-uri");
+		if (value != null) {
+			return value;
 		}
 
 		return DEFAULT_MAVEN_BASE_URL;
