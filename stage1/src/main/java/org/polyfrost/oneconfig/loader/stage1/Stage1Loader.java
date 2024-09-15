@@ -48,17 +48,20 @@ public class Stage1Loader extends LoaderBase {
 				capabilities
 		);
 
+		log.info("Loading stage1 properties from {}", PROPERTIES_FILE_PATH);
 		try (InputStream inputStream = this.getClass().getResourceAsStream(PROPERTIES_FILE_PATH)) {
 			this.stage1Properties.load(inputStream);
 		} catch (IOException e) {
 			throw new UncheckedIOException(e);
 		}
 
+		log.info("Looking for raw repositories...");
 		String rawRepositories = this.stage1Properties.getProperty("oneconfig-repositories");
 		if (rawRepositories == null) {
 			throw new RuntimeException("oneconfig-repositories option is not found in stage1.properties");
 		}
 
+		log.info("Found raw repositories: {}", rawRepositories);
 		URI[] repositories = Arrays.stream(rawRepositories.split(",")).map(rawRepository -> {
 			// If the repository does not end with a slash, add it
 			if (!rawRepository.endsWith("/")) {
@@ -67,25 +70,34 @@ public class Stage1Loader extends LoaderBase {
 
 			return URI.create(rawRepository);
 		}).distinct().toArray(URI[]::new);
+
+		log.info("Creating artifact manager...");
 		this.artifactManager = new MavenArtifactManager(
 				XDG.provideApplicationStore("OneConfig"),
 				getRequestHelper(),
 				repositories
 		);
+
+		log.info("Artifact manager created");
 	}
 
 	@Override
 	public void load() {
+		long startTime = System.currentTimeMillis();
+
+		log.info("Loading stage1...");
 		Capabilities capabilities = getCapabilities();
 		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
 		Capabilities.GameMetadata gameMetadata = capabilities.getGameMetadata();
 
+		log.info("Looking for OneConfig version...");
 		String oneConfigVersion = this.stage1Properties.getProperty("oneconfig-version");
 		if (oneConfigVersion == null) {
 			throw new RuntimeException("oneconfig-version option is not found in stage1.properties");
 		}
 
 		String targetSpecifier = gameMetadata.getTargetSpecifier();
+		log.info("Target specifier: {}", targetSpecifier);
 
 		// Fetch oneConfig version info
 		String artifactSpecifier = "org.polyfrost.oneconfig:" + targetSpecifier + ":" + oneConfigVersion;
@@ -93,6 +105,7 @@ public class Stage1Loader extends LoaderBase {
 		final Set<MavenArtifact> resolvedArtifacts = new HashSet<>();
 		MavenArtifactDeclaration oneConfigDeclaration = this.artifactManager.buildArtifactDeclaration(artifactSpecifier);
 		oneConfigDeclaration.setShouldValidate(true);
+		log.info("Resolving OneConfig artifact: {}", oneConfigDeclaration);
 		resolveQueue.add(oneConfigDeclaration);
 
 		while (!resolveQueue.isEmpty()) {
@@ -121,9 +134,11 @@ public class Stage1Loader extends LoaderBase {
 			}
 		}
 
-		log.info("Found {} artifacts to load", resolvedArtifacts.size());
+		log.info("Found {} artifacts to load:", resolvedArtifacts.size());
 
 		resolvedArtifacts.forEach(artifact -> checkAndAppendArtifactToClasspath(runtimeAccess, artifact));
+
+		log.info("OneConfig artifacts loaded in {}ms", System.currentTimeMillis() - startTime);
 
 		try {
 			ClassLoader classLoader = runtimeAccess.getClassLoader();

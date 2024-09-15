@@ -452,6 +452,11 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 					continue;
 				}
 
+				Element scopeElement = (Element) dependency.getElementsByTagName("scope").item(0);
+				if (scopeElement != null && "test".equalsIgnoreCase(scopeElement.getTextContent())) {
+					continue;
+				}
+
 				list.add(
 						new MavenArtifactDeclaration(
 								groupIdElement.getTextContent(),
