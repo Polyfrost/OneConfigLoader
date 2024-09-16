@@ -7,10 +7,15 @@ import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import lombok.SneakyThrows;
@@ -31,7 +36,7 @@ import org.polyfrost.oneconfig.loader.utils.XDG;
  * @since 1.1.0
  */
 @Log4j2
-@SuppressWarnings({"rawtypes", "unchecked"})
+@SuppressWarnings({"rawtypes"})
 public class Stage1Loader extends LoaderBase {
 	private static final String PROPERTIES_FILE_PATH = "/assets/oneconfig-loader/metadata/stage1.properties";
 	private final MavenArtifactManager artifactManager;
@@ -59,7 +64,7 @@ public class Stage1Loader extends LoaderBase {
 		}
 
 		log.info("Found raw repositories: {}", rawRepositories);
-		URI[] repositories = Arrays.stream(rawRepositories.split(",")).map(rawRepository -> {
+		URI[] repositories = Arrays.stream(rawRepositories.split(Pattern.quote(","))).map(rawRepository -> {
 			// If the repository does not end with a slash, add it
 			if (!rawRepository.endsWith("/")) {
 				rawRepository += "/";
@@ -131,29 +136,29 @@ public class Stage1Loader extends LoaderBase {
 			}
 		}
 
-		log.info("Found {} artifacts to load:", resolvedArtifacts.size());
+		log.trace("Found {} artifacts, deduplicating...", resolvedArtifacts.size());
 
-//		Function<MavenArtifact, String> getUnversioned = artifact -> artifact.getDeclaration().getGroupId() + ":" + artifact.getDeclaration().getArtifactId();
-//		List<List<MavenArtifact>> artifactGroups = resolvedArtifacts.stream()
-//				.collect(Collectors.groupingBy(getUnversioned))
-//				.values()
-//				.stream()
-//				.map(ArrayList::new)
-//				.collect(Collectors.toList());
-//		artifactGroups.removeIf(List::isEmpty);
-//		artifactGroups.forEach(grouping -> {
-//			grouping.sort(Comparator.comparing(MavenArtifact::getDeclaration));
-//			log.info("Group {} got {} artifacts:", grouping.get(0).getDeclaration(), grouping.size());
-//			grouping.forEach(artifact -> log.info("\t{}", artifact.getDeclaration()));
-//		});
-//		List<MavenArtifact> deduplicatedArtifacts = artifactGroups.stream()
-//				.filter(it -> it.size() > 1)
-//				.map(it -> it.get(0))
-//				.collect(Collectors.toList());
-//
-//		log.info("Found {} deduplicated artifacts to load:", deduplicatedArtifacts.size());
+		Function<MavenArtifact, String> getUnversioned = artifact -> artifact.getDeclaration().getGroupId() + ":" + artifact.getDeclaration().getArtifactId();
+		List<List<MavenArtifact>> artifactGroups = resolvedArtifacts.stream()
+				.collect(Collectors.groupingBy(getUnversioned))
+				.values()
+				.stream()
+				.map(ArrayList::new)
+				.collect(Collectors.toList());
+		artifactGroups.removeIf(List::isEmpty);
+		artifactGroups.forEach(grouping -> {
+			grouping.sort(Comparator.comparing(MavenArtifact::getDeclaration));
+			log.trace("Group {} got {} artifacts:", grouping.get(0).getDeclaration(), grouping.size());
+			grouping.forEach(artifact -> log.trace("\t{}", artifact.getDeclaration()));
+		});
+		List<MavenArtifact> deduplicatedArtifacts = artifactGroups.stream()
+				.filter(it -> !it.isEmpty())
+				.map(it -> it.get(0))
+				.collect(Collectors.toList());
 
-		resolvedArtifacts.forEach(artifact -> checkAndAppendArtifactToClasspath(runtimeAccess, artifact));
+		log.info("Found {} deduplicated artifacts to load:", deduplicatedArtifacts.size());
+
+		deduplicatedArtifacts.forEach(artifact -> checkAndAppendArtifactToClasspath(runtimeAccess, artifact));
 
 		log.info("OneConfig artifacts loaded in {}ms", System.currentTimeMillis() - startTime);
 

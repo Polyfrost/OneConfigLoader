@@ -95,7 +95,7 @@ public class RequestHelper {
     }
 
 	public URLConnection establishConnection(URL url, @Nullable String requestedType) throws IOException {
-		return establishConnection(url, requestedType, true);
+		return establishConnection(url, requestedType, false);
 	}
 
     public URLConnection establishConnection(URL url, @Nullable String requestedType, boolean allowCaches) throws IOException {
@@ -114,7 +114,7 @@ public class RequestHelper {
         }
         connection.setConnectTimeout(10000);
         connection.setReadTimeout(10000);
-//		connection.setDoOutput(true);
+		connection.setDoOutput(true);
         connection.setRequestProperty("Accept", requestedType);
 		connection.setRequestProperty("Accept-Encoding", "gzip, deflate");
 		if (!allowCaches) {
