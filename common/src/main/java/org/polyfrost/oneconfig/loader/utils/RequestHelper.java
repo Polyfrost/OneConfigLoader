@@ -1,18 +1,24 @@
 package org.polyfrost.oneconfig.loader.utils;
 
-import lombok.RequiredArgsConstructor;
-import org.apache.logging.log4j.LogManager;
-
-import org.polyfrost.oneconfig.loader.base.LoaderBase;
-
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLSocketFactory;
-
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Paths;
+import java.util.zip.DeflaterInputStream;
+import java.util.zip.GZIPInputStream;
+
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.log4j.Log4j2;
+import org.apache.logging.log4j.LogManager;
+import org.jetbrains.annotations.Nullable;
+
+import org.polyfrost.oneconfig.loader.base.LoaderBase;
 
 /**
  * A helper class for establishing connections to remote resources.
@@ -22,6 +28,7 @@ import java.nio.file.Paths;
  * @author pauliesnug
  * @since 1.1.0
  */
+@Log4j2
 @RequiredArgsConstructor
 public class RequestHelper {
     /**
@@ -78,15 +85,24 @@ public class RequestHelper {
      */
     private static final String SSL_STORE_PATH = "/assets/oneconfig-loader/ssl/polyfrost.jks";
     private static final String CONNECTION_IDENTIFIER = "oneconfig-loader";
+	public static final String GENERIC_ACCEPT_HEADER = "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/png,image/svg+xml,*/*;q=0.8";
     private static SSLSocketFactory sslSocketFactory;
 
     private final LoaderBase loader;
 
     public URLConnection establishConnection(URL url) throws IOException {
-        return establishConnection(url, "application/json");
+        return establishConnection(url, "application/xml");
     }
 
-    public URLConnection establishConnection(URL url, String requestedType) throws IOException {
+	public URLConnection establishConnection(URL url, @Nullable String requestedType) throws IOException {
+		return establishConnection(url, requestedType, true);
+	}
+
+    public URLConnection establishConnection(URL url, @Nullable String requestedType, boolean allowCaches) throws IOException {
+		if (requestedType == null) {
+			requestedType = GENERIC_ACCEPT_HEADER;
+		}
+
         URLConnection connection = url.openConnection();
         if (connection instanceof HttpsURLConnection) {
             ((HttpsURLConnection) connection).setSSLSocketFactory(
@@ -96,14 +112,59 @@ public class RequestHelper {
         if (connection instanceof HttpURLConnection) {
             ((HttpURLConnection) connection).setRequestMethod("GET");
         }
-        connection.setConnectTimeout(15000);
-        connection.setReadTimeout(15000);
-        connection.setUseCaches(false);
+        connection.setConnectTimeout(10000);
+        connection.setReadTimeout(10000);
+//		connection.setDoOutput(true);
         connection.setRequestProperty("Accept", requestedType);
+		connection.setRequestProperty("Accept-Encoding", "gzip, deflate");
+		if (!allowCaches) {
+			connection.setUseCaches(false);
+			connection.setRequestProperty("Cache-Control", "no-cache");
+		}
         connection.setRequestProperty("User-Agent", "Mozilla/5.0 (" + CONNECTION_IDENTIFIER + " " + loader.getName() + "/" + loader.getVersion() + ")");
-        connection.setRequestProperty("Cache-Control", "no-cache");
         return connection;
     }
+
+	public InputStream provideStream(URLConnection connection) throws IOException {
+		log.info("Establishing connection to {}", connection.getURL());
+		long startTime = System.currentTimeMillis();
+		connection.connect();
+		if (connection instanceof HttpURLConnection) {
+			HttpURLConnection con = (HttpURLConnection) connection;
+			int responseCode = con.getResponseCode();
+			if (responseCode != 200) { //TODO: Handle redirects
+				con.disconnect();
+				log.error("Response code: {}", responseCode);
+				throw new IOException("Response code: " + responseCode);
+			}
+		}
+
+		String encoding = connection.getContentEncoding();
+		log.info("Connection to {} took {}ms", connection.getURL(), System.currentTimeMillis() - startTime);
+
+		InputStream inputStream = connection.getInputStream();
+		if ("gzip".equalsIgnoreCase(encoding)) {
+			inputStream = new GZIPInputStream(inputStream);
+		} else if ("deflate".equalsIgnoreCase(encoding)) {
+			inputStream = new DeflaterInputStream(inputStream);
+		}
+		return inputStream;
+	}
+
+	public ByteArrayOutputStream consumeConnection(URLConnection connection) throws IOException {
+		InputStream inputStream = provideStream(connection);
+		ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+		byte[] byteBuffer = new byte[1024 * 128];
+		int bytesRead;
+		while ((bytesRead = inputStream.read(byteBuffer, 0, byteBuffer.length)) != -1) {
+			outputStream.write(byteBuffer, 0, bytesRead);
+		}
+
+		inputStream.close();
+		outputStream.flush();
+		return outputStream;
+	}
 
     public static RequestHelper tryInitialize(LoaderBase loader) {
         try {

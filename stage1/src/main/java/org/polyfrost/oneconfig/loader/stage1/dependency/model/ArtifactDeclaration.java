@@ -1,8 +1,8 @@
 package org.polyfrost.oneconfig.loader.stage1.dependency.model;
 
-import org.jetbrains.annotations.Nullable;
-
 import java.nio.file.Path;
+
+import org.jetbrains.annotations.Nullable;
 
 /**
  * A generic artifact, part of the dependency resolution system.

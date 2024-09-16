@@ -1,42 +1,31 @@
 package org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven;
 
-import lombok.Getter;
-
-import lombok.RequiredArgsConstructor;
-
-import lombok.Setter;
-
-import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;
-
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 
+import lombok.Data;
+
+import org.jetbrains.annotations.NotNull;
+
+import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;
+import org.polyfrost.oneconfig.loader.stage1.util.FlexVerComparator;
+
 /**
  * @author xtrm
+ * @author Deftu
  * @since 1.1.0
  */
-@Getter
-@RequiredArgsConstructor
-public class MavenArtifactDeclaration implements ArtifactDeclaration {
-
-	@Setter
-	private boolean shouldValidate = false;
-
-	@Setter
-	private boolean isSnapshot = false;
-
-	@Setter
-	private String snapshotVersion;
-
-	@Setter
-	private String actualVersion;
-
+public @Data class MavenArtifactDeclaration implements ArtifactDeclaration { //}, Comparable<MavenArtifactDeclaration> {
 	private final String groupId;
 	private final String artifactId;
 	private final String version;
     private final String classifier;
     private final String extension;
+	private boolean shouldValidate = false;
+	private boolean isSnapshot = false;
+	private String snapshotVersion;
+	private String actualVersion;
 
 	@Override
     public String getDeclaration() {
@@ -103,11 +92,6 @@ public class MavenArtifactDeclaration implements ArtifactDeclaration {
 	}
 
 	@Override
-	public int hashCode() {
-		return Objects.hash(groupId, artifactId, version, classifier, extension);
-	}
-
-	@Override
 	public String toString() {
 		return getDeclaration();
 	}
@@ -116,5 +100,14 @@ public class MavenArtifactDeclaration implements ArtifactDeclaration {
 		if (actualVersion == null) {
 			actualVersion = !isSnapshot ? version : snapshotVersion;
 		}
+	}
+
+//	@Override
+	public int eecompareTo(@NotNull MavenArtifactDeclaration o) {
+		if (this == o) return 0;
+		if (!Objects.equals(groupId, o.groupId)) return groupId.compareTo(o.groupId);
+		if (!Objects.equals(artifactId, o.artifactId)) return artifactId.compareTo(o.artifactId);
+		ensureVersion();
+		return FlexVerComparator.compare(actualVersion, o.actualVersion);
 	}
 }

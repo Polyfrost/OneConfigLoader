@@ -1,7 +1,36 @@
 package org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.math.BigInteger;
+import java.net.URI;
+import java.net.URLConnection;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import javax.xml.XMLConstants;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+
 import cc.polyfrost.polyio.util.PolyHashing;
 import lombok.extern.log4j.Log4j2;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
 
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactResolver;
@@ -10,42 +39,11 @@ import org.polyfrost.oneconfig.loader.stage1.dependency.utils.FileUtils;
 import org.polyfrost.oneconfig.loader.utils.RequestHelper;
 import org.polyfrost.oneconfig.loader.utils.XDG;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import org.w3c.dom.NodeList;
-import org.xml.sax.SAXException;
-
-import javax.xml.XMLConstants;
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.ParserConfigurationException;
-
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.math.BigInteger;
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
-
 @Log4j2
 public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, MavenArtifactDeclaration> {
-	private static final String[] MAVEN_METADATA_NAMES = new String[] {
-			"maven-metadata-local.xml",
+	private static final String[] MAVEN_METADATA_NAMES = new String[]{
 			"maven-metadata.xml",
+			"maven-metadata-local.xml",
 	};
 
 	private static final ExecutorService REPOSITORY_DOWNLOAD_EXECUTOR = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
@@ -75,10 +73,17 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 		Path localLibraries = dataDir.resolve("libraries");
 
 		if (declaration.getVersion().equals("+")) {
+			log.warn("Resolving latest version for {}", declaration.getDeclaration());
+			long startTime = System.currentTimeMillis();
 			resolveLatestVersion(declaration);
+			long endTime = System.currentTimeMillis();
+			log.info("Resolved latest version for {} (took {}ms)", declaration.getDeclaration(), endTime - startTime);
 		} else if (declaration.getVersion().endsWith("-SNAPSHOT")) {
 			log.warn("Resolving snapshot version for {}", declaration.getDeclaration());
+			long startTime = System.currentTimeMillis();
 			resolveSnapshotVersion(declaration);
+			long endTime = System.currentTimeMillis();
+			log.info("Resolved snapshot version for {} (took {}ms)", declaration.getDeclaration(), endTime - startTime);
 		} else {
 			declaration.setActualVersion(declaration.getVersion());
 		}
@@ -134,15 +139,11 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 		long startTime = System.currentTimeMillis();
 		if (declaration.isShouldValidate()) {
 			URI remoteSha1 = repository.resolve(FileUtils.encodePath(sha1Path.replace('\\', '/')));
-			try (InputStream inputStream = this.requestHelper.establishConnection(remoteSha1.toURL()).getInputStream()) {
-				ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-				byte[] buffer = new byte[1024];
-				int read;
-				while ((read = inputStream.read(buffer)) != -1) {
-					byteStream.write(buffer, 0, read);
-				}
-				byteStream.flush();
+			try {
+				URLConnection connection = this.requestHelper.establishConnection(remoteSha1.toURL());
+				ByteArrayOutputStream byteStream = this.requestHelper.consumeConnection(connection);
 				String sha1 = byteStream.toString().trim();
+				byteStream.close();
 				if (sha1.isEmpty()) {
 					log.warn("Did NOT receive SHA1 (repository: {}, took {}ms)", repository, System.currentTimeMillis() - startTime);
 					return null;
@@ -228,6 +229,7 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 	}
 
 	private MavenArtifact loadArtifact(MavenArtifactDeclaration declaration, Path pomPath) throws IOException, ParserConfigurationException, SAXException {
+		log.info("Loading artifact {} with pom {}", declaration.getDeclaration(), pomPath);
 		try (InputStream inputStream = Files.newInputStream(pomPath)) {
 			List<MavenArtifactDependency> dependencyList = this.getDependencies(declaration, inputStream)
 					.stream()
@@ -239,20 +241,29 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 
 	private boolean downloadArtifact(URI repository, String artifactRelativePath, Path localArtifactPath) throws IOException {
 		URI remoteArtifact = repository.resolve(FileUtils.encodePath(artifactRelativePath.replace('\\', '/')));
-		try (InputStream inputStream = this.requestHelper.establishConnection(remoteArtifact.toURL()).getInputStream()) {
-			// This is so incredibly suboptimal, oh my god
+		try (InputStream inputStream = this.requestHelper.provideStream(this.requestHelper.establishConnection(remoteArtifact.toURL()))) {
+			boolean checked = false;
 			ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-			byte[] buffer = new byte[1024];
+			byte[] buffer = new byte[1024 * 128];
 			int read;
 			while ((read = inputStream.read(buffer)) != -1) {
+				if (!checked) {
+					// This is a ZIP file, which is the same as a JAR file
+					if (read < 4 || buffer[0] != 0x50 || buffer[1] != 0x4B || buffer[2] != 0x03 || buffer[3] != 0x04) {
+						log.warn("File at {} is not a JAR file", remoteArtifact);
+						inputStream.close();
+						byteStream.close();
+						return false;
+					}
+					checked = true;
+				}
 				byteStream.write(buffer, 0, read);
 			}
 			byteStream.flush();
 
-			// Check if the file is actually a JAR file
+			// Double-check if the file is actually a JAR file
 			byte[] bytes = byteStream.toByteArray();
 			if (bytes.length > 4 && bytes[0] == 0x50 && bytes[1] == 0x4B && bytes[2] == 0x03 && bytes[3] == 0x04) {
-				// This is a ZIP file, which is the same as a JAR file
 				Files.createDirectories(localArtifactPath.getParent());
 				Files.write(localArtifactPath, bytes);
 				return true;
@@ -264,21 +275,16 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 
 	private void downloadPom(URI repository, String rawPomPath, Path pomPath) throws IOException {
 		URI remotePom = repository.resolve(FileUtils.encodePath(rawPomPath.replace('\\', '/')));
-		try (InputStream inputStream = this.requestHelper.establishConnection(remotePom.toURL()).getInputStream()) {
-			// This is so incredibly suboptimal, oh my god
-			ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
-			byte[] buffer = new byte[1024];
-			int read;
-			while ((read = inputStream.read(buffer)) != -1) {
-				byteStream.write(buffer, 0, read);
-			}
-			byteStream.flush();
-
-			if (!byteStream.toString().contains("<html")) {
-				Files.createDirectories(pomPath.getParent());
-				Files.write(pomPath, byteStream.toByteArray());
-			}
+		URLConnection connection = this.requestHelper.establishConnection(remotePom.toURL());
+		ByteArrayOutputStream byteStream = this.requestHelper.consumeConnection(connection);
+		if (!byteStream.toString().contains("<html")) {
+			Files.createDirectories(pomPath.getParent());
+			Files.write(pomPath, byteStream.toByteArray());
+		} else {
+			log.error("Tried to download POM file from {} but it was HTML", remotePom);
+			log.error("File contents:\n{}", byteStream.toString());
 		}
+		byteStream.close();
 	}
 
 	private String getHash(Path path) {
@@ -310,6 +316,7 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 
 			return latest.getTextContent();
 		} catch (Throwable t) {
+			log.error("Error while parsing latest version", t);
 			return null;
 		}
 	}
@@ -340,6 +347,7 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 
 			return timestamp.getTextContent() + "-" + buildNumber.getTextContent();
 		} catch (Throwable t) {
+			log.error("Error while parsing snapshot version", t);
 			return null;
 		}
 	}
@@ -349,8 +357,11 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 			for (String path : MAVEN_METADATA_NAMES) {
 				Path metadataPath = Paths.get(declaration.getGroupId().replace('.', '/'), declaration.getArtifactId(), path);
 				URI metadataUri = repository.resolve(metadataPath.toString().replace('\\', '/'));
-				try (InputStream inputStream = this.requestHelper.establishConnection(metadataUri.toURL()).getInputStream()) {
+				try {
+					URLConnection connection = this.requestHelper.establishConnection(metadataUri.toURL());
+					InputStream inputStream = this.requestHelper.provideStream(connection);
 					String latestVersion = this.getLatestVersion(inputStream);
+					inputStream.close();
 					if (latestVersion != null) {
 						declaration.setActualVersion(latestVersion);
 						return;
@@ -374,7 +385,7 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 			for (String path : MAVEN_METADATA_NAMES) {
 				Path metadataPath = Paths.get(declaration.getGroupId().replace('.', '/'), declaration.getArtifactId(), declaration.getVersion(), path);
 				URI metadataUri = repository.resolve(metadataPath.toString().replace('\\', '/'));
-				try (InputStream inputStream = this.requestHelper.establishConnection(metadataUri.toURL()).getInputStream()) {
+				try (InputStream inputStream = this.requestHelper.provideStream(this.requestHelper.establishConnection(metadataUri.toURL()))) {
 					log.error(metadataUri);
 					String snapshotVersion = this.getSnapshotVersion(inputStream);
 					log.warn("Snapshot version {} in {} @ {}", snapshotVersion, path, repository);

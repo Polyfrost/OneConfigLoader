@@ -14,7 +14,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import lombok.SneakyThrows;
-
 import lombok.extern.log4j.Log4j2;
 
 import org.polyfrost.oneconfig.loader.base.Capabilities;
@@ -24,8 +23,6 @@ import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifact
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactDependency;
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactManager;
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.Artifact;
-import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;
-import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDependency;
 import org.polyfrost.oneconfig.loader.utils.ErrorHandler;
 import org.polyfrost.oneconfig.loader.utils.XDG;
 
@@ -135,6 +132,26 @@ public class Stage1Loader extends LoaderBase {
 		}
 
 		log.info("Found {} artifacts to load:", resolvedArtifacts.size());
+
+//		Function<MavenArtifact, String> getUnversioned = artifact -> artifact.getDeclaration().getGroupId() + ":" + artifact.getDeclaration().getArtifactId();
+//		List<List<MavenArtifact>> artifactGroups = resolvedArtifacts.stream()
+//				.collect(Collectors.groupingBy(getUnversioned))
+//				.values()
+//				.stream()
+//				.map(ArrayList::new)
+//				.collect(Collectors.toList());
+//		artifactGroups.removeIf(List::isEmpty);
+//		artifactGroups.forEach(grouping -> {
+//			grouping.sort(Comparator.comparing(MavenArtifact::getDeclaration));
+//			log.info("Group {} got {} artifacts:", grouping.get(0).getDeclaration(), grouping.size());
+//			grouping.forEach(artifact -> log.info("\t{}", artifact.getDeclaration()));
+//		});
+//		List<MavenArtifact> deduplicatedArtifacts = artifactGroups.stream()
+//				.filter(it -> it.size() > 1)
+//				.map(it -> it.get(0))
+//				.collect(Collectors.toList());
+//
+//		log.info("Found {} deduplicated artifacts to load:", deduplicatedArtifacts.size());
 
 		resolvedArtifacts.forEach(artifact -> checkAndAppendArtifactToClasspath(runtimeAccess, artifact));
 
