@@ -1,10 +1,8 @@
 package org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven;
 
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.URLConnection;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.regex.Pattern;
@@ -12,32 +10,33 @@ import java.util.regex.Pattern;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 
+import org.jetbrains.annotations.Nullable;
+
 import org.polyfrost.oneconfig.loader.stage1.dependency.ArtifactManager;
 import org.polyfrost.oneconfig.loader.stage1.dependency.cache.CachingSolution;
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.cache.MavenCachingSolution;
-import org.polyfrost.oneconfig.loader.stage1.dependency.utils.FileUtils;
 import org.polyfrost.oneconfig.loader.utils.RequestHelper;
 import org.polyfrost.oneconfig.loader.utils.XDG;
 
 /**
  * @author xtrm
+ * @author Deftu
  * @since 1.1.0
  */
 @Getter
 @Log4j2
 public class MavenArtifactManager implements ArtifactManager<MavenArtifact, MavenArtifactDeclaration, MavenArtifactResolver> {
-
 	private final XDG.ApplicationStore store;
 	private final URI[] repositories;
 	private final RequestHelper requestHelper;
 	private final MavenArtifactResolver resolver;
 	private final CachingSolution cache;
 
-	public MavenArtifactManager(XDG.ApplicationStore store, RequestHelper requestHelper, URI... repositories) {
+	public MavenArtifactManager(XDG.ApplicationStore store, @Nullable Path readOnlyLibraryCache, RequestHelper requestHelper, URI... repositories) {
 		this.store = store;
 		this.requestHelper = requestHelper;
 		this.repositories = repositories;
-		this.resolver = new MavenArtifactResolver(store, requestHelper, repositories);
+		this.resolver = new MavenArtifactResolver(store, readOnlyLibraryCache, requestHelper, repositories);
 		this.cache = new MavenCachingSolution(store, repositories, requestHelper);
 	}
 
@@ -100,7 +99,7 @@ public class MavenArtifactManager implements ArtifactManager<MavenArtifact, Mave
 			try {
 				return Files.newInputStream(localArtifactPath);
 			} catch (IOException e) {
-				log.error("Error while creating input stream for " + artifact.getDeclaration(), e);
+				log.error("Error while creating input stream for {}", artifact.getDeclaration(), e);
 			}
 		}
 

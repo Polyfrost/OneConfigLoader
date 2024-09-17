@@ -21,6 +21,8 @@ import java.util.stream.Collectors;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 
+import org.jetbrains.annotations.Nullable;
+
 import org.polyfrost.oneconfig.loader.base.Capabilities;
 import org.polyfrost.oneconfig.loader.base.LoaderBase;
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifact;
@@ -76,6 +78,7 @@ public class Stage1Loader extends LoaderBase {
 		log.info("Creating artifact manager...");
 		this.artifactManager = new MavenArtifactManager(
 				XDG.provideApplicationStore("OneConfig"),
+				findLocalLibraryCache(capabilities),
 				getRequestHelper(),
 				repositories
 		);
@@ -85,8 +88,6 @@ public class Stage1Loader extends LoaderBase {
 
 	@Override
 	public void load() {
-		long startTime = System.currentTimeMillis();
-
 		log.info("Loading stage1...");
 		Capabilities capabilities = getCapabilities();
 		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
@@ -102,6 +103,7 @@ public class Stage1Loader extends LoaderBase {
 		log.info("Target specifier: {}", targetSpecifier);
 
 		// Fetch oneConfig version info
+		long resolveStartTime = System.currentTimeMillis();
 		String artifactSpecifier = "org.polyfrost.oneconfig:" + targetSpecifier + ":" + oneConfigVersion;
 		final Set<MavenArtifactDeclaration> resolveQueue = new HashSet<>();
 		final Set<MavenArtifact> resolvedArtifacts = new HashSet<>();
@@ -118,7 +120,9 @@ public class Stage1Loader extends LoaderBase {
 			try {
 				resolvedArtifact = this.artifactManager.getArtifactResolver().resolveArtifact(artifactDeclaration);
 			} catch (Exception e) {
-				throw new RuntimeException(e);
+				logger.fatal("Could not resolve artifact {}", artifactDeclaration, e);
+				ErrorHandler.displayError(this, "Error while resolving artifact: " + artifactDeclaration);
+				return;
 			}
 
 			if (resolvedArtifact != null) {
@@ -135,6 +139,7 @@ public class Stage1Loader extends LoaderBase {
 				logger.warn("Could not resolve artifact {}", artifactDeclaration);
 			}
 		}
+		log.info("Artifacts resolved in {}ms", System.currentTimeMillis() - resolveStartTime);
 
 		log.trace("Found {} artifacts, deduplicating...", resolvedArtifacts.size());
 
@@ -156,11 +161,11 @@ public class Stage1Loader extends LoaderBase {
 				.map(it -> it.get(0))
 				.collect(Collectors.toList());
 
-		log.info("Found {} deduplicated artifacts to load:", deduplicatedArtifacts.size());
+		log.trace("Found {} deduplicated artifacts to load:", deduplicatedArtifacts.size());
 
+		long appendStartTime = System.currentTimeMillis();
 		deduplicatedArtifacts.forEach(artifact -> checkAndAppendArtifactToClasspath(runtimeAccess, artifact));
-
-		log.info("OneConfig artifacts loaded in {}ms", System.currentTimeMillis() - startTime);
+		log.info("OneConfig artifacts loaded in {}ms", System.currentTimeMillis() - appendStartTime);
 
 		try {
 			ClassLoader classLoader = runtimeAccess.getClassLoader();
@@ -207,10 +212,27 @@ public class Stage1Loader extends LoaderBase {
 		}
 
 		try {
-			logger.info("Appending artifact {} to class path", artifact.getDeclaration());
+			logger.trace("Appending artifact {} to class path", artifact.getDeclaration());
 			runtimeAccess.appendToClassPath(false, artifactFile.toUri().toURL());
 		} catch (IOException e) {
 			throw new RuntimeException("Failed to append artifact to class path", e);
 		}
+	}
+
+	private static @Nullable Path findLocalLibraryCache(Capabilities capabilities) {
+		Path gameDir = capabilities.getGameMetadata().getGameDir();
+		Path libraryCache = gameDir.resolve("libraries");
+		if (Files.exists(libraryCache) && Files.isDirectory(libraryCache)) {
+			return libraryCache;
+		}
+		Path parentDir = gameDir.getParent();
+		Path mmcPack = parentDir.resolve("mmc-pack.json");
+		Path instanceCfg = parentDir.resolve("instance.cfg");
+		if (!Files.exists(mmcPack) && !Files.exists(instanceCfg)) {
+			// Probably in dev-env, fuck it.
+			return null;
+		}
+		parentDir = parentDir.getParent().getParent();
+		return parentDir.resolve("libraries");
 	}
 }

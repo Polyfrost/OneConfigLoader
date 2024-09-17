@@ -27,6 +27,7 @@ import javax.xml.parsers.ParserConfigurationException;
 
 import cc.polyfrost.polyio.util.PolyHashing;
 import lombok.extern.log4j.Log4j2;
+import org.jetbrains.annotations.Nullable;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -49,13 +50,15 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 	private static final ExecutorService REPOSITORY_DOWNLOAD_EXECUTOR = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
 
 	private final XDG.ApplicationStore store;
+	private final @Nullable Path readOnlyLibraryCache;
 	private final RequestHelper requestHelper;
 	private final URI[] repositories;
 
 	private final DocumentBuilderFactory documentBuilderFactory;
 
-	public MavenArtifactResolver(XDG.ApplicationStore store, RequestHelper requestHelper, URI[] repositories) {
+	public MavenArtifactResolver(XDG.ApplicationStore store, @Nullable Path readOnlyLibraryCache, RequestHelper requestHelper, URI[] repositories) {
 		this.store = store;
+		this.readOnlyLibraryCache = readOnlyLibraryCache;
 		this.requestHelper = requestHelper;
 		this.repositories = repositories;
 
@@ -90,14 +93,19 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 
 		Path artifactRelativePath = declaration.getRelativePath();
 		Path localArtifactPath = localLibraries.resolve(artifactRelativePath);
+		Path optionalLocalPath = null;
+		if (readOnlyLibraryCache != null) {
+			optionalLocalPath = readOnlyLibraryCache.resolve(artifactRelativePath);
+		}
 		String sha1Path = artifactRelativePath + ".sha1";
 		String rawPomPath = artifactRelativePath.toString().replace(declaration.getExtension(), "pom");
 		Path pomPath = localLibraries.resolve(rawPomPath);
 
+		final Path finalOptionalLocalPath = optionalLocalPath;
 		List<CompletableFuture<MavenArtifact>> futures = Arrays.stream(repositories)
 				.map(repository -> CompletableFuture.supplyAsync(() -> {
 					try {
-						return resolveArtifactFromRepository(repository, declaration, localArtifactPath, artifactRelativePath, sha1Path, pomPath, rawPomPath);
+						return resolveArtifactFromRepository(repository, declaration, localArtifactPath, finalOptionalLocalPath, artifactRelativePath, sha1Path, pomPath, rawPomPath);
 					} catch (Throwable t) {
 						return null;
 					}
@@ -131,11 +139,17 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 			URI repository,
 			MavenArtifactDeclaration declaration,
 			Path localArtifactPath,
+			@Nullable Path readOnlyLocalPath,
 			Path artifactRelativePath,
 			String sha1Path,
 			Path pomPath,
 			String rawPomPath
 	) {
+		if (readOnlyLocalPath != null && Files.exists(readOnlyLocalPath)) {
+			log.warn("Resolved (read-only) artifact {}", declaration.getDeclaration());
+			return null;
+		}
+
 		long startTime = System.currentTimeMillis();
 		if (declaration.isShouldValidate()) {
 			URI remoteSha1 = repository.resolve(FileUtils.encodePath(sha1Path.replace('\\', '/')));
@@ -207,7 +221,7 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 		}
 
 		try {
-			if (localArtifactPath.toFile().exists()) {
+			if (Files.exists(localArtifactPath)) {
 				log.warn("Resolved (local) artifact {} (repository: {}, took {}ms)", declaration.getDeclaration(), repository, System.currentTimeMillis() - startTime);
 				return loadArtifact(declaration, pomPath); // Load from local
 			} else {
@@ -240,6 +254,7 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 	}
 
 	private boolean downloadArtifact(URI repository, String artifactRelativePath, Path localArtifactPath) throws IOException {
+		log.info("Downloading artifact {} from {} to {}", artifactRelativePath, repository, localArtifactPath);
 		URI remoteArtifact = repository.resolve(FileUtils.encodePath(artifactRelativePath.replace('\\', '/')));
 		try (InputStream inputStream = this.requestHelper.provideStream(this.requestHelper.establishConnection(remoteArtifact.toURL()))) {
 			boolean checked = false;
@@ -274,6 +289,7 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 	}
 
 	private void downloadPom(URI repository, String rawPomPath, Path pomPath) throws IOException {
+		log.info("Downloading POM {} from {} to {}", rawPomPath, repository, pomPath);
 		URI remotePom = repository.resolve(FileUtils.encodePath(rawPomPath.replace('\\', '/')));
 		URLConnection connection = this.requestHelper.establishConnection(remotePom.toURL());
 		ByteArrayOutputStream byteStream = this.requestHelper.consumeConnection(connection);
@@ -287,13 +303,13 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 		byteStream.close();
 	}
 
+	@SuppressWarnings("UnstableApiUsage")
 	private String getHash(Path path) {
 		try {
 			byte[] bytes = Files.readAllBytes(path);
 			byte[] hashed = PolyHashing.hash(bytes, PolyHashing.SHA1);
 			BigInteger bigInt = new BigInteger(1, hashed);
-			String hash = bigInt.toString(16);
-			return hash;
+			return bigInt.toString(16);
 		} catch (Throwable t) {
 			throw new RuntimeException("Error while hashing " + path, t);
 		}

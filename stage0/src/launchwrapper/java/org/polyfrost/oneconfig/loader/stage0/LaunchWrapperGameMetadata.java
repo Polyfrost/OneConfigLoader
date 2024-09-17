@@ -1,5 +1,6 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
+import java.io.File;
 import java.nio.file.Path;
 
 import lombok.Getter;
@@ -8,8 +9,6 @@ import net.fabricmc.loader.api.ModContainer;
 import net.fabricmc.loader.api.Version;
 import net.minecraftforge.common.ForgeVersion;
 import net.minecraftforge.common.MinecraftForge;
-
-import net.minecraft.launchwrapper.Launch;
 
 import org.polyfrost.oneconfig.loader.base.Capabilities;
 
@@ -23,6 +22,7 @@ public class LaunchWrapperGameMetadata implements Capabilities.GameMetadata {
 
 	private final String loaderName;
 	private final String gameVersion;
+	private Path gameDir;
 
 	LaunchWrapperGameMetadata() {
 		boolean isFabric = false;
@@ -42,7 +42,14 @@ public class LaunchWrapperGameMetadata implements Capabilities.GameMetadata {
 
 	@Override
 	public Path getGameDir() {
-		return Launch.minecraftHome.toPath();
+		if (this.gameDir == null) {
+			File gameDirFile = LaunchWrapperTweaker.gameDir;
+			if (gameDirFile == null) {
+				gameDirFile = new File(".");
+			}
+			this.gameDir = gameDirFile.toPath().toAbsolutePath();
+		}
+		return this.gameDir;
 	}
 
 	private static String fetchGameVersion(boolean isFabric) {
