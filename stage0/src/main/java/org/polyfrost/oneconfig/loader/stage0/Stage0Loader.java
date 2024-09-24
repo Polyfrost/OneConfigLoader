@@ -92,7 +92,7 @@ public class Stage0Loader extends LoaderBase {
 
         // Load in classloader as a library
         logger.info("Loading stage1 as a library");
-        runtimeAccess.appendToClassPath(false, stage1Jar.toUri().toURL());
+        runtimeAccess.appendToClassPath("org.polyfrost.oneconfig:stage1", false, stage1Jar.toUri().toURL()); //TODO is the id correct?
 
         // Delegate loading to stage1
         logger.info("GO");

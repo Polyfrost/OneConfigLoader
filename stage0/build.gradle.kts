@@ -17,7 +17,11 @@ val platforms = setOf(
     Platform(
         "launchwrapper",
 		// also depend on fabric-loader since it *can* be used with launchwrapper
-        setOf("net.minecraft:launchwrapper:1.12", "net.fabricmc:fabric-loader:0.13.3"),
+        setOf("net.minecraft:launchwrapper:1.12", "net.fabricmc:fabric-loader:0.13.3",
+			// Versions based on the one which MC include by default in 1.8.9 (minimal supported version)
+			"com.google.guava:guava:17.0",
+			"org.apache.commons:commons-lang3:3.3.2",
+		),
         extraAttributes = mapOf(
             "TweakClass" to "org.polyfrost.oneconfig.loader.stage0.LaunchWrapperTweaker",
         )

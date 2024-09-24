@@ -28,9 +28,12 @@ public interface Capabilities {
 	 * @since 1.1.0
 	 */
 	interface RuntimeAccess {
-		void appendToClassPath(boolean mod, @NotNull URL @NotNull... urls);
+		void appendToClassPath(String id, boolean mod, @NotNull URL @NotNull... urls);
 
 		ClassLoader getClassLoader();
+
+		default void doRelaunchShitREMOVETHISLATER() {
+		}
 	}
 
 	/**
