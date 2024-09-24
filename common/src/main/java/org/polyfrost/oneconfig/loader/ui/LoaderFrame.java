@@ -6,7 +6,7 @@ import java.awt.*;
 
 public class LoaderFrame extends JFrame {
 
-	private final DownloadProgressPanel downloadUI = new DownloadProgressPanel();
+	private final DownloadProgressPanel downloadProgressPanel = new DownloadProgressPanel();
 
 	public LoaderFrame() {
 		super("OneConfig");
@@ -22,7 +22,7 @@ public class LoaderFrame extends JFrame {
 		setBackground(new Color(0, 0, 0, 0));
 
 		// Adding components
-		add(downloadUI);
+		add(downloadProgressPanel);
 
 		// Display
 		pack();
@@ -30,7 +30,7 @@ public class LoaderFrame extends JFrame {
 	}
 
 	public void update(float progress) {
-		downloadUI.update(progress);
+		downloadProgressPanel.update(progress);
 		repaint();
 	}
 
