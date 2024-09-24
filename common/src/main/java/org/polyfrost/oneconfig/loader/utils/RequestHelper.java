@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.apache.logging.log4j.LogManager;
 
 import org.polyfrost.oneconfig.loader.base.LoaderBase;
+import org.polyfrost.oneconfig.loader.ui.ErrorHandler;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;

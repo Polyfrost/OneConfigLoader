@@ -24,9 +24,7 @@ import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifact
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactDependency;
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactManager;
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.Artifact;
-import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;
-import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDependency;
-import org.polyfrost.oneconfig.loader.utils.ErrorHandler;
+import org.polyfrost.oneconfig.loader.ui.ErrorHandler;
 import org.polyfrost.oneconfig.loader.utils.XDG;
 
 /**
