@@ -106,7 +106,7 @@ public class LaunchWrapperRuntimeAccess implements Capabilities.RuntimeAccess {
 			@SuppressWarnings("unchecked")
 			Set<String> negativeResourceCache = (Set<String>) negativeResourceCacheField.get(Launch.classLoader);
 
-			List<Detection> detectionsRan = new ArrayList<>(this.detections); // Detections that have already been run
+			List<Detection> detectionsRan = new ArrayList<>(this.detections); // Detections that have already been run. TODO is this actually needed or nah
 
 			for (Detection detection : detections) {
 				detectionsRan.add(detection);
@@ -130,7 +130,9 @@ public class LaunchWrapperRuntimeAccess implements Capabilities.RuntimeAccess {
 			log.error("Failed to pre-load dependencies: ", e);
 		}
 		if (!relaunchUrls.isEmpty()) {
-			Relaunch.relaunch(relaunchUrls);
+			if (Relaunch.checkEnabled()) {
+				Relaunch.relaunch(relaunchUrls);
+			}
 		}
 	}
 
