@@ -25,6 +25,8 @@ import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifact
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactManager;
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.Artifact;
 import org.polyfrost.oneconfig.loader.ui.ErrorHandler;
+import org.polyfrost.oneconfig.loader.ui.LoaderFrame;
+import org.polyfrost.oneconfig.loader.utils.IOUtils;
 import org.polyfrost.oneconfig.loader.utils.XDG;
 
 /**
@@ -35,16 +37,22 @@ import org.polyfrost.oneconfig.loader.utils.XDG;
 @SuppressWarnings({"rawtypes", "unchecked"})
 public class Stage1Loader extends LoaderBase {
 	private static final String PROPERTIES_FILE_PATH = "/assets/oneconfig-loader/metadata/stage1.properties";
+
+	private final LoaderFrame loaderFrame;
 	private final MavenArtifactManager artifactManager;
 	private final Properties stage1Properties = new Properties();
 
 	@SneakyThrows
-	public Stage1Loader(Capabilities capabilities) {
+	public Stage1Loader(LoaderFrame loaderFrame, Capabilities capabilities) {
 		super(
 				"stage1",
-				Stage1Loader.class.getPackage().getImplementationVersion(),
+				IOUtils.provideImplementationVersion(
+						Stage1Loader.class, UNKNOWN_VERSION
+				),
 				capabilities
 		);
+
+		this.loaderFrame = loaderFrame;
 
 		log.info("Loading stage1 properties from {}", PROPERTIES_FILE_PATH);
 		try (InputStream inputStream = this.getClass().getResourceAsStream(PROPERTIES_FILE_PATH)) {
@@ -112,6 +120,8 @@ public class Stage1Loader extends LoaderBase {
 			MavenArtifact resolvedArtifact;
 
 			try {
+				this.loaderFrame.updateMessage("Resolving artifact: " + artifactDeclaration.getDeclaration());
+				this.loaderFrame.updateProgress((float) Math.random()); // Just to make the progress bar move xD
 				resolvedArtifact = this.artifactManager.getArtifactResolver().resolveArtifact(artifactDeclaration);
 			} catch (Exception e) {
 				throw new RuntimeException(e);
@@ -144,6 +154,8 @@ public class Stage1Loader extends LoaderBase {
 			if (oneConfigMainClass == null) {
 				throw new RuntimeException("oneconfig-main-class option is not found in stage1.properties");
 			}
+
+			loaderFrame.destroy();
 
 			classLoader.loadClass(oneConfigMainClass)
 					.getDeclaredMethod("init")

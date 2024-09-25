@@ -26,7 +26,15 @@ public class LoaderFrame extends JFrame {
 
 		// Display
 		pack();
+	}
+
+	public void display() {
 		setVisible(true);
+	}
+
+	public void destroy() {
+		setVisible(false);
+		dispose();
 	}
 
 	public void updateMessage(String message) {
