@@ -5,13 +5,17 @@ import javax.swing.*;
 import java.awt.*;
 import java.text.DecimalFormat;
 
-public class DownloadProgressPanel extends JPanel {
+public class ProgressPanel extends JPanel {
+
+	private static final DecimalFormat DECIMAL_FORMAT = new DecimalFormat("#.##");
 
 	private final Image logo;
-	private float progress = 0f;
-	private final DecimalFormat df = new DecimalFormat("#.##");
+	private final Font font;
 
-	public DownloadProgressPanel() {
+	private String message = "";
+	private float progress = 0f;
+
+	public ProgressPanel() {
 		super();
 
 		setBackground(new Color(0, 0, 0, 0));
@@ -19,6 +23,7 @@ public class DownloadProgressPanel extends JPanel {
 
 		// Preload the logo
 		this.logo = Resources.getLogo();
+		this.font = Resources.getFont();
 	}
 
 	@Override
@@ -35,20 +40,23 @@ public class DownloadProgressPanel extends JPanel {
 		g2d.setColor(Palette.PRIMARY_500);
 		g2d.fillRoundRect(24, 150 - 16 - 8, (int) (352 * progress), 8, 6, 6);
 		g2d.setColor(Color.WHITE);
-
-		Font font = Resources.getFont();
 		g2d.setFont(font.deriveFont(getAdjustedFontSize(13f, font, g2d)));
 
-		g2d.drawString("Downloading OneConfig...", 24, 150 - 16 - 8 - 8);
 
-		String percentage = df.format(progress * 100f) + "%";
+		String percentage = DECIMAL_FORMAT.format(progress * 100f) + "%";
+		g2d.drawString(message, 24, 150 - 16 - 8 - 8);
 		g2d.drawString(percentage, 400 - 24 - g2d.getFontMetrics().stringWidth(percentage), 150 - 16 - 8 - 8);
 
 		g2d.dispose();
 	}
 
-	public void update(float progress) {
-		this.progress = progress;
+	public void updateMessage(String message) {
+		this.message = message;
+		repaint();
+	}
+
+	public void updateProgress(float progress) {
+		this.progress = Math.max(0f, Math.min(1f, progress));
 		repaint();
 	}
 
