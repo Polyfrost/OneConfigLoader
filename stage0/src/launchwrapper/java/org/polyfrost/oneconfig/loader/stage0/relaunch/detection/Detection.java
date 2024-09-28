@@ -11,7 +11,7 @@ import java.util.Set;
 public interface Detection {
 	void checkRelaunch(String id, List<URL> urls, Field classLoaderExceptionsField, Set<String> classLoaderExceptions, Field transformerExceptionsField, Set<String> transformerExceptions, Field resourceCacheField, Map<String, byte[]> resourceCache, Field negativeResourceCacheField, Set<String> negativeResourceCache) throws Exception;
 	boolean isRelaunch();
-	boolean setRelaunch(boolean relaunch);
+	void setRelaunch(boolean relaunch);
 	@Nullable List<URL> getDetectedUrls();
 	default boolean shouldCheck(List<Detection> detectionsRan) {
 		return true;

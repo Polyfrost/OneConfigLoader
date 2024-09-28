@@ -50,46 +50,46 @@ public class PreloadLibraryDetection implements Detection {
 		}
 		try (FileSystem fileSystem = FileSystems.newFileSystem(Paths.get(urls.get(0).toURI()), null)) {
 			libPath = fileSystem.getPath(firstPath, restOfPath);
-		}
 
-		if (Files.notExists(libPath)) {
-			log.debug("Not pre-loading {} because it does not exist.", libPath);
-			return;
-		}
-
-		detectedUrls = urls;
-
-		log.debug("Pre-loading {} from {}..", libPath, urls.get(0).getPath());
-		long start = System.nanoTime();
-
-		Files.walkFileTree(libPath, new SimpleFileVisitor<Path>() {
-			private static final String SUFFIX = ".class";
-			private boolean warned;
-
-			@Override
-			public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
-				if (path.getFileName().toString().endsWith(SUFFIX)) {
-					String file = path.toString().substring(1);
-					String name = file.substring(0, file.length() - SUFFIX.length()).replace('/', '.');
-					byte[] bytes = Files.readAllBytes(path);
-					byte[] oldBytes = resourceCache.put(name, bytes);
-					if (oldBytes != null && !Arrays.equals(oldBytes, bytes) && !warned) {
-						warned = true;
-						log.warn("Found potentially conflicting version of {} already loaded. This may cause issues.", libPath);
-						log.warn("First conflicting class: {}", name);
-						try {
-							log.warn("Likely source: {}", Launch.classLoader.findResource(file));
-						} catch (Throwable t) {
-							log.warn("Unable to determine likely source:", t);
-						}
-						relaunch = true;
-					}
-					negativeResourceCache.remove(name);
-				}
-				return FileVisitResult.CONTINUE;
+			if (Files.notExists(libPath)) {
+				log.debug("Not pre-loading {} because it does not exist.", libPath);
+				return;
 			}
-		});
 
-		log.debug("Done after {}ns.", System.nanoTime() - start);
+			detectedUrls = urls;
+
+			log.debug("Pre-loading {} from {}..", libPath, urls.get(0).getPath());
+			long start = System.nanoTime();
+
+			Files.walkFileTree(libPath, new SimpleFileVisitor<Path>() {
+				private static final String SUFFIX = ".class";
+				private boolean warned;
+
+				@Override
+				public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
+					if (path.getFileName().toString().endsWith(SUFFIX)) {
+						String file = path.toString().substring(1);
+						String name = file.substring(0, file.length() - SUFFIX.length()).replace('/', '.');
+						byte[] bytes = Files.readAllBytes(path);
+						byte[] oldBytes = resourceCache.put(name, bytes);
+						if (oldBytes != null && !Arrays.equals(oldBytes, bytes) && !warned) {
+							warned = true;
+							log.warn("Found potentially conflicting version of {} already loaded. This may cause issues.", libPath);
+							log.warn("First conflicting class: {}", name);
+							try {
+								log.warn("Likely source: {}", Launch.classLoader.findResource(file));
+							} catch (Throwable t) {
+								log.warn("Unable to determine likely source:", t);
+							}
+							relaunch = true;
+						}
+						negativeResourceCache.remove(name);
+					}
+					return FileVisitResult.CONTINUE;
+				}
+			});
+
+			log.debug("Done after {}ns.", System.nanoTime() - start);
+		}
 	}
 }

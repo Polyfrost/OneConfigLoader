@@ -69,6 +69,10 @@ public class Relaunch {
         LOGGER.warn("");
         LOGGER.warn("==================================================================================");
         LOGGER.warn("Attempting re-launch to load the newer version instead.");
+		LOGGER.warn("Relaunch URLs:");
+		for (URL url : relaunchUrls) {
+			LOGGER.warn("    {}", url);
+		}
         LOGGER.warn("");
         LOGGER.warn("If AND ONLY IF you know what you are doing, have fixed the issue manually and need");
         LOGGER.warn("to suppress this behavior (did you really fix it then?), you can set the");

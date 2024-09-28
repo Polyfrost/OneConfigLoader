@@ -12,7 +12,7 @@ import org.polyfrost.oneconfig.loader.base.Capabilities;
  */
 public class ModLauncherRuntimeAccess implements Capabilities.RuntimeAccess {
 	@Override
-	public void appendToClassPath(boolean mod, @NotNull URL @NotNull ... urls) {
+	public void appendToClassPath(String id, boolean mod, @NotNull URL @NotNull ... urls) {
 		//TODO: Add to a list/set that's passed on to the TransformationService's runScan thingy
 		throw new UnsupportedOperationException("Not implemented");
 	}
