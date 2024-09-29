@@ -20,7 +20,7 @@ public class MixinDetection extends SimpleDetection {
 
 	@Override
 	public void checkRelaunch(String id, List<URL> urls) {
-		if (!id.equals("org.spongepowered:mixin")) {
+		if (!id.equals("org.spongepowered:mixin") && !id.endsWith(":UniMix")) {
 			return;
 		}
 		this.detectedUrls = urls;

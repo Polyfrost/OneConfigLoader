@@ -106,13 +106,7 @@ public class LaunchWrapperRuntimeAccess implements Capabilities.RuntimeAccess {
 			@SuppressWarnings("unchecked")
 			Set<String> negativeResourceCache = (Set<String>) negativeResourceCacheField.get(Launch.classLoader);
 
-			List<Detection> detectionsRan = new ArrayList<>(this.detections); // Detections that have already been run. TODO is this actually needed or nah
-
 			for (Detection detection : detections) {
-				detectionsRan.add(detection);
-				if (!detection.shouldCheck(detectionsRan)) {
-					continue;
-				}
 				for (Map.Entry<String, ArrayList<URL>> entry : ourUrls.entrySet()) {
 					detection.checkRelaunch(entry.getKey(), entry.getValue(), classLoaderExceptionsField, classLoaderExceptions, transformerExceptionsField, transformerExceptions, resourceCacheField, resourceCache, negativeResourceCacheField, negativeResourceCache);
 					if (detection.isRelaunch()) {

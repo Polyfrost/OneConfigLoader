@@ -13,7 +13,4 @@ public interface Detection {
 	boolean isRelaunch();
 	void setRelaunch(boolean relaunch);
 	@Nullable List<URL> getDetectedUrls();
-	default boolean shouldCheck(List<Detection> detectionsRan) {
-		return true;
-	}
 }
