@@ -27,7 +27,7 @@ public class FabricLikeRuntimeAccess implements Capabilities.RuntimeAccess {
 	private final Consumer<URL> appender = initializeAppender();
 
 	@Override
-	public void appendToClassPath(boolean mod, @NotNull URL @NotNull ... urls) {
+	public void appendToClassPath(String id, boolean mod, @NotNull URL @NotNull ... urls) {
 		for (URL url : urls) {
 			appender.accept(url);
 		}

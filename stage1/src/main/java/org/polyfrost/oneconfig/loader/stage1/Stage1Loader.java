@@ -14,7 +14,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import lombok.SneakyThrows;
-
 import lombok.extern.log4j.Log4j2;
 
 import org.polyfrost.oneconfig.loader.base.Capabilities;
@@ -24,8 +23,6 @@ import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifact
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactDependency;
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactManager;
 import org.polyfrost.oneconfig.loader.stage1.dependency.model.Artifact;
-import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDeclaration;
-import org.polyfrost.oneconfig.loader.stage1.dependency.model.ArtifactDependency;
 import org.polyfrost.oneconfig.loader.utils.ErrorHandler;
 import org.polyfrost.oneconfig.loader.utils.XDG;
 
@@ -34,7 +31,7 @@ import org.polyfrost.oneconfig.loader.utils.XDG;
  * @since 1.1.0
  */
 @Log4j2
-@SuppressWarnings({"rawtypes", "unchecked"})
+@SuppressWarnings({"rawtypes"})
 public class Stage1Loader extends LoaderBase {
 	private static final String PROPERTIES_FILE_PATH = "/assets/oneconfig-loader/metadata/stage1.properties";
 	private final MavenArtifactManager artifactManager;
@@ -140,6 +137,8 @@ public class Stage1Loader extends LoaderBase {
 
 		log.info("OneConfig artifacts loaded in {}ms", System.currentTimeMillis() - startTime);
 
+		runtimeAccess.doRelaunchShitREMOVETHISLATER();
+
 		try {
 			ClassLoader classLoader = runtimeAccess.getClassLoader();
 			String oneConfigMainClass = this.stage1Properties.getProperty("oneconfig-main-class");
@@ -186,7 +185,7 @@ public class Stage1Loader extends LoaderBase {
 
 		try {
 			logger.info("Appending artifact {} to class path", artifact.getDeclaration());
-			runtimeAccess.appendToClassPath(false, artifactFile.toUri().toURL());
+			runtimeAccess.appendToClassPath(artifact.getDeclaration().getDeclaration(), false, artifactFile.toUri().toURL());
 		} catch (IOException e) {
 			throw new RuntimeException("Failed to append artifact to class path", e);
 		}
