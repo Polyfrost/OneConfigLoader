@@ -22,7 +22,7 @@ public class ExcludedKotlinDetection implements Detection {
 	private List<URL> detectedUrls = null;
 	@Override
 	public void checkRelaunch(String id, List<URL> urls, Field classLoaderExceptionsField, Set<String> classLoaderExceptions, Field transformerExceptionsField, Set<String> transformerExceptions, Field resourceCacheField, Map<String, byte[]> resourceCache, Field negativeResourceCacheField, Set<String> negativeResourceCache) {
-		if (!id.equals("org.jetbrains.kotlin")) {
+		if (!id.startsWith("org.jetbrains.kotlin")) {
 			return;
 		}
 		detectedUrls = urls;

@@ -185,7 +185,7 @@ public class Stage1Loader extends LoaderBase {
 
 		try {
 			logger.info("Appending artifact {} to class path", artifact.getDeclaration());
-			runtimeAccess.appendToClassPath(artifact.getDeclaration().getGroupId() + ":" + artifact.getDeclaration().getArtifactId(), false, artifactFile.toUri().toURL());
+			runtimeAccess.appendToClassPath(artifact.getDeclaration().getDeclaration(), false, artifactFile.toUri().toURL());
 		} catch (IOException e) {
 			throw new RuntimeException("Failed to append artifact to class path", e);
 		}

@@ -27,7 +27,7 @@ public class SignedMixinDetection implements Detection {
 		// Some mods include signatures for all the classes in their jar, including Mixin. As a result, if any other
 		// mod ships a Mixin version different from theirs (we likely do), it'll explode because of mis-matching
 		// signatures.
-		if (!id.equals("org.spongepowered:mixin")) {
+		if (!id.startsWith("org.spongepowered:mixin")) {
 			return;
 		}
 		detectedUrls = urls;
