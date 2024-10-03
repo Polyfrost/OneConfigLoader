@@ -33,6 +33,7 @@ import org.polyfrost.oneconfig.loader.relaunch.args.LaunchArgs;
 // https://github.com/EssentialGG/EssentialLoader/blob/master/LICENSE
 
 @Log4j2
+@SuppressWarnings("LoggingSimilarMessage")
 public class RelaunchImpl implements Relaunch {
     static final String FML_TWEAKER = "net.minecraftforge.fml.common.launcher.FMLTweaker";
 
@@ -45,7 +46,7 @@ public class RelaunchImpl implements Relaunch {
     /** Whether we should try to re-launch in case of classpath complications. */
     public static final boolean ENABLED = !HAPPENED && Boolean.parseBoolean(System.getProperty(ENABLED_PROPERTY, "true"));
 
-    public static boolean checkEnabled() {
+	public static boolean checkEnabled() {
         if (HAPPENED) {
             return false;
         }
@@ -267,8 +268,7 @@ public class RelaunchImpl implements Relaunch {
             Map<String, Integer> tweakSorting = (Map<String, Integer>) field.get(null);
             return tweakSorting.keySet();
         } catch (Exception e) {
-            log.error("Failed to determine dynamically loaded tweaker classes.");
-            e.printStackTrace();
+            log.error("Failed to determine dynamically loaded tweaker classes.", e);
             return Collections.emptySet();
         }
     }
@@ -291,16 +291,17 @@ public class RelaunchImpl implements Relaunch {
                 return tweakClasses.contains(manifest.getMainAttributes().getValue("TweakClass"));
             }
         } catch (Exception e) {
-            log.error("Failed to read manifest from " + url + ":", e);
+			log.error("Failed to read manifest from {}:", url, e);
             return false;
         }
     }
 
-	private class LaunchClassLoaderDataItem<T> {
+	private static class LaunchClassLoaderDataItem<T> {
 
 		public final Field field;
 		public final T value;
 
+		@SuppressWarnings("unchecked")
 		public LaunchClassLoaderDataItem(String fieldName) {
 			try {
 				field = Launch.class.getDeclaredField(fieldName);
