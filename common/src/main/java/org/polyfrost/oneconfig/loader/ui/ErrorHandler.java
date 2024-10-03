@@ -1,4 +1,4 @@
-package org.polyfrost.oneconfig.loader.utils;
+package org.polyfrost.oneconfig.loader.ui;
 
 import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
@@ -23,13 +23,6 @@ public class ErrorHandler {
     private static final String TITLE = "OneConfig Loader (%s) - Error";
     private static final boolean CENTER_BODY = false;
     private static final int ICON_SIZE = 64;
-
-    private static final Color GRAY_900 = new Color(13, 14, 15, 255);
-    private static final Color GRAY_700 = new Color(34, 35, 38);
-    private static final Color PRIMARY_500 = new Color(26, 103, 255);
-    private static final Color PRIMARY_500_80 = new Color(26, 103, 204);
-    private static final Color WHITE_80 = new Color(255, 255, 255, 204);
-    private static final Color TRANSPARENT = new Color(0, 0, 0, 0);
 
     private ErrorHandler() {
         throw new IllegalStateException("This class cannot be instantiated.");
@@ -150,13 +143,13 @@ public class ErrorHandler {
             }
         }
 
-        UIManager.put("OptionPane.background", GRAY_900);
-        UIManager.put("Panel.background", GRAY_900);
-        UIManager.put("OptionPane.messageForeground", WHITE_80);
-        UIManager.put("Button.background", PRIMARY_500);
-        UIManager.put("Button.select", PRIMARY_500_80);
-        UIManager.put("Button.foreground", WHITE_80);
-        UIManager.put("Button.focus", TRANSPARENT);
+        UIManager.put("OptionPane.background", Palette.GRAY_900);
+        UIManager.put("Panel.background", Palette.GRAY_900);
+        UIManager.put("OptionPane.messageForeground", Palette.WHITE_80);
+        UIManager.put("Button.background", Palette.PRIMARY_500);
+        UIManager.put("Button.select", Palette.PRIMARY_500_80);
+        UIManager.put("Button.foreground", Palette.WHITE_80);
+        UIManager.put("Button.focus", Palette.TRANSPARENT);
     }
 
     /**
