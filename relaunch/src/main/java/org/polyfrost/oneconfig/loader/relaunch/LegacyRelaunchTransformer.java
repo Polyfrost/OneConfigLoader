@@ -1,6 +1,6 @@
-package org.polyfrost.oneconfig.loader.stage0.relaunch;
+package org.polyfrost.oneconfig.loader.relaunch;
 
-import static org.polyfrost.oneconfig.loader.stage0.relaunch.Relaunch.FML_TWEAKER;
+import static org.polyfrost.oneconfig.loader.relaunch.RelaunchImpl.FML_TWEAKER;
 
 import java.util.function.BiFunction;
 

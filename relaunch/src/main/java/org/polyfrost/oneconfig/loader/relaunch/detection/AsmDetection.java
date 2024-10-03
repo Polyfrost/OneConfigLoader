@@ -1,10 +1,10 @@
-package org.polyfrost.oneconfig.loader.stage0.relaunch.detection;
+package org.polyfrost.oneconfig.loader.relaunch.detection;
 
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
-import org.polyfrost.oneconfig.loader.stage0.relaunch.RelaunchVersions;
+import org.polyfrost.oneconfig.loader.relaunch.RelaunchVersions;
 
 import java.net.URL;
 import java.util.List;

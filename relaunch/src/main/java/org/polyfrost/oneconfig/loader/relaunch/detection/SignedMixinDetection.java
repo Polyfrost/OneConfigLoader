@@ -1,4 +1,4 @@
-package org.polyfrost.oneconfig.loader.stage0.relaunch.detection;
+package org.polyfrost.oneconfig.loader.relaunch.detection;
 
 import lombok.Getter;
 import lombok.Setter;
@@ -6,7 +6,8 @@ import lombok.extern.log4j.Log4j2;
 
 import net.minecraft.launchwrapper.Launch;
 
-import org.polyfrost.oneconfig.loader.stage0.relaunch.Relaunch;
+import org.polyfrost.oneconfig.loader.relaunch.Detection;
+import org.polyfrost.oneconfig.loader.relaunch.RelaunchImpl;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -32,12 +33,12 @@ public class SignedMixinDetection implements Detection {
 		}
 		detectedUrls = urls;
 		String signedMixinMod = findSignedMixin();
-		if (signedMixinMod != null && !Relaunch.HAPPENED) {
+		if (signedMixinMod != null && !RelaunchImpl.HAPPENED) {
 			// To work around that, we'll re-launch. That works because our relaunch class loader does not implement
 			// signature loading.
 			log.warn("Found {}. This mod includes signatures for its bundled Mixin and will explode if " +
 					"a different Mixin version (even a more recent one) is loaded.", signedMixinMod);
-			if (Relaunch.ENABLED) {
+			if (RelaunchImpl.ENABLED) {
 				log.warn("Trying to work around the issue by re-launching which will ignore signatures.");
 			} else {
 				log.warn("Cannot apply workaround because re-launching is disabled.");

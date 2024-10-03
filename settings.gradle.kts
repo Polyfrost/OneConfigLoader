@@ -18,4 +18,5 @@ rootProject.name = "loader"
 // Direct submodules
 include("common")
 include("stage0")
+include("relaunch")
 include("stage1")

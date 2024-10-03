@@ -1,6 +1,6 @@
-package org.polyfrost.oneconfig.loader.stage0.relaunch.args;
+package org.polyfrost.oneconfig.loader.relaunch.args;
 
-import static org.polyfrost.oneconfig.loader.stage0.relaunch.args.LaunchArgs.FML_TWEAKER;
+import static org.polyfrost.oneconfig.loader.relaunch.args.LaunchArgs.FML_TWEAKER;
 
 import java.util.ArrayList;
 import java.util.Arrays;

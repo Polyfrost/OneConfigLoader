@@ -1,4 +1,4 @@
-package org.polyfrost.oneconfig.loader.stage0.relaunch;
+package org.polyfrost.oneconfig.loader.relaunch;
 
 import java.io.IOException;
 import java.net.URL;

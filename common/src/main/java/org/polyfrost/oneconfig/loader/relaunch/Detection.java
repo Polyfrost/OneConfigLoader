@@ -1,4 +1,4 @@
-package org.polyfrost.oneconfig.loader.stage0.relaunch.detection;
+package org.polyfrost.oneconfig.loader.relaunch;
 
 import org.jetbrains.annotations.Nullable;
 

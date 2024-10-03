@@ -1,4 +1,4 @@
-package org.polyfrost.oneconfig.loader.stage0.relaunch.args;
+package org.polyfrost.oneconfig.loader.relaunch.args;
 
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;

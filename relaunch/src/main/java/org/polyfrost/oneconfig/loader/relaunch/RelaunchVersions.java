@@ -1,4 +1,4 @@
-package org.polyfrost.oneconfig.loader.stage0.relaunch;
+package org.polyfrost.oneconfig.loader.relaunch;
 
 import lombok.extern.log4j.Log4j2;
 import org.objectweb.asm.ClassReader;

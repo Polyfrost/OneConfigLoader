@@ -1,10 +1,12 @@
-package org.polyfrost.oneconfig.loader.stage0.relaunch.detection;
+package org.polyfrost.oneconfig.loader.relaunch.detection;
 
 import lombok.Getter;
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
 import net.minecraft.launchwrapper.Launch;
+
+import org.polyfrost.oneconfig.loader.relaunch.Detection;
 
 import java.io.IOException;
 import java.lang.reflect.Field;

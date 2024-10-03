@@ -1,4 +1,4 @@
-package org.polyfrost.oneconfig.loader.stage0.relaunch;
+package org.polyfrost.oneconfig.loader.relaunch;
 
 import java.io.File;
 import java.lang.reflect.Field;
@@ -14,20 +14,26 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
+import lombok.extern.log4j.Log4j2;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.Appender;
 
 import net.minecraft.launchwrapper.Launch;
 
-import org.polyfrost.oneconfig.loader.stage0.relaunch.args.LaunchArgs;
+import org.jetbrains.annotations.NotNull;
 
-public class Relaunch {
-    private static final Logger LOGGER = LogManager.getLogger(Relaunch.class);
+import org.polyfrost.oneconfig.loader.relaunch.args.LaunchArgs;
 
+// THE FOLLOWING CODE IS TAKEN AND ADAPTED FROM "EssentialLoader", UNDER THE GPL-3.0 LICENSE.
+// https://github.com/EssentialGG/EssentialLoader/blob/master/LICENSE
+
+@Log4j2
+public class RelaunchImpl implements Relaunch {
     static final String FML_TWEAKER = "net.minecraftforge.fml.common.launcher.FMLTweaker";
 
     private static final String HAPPENED_PROPERTY = "oneconfig.loader.relaunched";
@@ -43,44 +49,46 @@ public class Relaunch {
         if (HAPPENED) {
             return false;
         }
+
         if (ENABLED) {
             return true;
         }
-        LOGGER.warn("");
-        LOGGER.warn("");
-        LOGGER.warn("");
-        LOGGER.warn("==================================================================================");
-        LOGGER.warn("OneConfig can automatically attempt to fix this but this feature has been disabled");
-        LOGGER.warn("because \"" + ENABLED_PROPERTY + "\" is set to false.");
-        LOGGER.warn("");
-        LOGGER.warn("THIS WILL CAUSE ISSUES, PROCEED AT YOUR OWN RISK!");
-        LOGGER.warn("");
-        LOGGER.warn("Remove \"-D" + ENABLED_PROPERTY + "=false\" from JVM args to enable re-launching.");
-        LOGGER.warn("==================================================================================");
-        LOGGER.warn("");
-        LOGGER.warn("");
-        LOGGER.warn("");
+
+        log.warn("");
+        log.warn("");
+        log.warn("");
+        log.warn("==================================================================================");
+        log.warn("OneConfig can automatically attempt to fix this but this feature has been disabled");
+        log.warn("because \"" + ENABLED_PROPERTY + "\" is set to false.");
+        log.warn("");
+        log.warn("THIS WILL CAUSE ISSUES, PROCEED AT YOUR OWN RISK!");
+        log.warn("");
+        log.warn("Remove \"-D" + ENABLED_PROPERTY + "=false\" from JVM args to enable re-launching.");
+        log.warn("==================================================================================");
+        log.warn("");
+        log.warn("");
+        log.warn("");
         return false;
     }
 
     public static void relaunch(List<URL> relaunchUrls) {
-        LOGGER.warn("");
-        LOGGER.warn("");
-        LOGGER.warn("");
-        LOGGER.warn("==================================================================================");
-        LOGGER.warn("Attempting re-launch to load the newer version instead.");
-		LOGGER.warn("Relaunch URLs:");
+        log.warn("");
+        log.warn("");
+        log.warn("");
+        log.warn("==================================================================================");
+        log.warn("Attempting re-launch to load the newer version instead.");
+		log.warn("Relaunch URLs:");
 		for (URL url : relaunchUrls) {
-			LOGGER.warn("    {}", url);
+			log.warn("    {}", url);
 		}
-        LOGGER.warn("");
-        LOGGER.warn("If AND ONLY IF you know what you are doing, have fixed the issue manually and need");
-        LOGGER.warn("to suppress this behavior (did you really fix it then?), you can set the");
-        LOGGER.warn("\"" + ENABLED_PROPERTY + "\" system property to false.");
-        LOGGER.warn("==================================================================================");
-        LOGGER.warn("");
-        LOGGER.warn("");
-        LOGGER.warn("");
+        log.warn("");
+        log.warn("If AND ONLY IF you know what you are doing, have fixed the issue manually and need");
+        log.warn("to suppress this behavior (did you really fix it then?), you can set the");
+        log.warn("\"" + ENABLED_PROPERTY + "\" system property to false.");
+        log.warn("==================================================================================");
+        log.warn("");
+        log.warn("");
+        log.warn("");
 
         // Set marker so we do not end up in a loop
         System.setProperty(HAPPENED_PROPERTY, "true");
@@ -118,9 +126,9 @@ public class Relaunch {
                 }
             }
 
-            LOGGER.debug("Re-launching with classpath:");
+            log.debug("Re-launching with classpath:");
             for (URL url : urls) {
-                LOGGER.debug("    {}", url);
+                log.debug("    {}", url);
             }
 
             RelaunchClassLoader relaunchClassLoader = new RelaunchClassLoader(urls.toArray(new URL[0]), systemClassLoader);
@@ -141,7 +149,85 @@ public class Relaunch {
         }
     }
 
-    private static void cleanupForRelaunch() {
+	@Override
+	public void maybeRelaunch(DetectionSupplier detectionSupplier, Map<String, List<URL>> urls) {
+		List<Detection> detections = detectionSupplier.createDetectionList();
+		if (detections.isEmpty()) {
+			return; // Somehow, we got a no-op detection supplier despite having a relaunch instance.
+		}
+
+		List<URL> relaunchUrls = new ArrayList<>();
+
+		LaunchClassLoaderDataItem<Set<String>> classLoaderExceptionsData = new LaunchClassLoaderDataItem<>("classLoaderExceptions");
+		LaunchClassLoaderDataItem<Set<String>> transformerExceptionsData = new LaunchClassLoaderDataItem<>("transformerExceptions");
+		LaunchClassLoaderDataItem<Map<String, byte[]>> resourceCacheData = new LaunchClassLoaderDataItem<>("resourceCache");
+		LaunchClassLoaderDataItem<Set<String>> negativeResourceCacheData = new LaunchClassLoaderDataItem<>("negativeResourceCache");
+
+		for (Detection detection : detections) {
+			for (Map.Entry<String, List<URL>> entry : urls.entrySet()) {
+				try {
+					detection.checkRelaunch(
+							entry.getKey(),
+							entry.getValue(),
+							classLoaderExceptionsData.field,
+							classLoaderExceptionsData.value,
+							transformerExceptionsData.field,
+							transformerExceptionsData.value,
+							resourceCacheData.field,
+							resourceCacheData.value,
+							negativeResourceCacheData.field,
+							negativeResourceCacheData.value
+					);
+
+					if (detection.isRelaunch()) {
+						List<URL> detectedUrls = detection.getDetectedUrls();
+						if (detectedUrls != null) {
+							relaunchUrls.addAll(detectedUrls);
+						}
+						detection.setRelaunch(false);
+					}
+				} catch (Exception e) {
+					throw new RuntimeException("Failed to check relaunch for " + entry.getKey(), e);
+				}
+			}
+		}
+
+		try {
+			runFoamFixCompat(resourceCacheData.field, resourceCacheData.value);
+		} catch (Exception e) {
+			log.error("Failed to run FoamFix compatibility", e);
+		}
+
+		if (!relaunchUrls.isEmpty()) {
+			if (checkEnabled()) {
+				relaunch(relaunchUrls);
+			}
+		}
+	}
+
+	private void runFoamFixCompat(Field resourceCacheField, Map<String, byte[]> resourceCache) throws Exception {
+		if (Launch.classLoader.getClassBytes("pl.asie.foamfix.coremod.FoamFixCore") != null) {
+			// FoamFix will by default replace the resource cache map with a weak one, thereby negating our hack.
+			// To work around that, we preempt its replacement and put in a map which will throw an exception when
+			// iterated.
+			log.info("Detected FoamFix, locking LaunchClassLoader.resourceCache");
+			resourceCacheField.set(Launch.classLoader, new ConcurrentHashMap<String,byte[]>(resourceCache) {
+				// FoamFix will call this before overwriting the resourceCache field
+				@Override
+				public @NotNull Set<Entry<String, byte[]>> entrySet() {
+					throw new RuntimeException("Suppressing FoamFix LaunchWrapper weak resource cache.") {
+						// It'll then catch the exception and print it, which we can make less noisy.
+						@Override
+						public void printStackTrace() {
+							log.info(this.getMessage());
+						}
+					};
+				}
+			});
+		}
+	}
+
+	private static void cleanupForRelaunch() {
         // https://github.com/MinimallyCorrect/ModPatcher/blob/3a538a5b574546f68d927f3551bf9e61fda4a334/src/main/java/org/minimallycorrect/modpatcher/api/ModPatcherTransformer.java#L43-L51
         System.clearProperty("nallar.ModPatcher.alreadyLoaded");
         // https://github.com/MinimallyCorrect/ModPatcher/blob/3a538a5b574546f68d927f3551bf9e61fda4a334/src/main/java/org/minimallycorrect/modpatcher/api/LaunchClassLoaderUtil.java#L31-L36
@@ -150,7 +236,7 @@ public class Relaunch {
         try {
             cleanupMixinAppender();
         } catch (Throwable t) {
-            LOGGER.error("Failed to reset mixin appender. INIT-phase mixins may misfunction.", t);
+            log.error("Failed to reset mixin appender. INIT-phase mixins may misfunction.", t);
         }
     }
 
@@ -181,7 +267,7 @@ public class Relaunch {
             Map<String, Integer> tweakSorting = (Map<String, Integer>) field.get(null);
             return tweakSorting.keySet();
         } catch (Exception e) {
-            LOGGER.error("Failed to determine dynamically loaded tweaker classes.");
+            log.error("Failed to determine dynamically loaded tweaker classes.");
             e.printStackTrace();
             return Collections.emptySet();
         }
@@ -205,8 +291,25 @@ public class Relaunch {
                 return tweakClasses.contains(manifest.getMainAttributes().getValue("TweakClass"));
             }
         } catch (Exception e) {
-            LOGGER.error("Failed to read manifest from " + url + ":", e);
+            log.error("Failed to read manifest from " + url + ":", e);
             return false;
         }
     }
+
+	private class LaunchClassLoaderDataItem<T> {
+
+		public final Field field;
+		public final T value;
+
+		public LaunchClassLoaderDataItem(String fieldName) {
+			try {
+				field = Launch.class.getDeclaredField(fieldName);
+				field.setAccessible(true);
+				value = (T) field.get(null);
+			} catch (Exception e) {
+				throw new RuntimeException("Failed to access Launch field " + fieldName, e);
+			}
+		}
+
+	}
 }

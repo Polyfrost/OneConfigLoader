@@ -1,4 +1,6 @@
-package org.polyfrost.oneconfig.loader.stage0.relaunch.detection;
+package org.polyfrost.oneconfig.loader.relaunch.detection;
+
+import org.polyfrost.oneconfig.loader.relaunch.Detection;
 
 import java.lang.reflect.Field;
 import java.net.URL;

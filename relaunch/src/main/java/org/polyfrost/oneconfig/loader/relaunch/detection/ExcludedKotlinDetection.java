@@ -1,11 +1,12 @@
-package org.polyfrost.oneconfig.loader.stage0.relaunch.detection;
+package org.polyfrost.oneconfig.loader.relaunch.detection;
 
 import lombok.Getter;
 
 import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
 
-import org.polyfrost.oneconfig.loader.stage0.relaunch.Relaunch;
+import org.polyfrost.oneconfig.loader.relaunch.Detection;
+import org.polyfrost.oneconfig.loader.relaunch.RelaunchImpl;
 
 import java.lang.reflect.Field;
 import java.net.URL;
@@ -29,7 +30,7 @@ public class ExcludedKotlinDetection implements Detection {
 		// Some mods (BetterFoliage) will exclude kotlin from transformations, thereby voiding our preloading.
 		boolean kotlinExcluded = Stream.concat(classLoaderExceptions.stream(), transformerExceptions.stream())
 				.anyMatch(prefix -> prefix.startsWith("kotlin"));
-		if (kotlinExcluded && !Relaunch.HAPPENED) {
+		if (kotlinExcluded && !RelaunchImpl.HAPPENED) {
 			log.warn("Found Kotlin to be excluded from LaunchClassLoader transformations. This may cause issues.");
 			log.debug("classLoaderExceptions:");
 			for (String classLoaderException : classLoaderExceptions) {

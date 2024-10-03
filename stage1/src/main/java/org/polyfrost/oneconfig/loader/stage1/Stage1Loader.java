@@ -18,6 +18,8 @@ import lombok.extern.log4j.Log4j2;
 
 import org.polyfrost.oneconfig.loader.base.Capabilities;
 import org.polyfrost.oneconfig.loader.base.LoaderBase;
+import org.polyfrost.oneconfig.loader.relaunch.DetectionSupplier;
+import org.polyfrost.oneconfig.loader.relaunch.Relaunch;
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifact;
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactDeclaration;
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactDependency;
@@ -137,7 +139,7 @@ public class Stage1Loader extends LoaderBase {
 
 		log.info("OneConfig artifacts loaded in {}ms", System.currentTimeMillis() - startTime);
 
-		runtimeAccess.doRelaunchShitREMOVETHISLATER();
+		Relaunch.maybeCreate().maybeRelaunch(DetectionSupplier.maybeCreate(), runtimeAccess.getAppendedUrls());
 
 		try {
 			ClassLoader classLoader = runtimeAccess.getClassLoader();
