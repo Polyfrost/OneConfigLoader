@@ -19,6 +19,9 @@ import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 import lombok.extern.log4j.Log4j2;
+
+import net.minecraft.launchwrapper.LaunchClassLoader;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.Appender;
@@ -304,9 +307,9 @@ public class RelaunchImpl implements Relaunch {
 		@SuppressWarnings("unchecked")
 		public LaunchClassLoaderDataItem(String fieldName) {
 			try {
-				field = Launch.class.getDeclaredField(fieldName);
+				field = LaunchClassLoader.class.getDeclaredField(fieldName);
 				field.setAccessible(true);
-				value = (T) field.get(null);
+				value = (T) field.get(Launch.classLoader);
 			} catch (Exception e) {
 				throw new RuntimeException("Failed to access Launch field " + fieldName, e);
 			}

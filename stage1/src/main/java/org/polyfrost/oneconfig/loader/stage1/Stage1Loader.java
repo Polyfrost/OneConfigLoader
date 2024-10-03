@@ -9,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -99,12 +100,30 @@ public class Stage1Loader extends LoaderBase {
 		log.info("Target specifier: {}", targetSpecifier);
 
 		// Fetch oneConfig version info
-		String artifactSpecifier = "org.polyfrost.oneconfig:" + targetSpecifier + ":" + oneConfigVersion;
 		final Set<MavenArtifactDeclaration> resolveQueue = new HashSet<>();
 		final Set<MavenArtifact> resolvedArtifacts = new HashSet<>();
-		MavenArtifactDeclaration oneConfigDeclaration = this.artifactManager.buildArtifactDeclaration(artifactSpecifier);
+
+		if ("forge".equalsIgnoreCase(gameMetadata.getLoaderName())) {
+			String gameVersion = gameMetadata.getGameVersion();
+
+			// If we're on 1.8.9 or 1.12.2, add the relaunch module
+			if (gameVersion.equals("1.8.9") || gameVersion.equals("1.12.2")) {
+				log.info("Adding Relaunch module for legacy Forge");
+
+				String relaunchArtifactSpecifier = "org.polyfrost.oneconfig:relaunch:" + this.stage1Properties.getProperty("relaunch-version") + ":all";
+				MavenArtifactDeclaration relaunchDeclaration = this.artifactManager.buildArtifactDeclaration(relaunchArtifactSpecifier);
+//				relaunchDeclaration.setShouldValidate(true);
+				log.info("Resolving Relaunch artifact: {}", relaunchDeclaration);
+
+				resolveQueue.add(relaunchDeclaration);
+			}
+		}
+
+		String oneConfigArtifactSpecifier = "org.polyfrost.oneconfig:" + targetSpecifier + ":" + oneConfigVersion;
+		MavenArtifactDeclaration oneConfigDeclaration = this.artifactManager.buildArtifactDeclaration(oneConfigArtifactSpecifier);
 		oneConfigDeclaration.setShouldValidate(true);
 		log.info("Resolving OneConfig artifact: {}", oneConfigDeclaration);
+
 		resolveQueue.add(oneConfigDeclaration);
 
 		while (!resolveQueue.isEmpty()) {

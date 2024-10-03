@@ -86,7 +86,7 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 		Path artifactRelativePath = declaration.getRelativePath();
 		Path localArtifactPath = localLibraries.resolve(artifactRelativePath);
 		String sha1Path = artifactRelativePath + ".sha1";
-		String rawPomPath = artifactRelativePath.toString().replace(declaration.getExtension(), "pom");
+		String rawPomPath = artifactRelativePath.toString().replace("-" + declaration.getClassifier(), "").replace(declaration.getExtension(), "pom");
 		Path pomPath = localLibraries.resolve(rawPomPath);
 
 		List<CompletableFuture<MavenArtifact>> futures = Arrays.stream(repositories)
@@ -187,6 +187,8 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 				log.info("Resolved artifact {} (repository: {}, took {}ms)", declaration.getDeclaration(), repository, System.currentTimeMillis() - startTime);
 				return loadArtifact(declaration, pomPath);
 			} catch (FileNotFoundException e) {
+				log.warn("SHA1 file ({}) not found @ {}", sha1Path, repository);
+
 				return null; // Ignore and continue
 			} catch (Throwable t) {
 				throw new RuntimeException("Error while checking SHA1 of " + declaration.getDeclaration(), t);
@@ -199,6 +201,8 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 			}
 		} catch (Throwable t) {
 			if (t instanceof FileNotFoundException) {
+				log.warn("POM file ({}) not found @ {}", pomPath, repository);
+
 				return null; // Ignore
 			}
 
@@ -217,6 +221,8 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 			}
 		} catch (Throwable t) {
 			if (t instanceof FileNotFoundException) {
+				log.warn("File ({}) not found @ {}", localArtifactPath, repository);
+
 				return null; // Ignore
 			}
 
