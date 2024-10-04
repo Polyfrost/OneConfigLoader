@@ -13,13 +13,16 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.jar.Attributes;
 import java.util.jar.JarFile;
 import java.util.jar.Manifest;
 
 import lombok.extern.log4j.Log4j2;
 
+import net.minecraft.launchwrapper.ITweaker;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 import org.apache.logging.log4j.LogManager;
@@ -38,7 +41,10 @@ import org.polyfrost.oneconfig.loader.relaunch.args.LaunchArgs;
 @Log4j2
 @SuppressWarnings("LoggingSimilarMessage")
 public class RelaunchImpl implements Relaunch {
-    static final String FML_TWEAKER = "net.minecraftforge.fml.common.launcher.FMLTweaker";
+	private static final String CORE_MOD_MANAGER = "net.minecraftforge.fml.relauncher.CoreModManager";
+
+	static final String FML_TWEAKER = "net.minecraftforge.fml.common.launcher.FMLTweaker";
+	private static final String MIXIN_TWEAKER = "org.spongepowered.asm.launch.MixinTweaker";
 
     private static final String HAPPENED_PROPERTY = "oneconfig.loader.relaunched";
     private static final String ENABLED_PROPERTY = "oneconfig.loader.relaunch";
@@ -231,6 +237,150 @@ public class RelaunchImpl implements Relaunch {
 		}
 	}
 
+	@Override
+	public void attemptInjectMixin() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+		@SuppressWarnings("unchecked")
+		List<String> tweakClasses = (List<String>) Launch.blackboard.get("TweakClasses");
+
+		// If the MixinTweaker is already queued (because of another mod), then there's nothing we need to to
+		if (tweakClasses.contains(MIXIN_TWEAKER)) {
+			// Except we do need to initialize the MixinTweaker immediately so we can add containers
+			// for our mods.
+			// This is idempotent, so we can call it without adding to the tweaks list (and we must not add to
+			// it because the queued tweaker will already get added and there is nothing we can do about that).
+			initMixinTweaker();
+			return;
+		}
+
+		// If it is already booted, we're also good to go
+		if (Launch.blackboard.get("mixin.initialised") != null) {
+			return;
+		}
+
+		System.out.println("Injecting MixinTweaker from OneConfig Loader");
+
+		// Otherwise, we need to take things into our own hands because the normal way to chainload a tweaker
+		// (by adding it to the TweakClasses list during injectIntoClassLoader) is too late for Mixin.
+		// Instead, we instantiate the MixinTweaker on our own and add it to the current Tweaks list immediately.
+		@SuppressWarnings("unchecked")
+		List<ITweaker> tweaks = (List<ITweaker>) Launch.blackboard.get("Tweaks");
+		tweaks.add(initMixinTweaker());
+	}
+
+	@Override
+	public void fixTweakerLoading() {
+		List<SourceFile> sourceFiles = getSourceFiles();
+		if (sourceFiles.isEmpty()) {
+			log.error("Not able to determine current file... Mod will NOT work!");
+			return;
+		}
+
+		for (SourceFile sourceFile : sourceFiles) {
+			try {
+				log.warn("Attempting to fix tweaker loading for {}", sourceFile.file);
+				setupSourceFile(sourceFile);
+			} catch (Exception e) {
+				log.error("Failed to setup source file {}", sourceFile.file, e);
+			}
+		}
+	}
+
+	private ITweaker initMixinTweaker() throws ClassNotFoundException, IllegalAccessException, InstantiationException {
+		Launch.classLoader.addClassLoaderExclusion(MIXIN_TWEAKER.substring(0, MIXIN_TWEAKER.lastIndexOf('.')));
+		return (ITweaker) Class.forName(MIXIN_TWEAKER, true, Launch.classLoader).newInstance();
+	}
+
+	private List<SourceFile> getSourceFiles() {
+		List<SourceFile> sourceFiles = new ArrayList<>();
+		for (URL url : Launch.classLoader.getSources()) {
+			try {
+				URI uri = url.toURI();
+				if (!"file".equals(uri.getScheme())) {
+					continue;
+				}
+				File file = new File(uri);
+				if (!file.exists() || !file.isFile()) {
+					continue;
+				}
+				String tweakClass = null;
+				String coreMod = null;
+				boolean isMixin = false;
+				try (JarFile jar = new JarFile(file)) {
+					if (jar.getManifest() != null) {
+						Attributes attributes = jar.getManifest().getMainAttributes();
+						tweakClass = attributes.getValue("TweakClass");
+						coreMod = attributes.getValue("FMLCorePlugin");
+						isMixin = attributes.getValue("MixinConfigs") != null;
+					}
+				}
+
+				if (Objects.equals(tweakClass, "cc.polyfrost.oneconfigwrapper.OneConfigWrapper") || Objects.equals(tweakClass, "cc.polyfrost.oneconfig.loader.stage0.LaunchWrapperTweaker")) {
+					sourceFiles.add(new SourceFile(file, coreMod, isMixin));
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+		return sourceFiles;
+	}
+
+	@SuppressWarnings("unchecked")
+	private void setupSourceFile(SourceFile sourceFile) throws Exception {
+		Class<?> coreModManagerClz = Class.forName(CORE_MOD_MANAGER);
+
+		// Forge will by default ignore a mod file if it contains a tweaker
+		// So we need to remove ourselves from that exclusion list
+		Field ignoredModFile = coreModManagerClz.getDeclaredField("ignoredModFiles");
+		ignoredModFile.setAccessible(true);
+		((List<String>) ignoredModFile.get(null)).remove(sourceFile.file.getName());
+
+		// And instead add ourselves to the mod candidate list
+		List<String> reparseableCoremods = (List<String>) coreModManagerClz.getDeclaredMethod("getReparseableCoremods").invoke(null);
+		reparseableCoremods.add(sourceFile.file.getName());
+
+		// FML will not load CoreMods if it finds a tweaker, so we need to load the coremod manually if present
+		// We do this to reduce the friction of adding our tweaker if a mod has previously been relying on a
+		// coremod (cause ordinarily they would have to convert their coremod into a tweaker manually).
+		// Mixin takes care of this as well, so we mustn't if it will.
+		String coreMod = sourceFile.coreMod;
+		if (coreMod != null && !sourceFile.isMixin) {
+			Method loadCoreMod = coreModManagerClz.getDeclaredMethod("loadCoreMod", LaunchClassLoader.class, String.class, File.class);
+			loadCoreMod.setAccessible(true);
+			ITweaker tweaker = (ITweaker) loadCoreMod.invoke(null, Launch.classLoader, coreMod, sourceFile.file);
+			((List<ITweaker>) Launch.blackboard.get("Tweaks")).add(tweaker);
+		}
+
+		// If they declared our tweaker but also want to use mixin, then we'll inject the mixin tweaker
+		// for them.
+		if (sourceFile.isMixin) {
+			// Mixin will only look at jar files which declare the MixinTweaker as their tweaker class, so we need
+			// to manually add our source files for inspection.
+			try {
+				attemptInjectMixin();
+
+				Class<?> MixinBootstrap = Class.forName("org.spongepowered.asm.launch.MixinBootstrap");
+				Class<?> MixinPlatformManager = Class.forName("org.spongepowered.asm.launch.platform.MixinPlatformManager");
+				Object platformManager = MixinBootstrap.getDeclaredMethod("getPlatform").invoke(null);
+				Method addContainer;
+				Object arg;
+				try {
+					// Mixin 0.7
+					addContainer = MixinPlatformManager.getDeclaredMethod("addContainer", URI.class);
+					arg = sourceFile.file.toURI();
+				} catch (NoSuchMethodException ignored) {
+					// Mixin 0.8
+					Class<?> IContainerHandle = Class.forName("org.spongepowered.asm.launch.platform.container.IContainerHandle");
+					Class<?> ContainerHandleURI = Class.forName("org.spongepowered.asm.launch.platform.container.ContainerHandleURI");
+					addContainer = MixinPlatformManager.getDeclaredMethod("addContainer", IContainerHandle);
+					arg = ContainerHandleURI.getDeclaredConstructor(URI.class).newInstance(sourceFile.file.toURI());
+				}
+				addContainer.invoke(platformManager, arg);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+	}
+
 	private static void cleanupForRelaunch() {
         // https://github.com/MinimallyCorrect/ModPatcher/blob/3a538a5b574546f68d927f3551bf9e61fda4a334/src/main/java/org/minimallycorrect/modpatcher/api/ModPatcherTransformer.java#L43-L51
         System.clearProperty("nallar.ModPatcher.alreadyLoaded");
@@ -300,7 +450,6 @@ public class RelaunchImpl implements Relaunch {
     }
 
 	private static class LaunchClassLoaderDataItem<T> {
-
 		public final Field field;
 		public final T value;
 
@@ -314,6 +463,17 @@ public class RelaunchImpl implements Relaunch {
 				throw new RuntimeException("Failed to access Launch field " + fieldName, e);
 			}
 		}
+	}
 
+	private static class SourceFile {
+		public final File file;
+		public final String coreMod;
+		public final boolean isMixin;
+
+		private SourceFile(File file, String coreMod, boolean isMixin) {
+			this.file = file;
+			this.coreMod = coreMod;
+			this.isMixin = isMixin;
+		}
 	}
 }

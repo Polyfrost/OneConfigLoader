@@ -38,8 +38,19 @@ public interface Relaunch {
 	 * @author Deftu
 	 * @since 1.1.0-alpha.x
 	 */
-	class RelaunchNoOp implements Relaunch {
+	void attemptInjectMixin() throws Exception;
 
+	/**
+	 * @author Deftu
+	 * @since 1.1.0-alpha.x
+	 */
+	void fixTweakerLoading();
+
+	/**
+	 * @author Deftu
+	 * @since 1.1.0-alpha.x
+	 */
+	class RelaunchNoOp implements Relaunch {
 		public static final RelaunchNoOp INSTANCE = new RelaunchNoOp();
 
 		@Override
@@ -47,6 +58,15 @@ public interface Relaunch {
 			// No-op
 		}
 
+		@Override
+		public void attemptInjectMixin() {
+			// No-op
+		}
+
+		@Override
+		public void fixTweakerLoading() {
+			// No-op
+		}
 	}
 
 }

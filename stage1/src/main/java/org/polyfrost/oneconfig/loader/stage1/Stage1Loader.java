@@ -9,7 +9,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Objects;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -158,13 +157,27 @@ public class Stage1Loader extends LoaderBase {
 
 		log.info("OneConfig artifacts loaded in {}ms", System.currentTimeMillis() - startTime);
 
-		Relaunch.maybeCreate().maybeRelaunch(DetectionSupplier.maybeCreate(), runtimeAccess.getAppendedUrls());
+		Relaunch relaunch = Relaunch.maybeCreate();
+
+		relaunch.maybeRelaunch(DetectionSupplier.maybeCreate(), runtimeAccess.getAppendedUrls());
 
 		try {
 			ClassLoader classLoader = runtimeAccess.getClassLoader();
 			String oneConfigMainClass = this.stage1Properties.getProperty("oneconfig-main-class");
 			if (oneConfigMainClass == null) {
 				throw new RuntimeException("oneconfig-main-class option is not found in stage1.properties");
+			}
+
+			try {
+				relaunch.attemptInjectMixin();
+			} catch (Exception e) {
+				logger.error("Failed to inject Mixin", e);
+			}
+
+			try {
+				relaunch.fixTweakerLoading();
+			} catch (Exception e) {
+				logger.error("Failed to fix tweaker loading", e);
 			}
 
 			classLoader.loadClass(oneConfigMainClass)
