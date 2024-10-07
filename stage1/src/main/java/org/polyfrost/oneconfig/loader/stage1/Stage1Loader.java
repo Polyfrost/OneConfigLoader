@@ -3,6 +3,7 @@ package org.polyfrost.oneconfig.loader.stage1;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.nio.file.Files;
@@ -111,19 +112,22 @@ public class Stage1Loader extends LoaderBase {
 
 				String relaunchArtifactSpecifier = "org.polyfrost.oneconfig:relaunch:" + this.stage1Properties.getProperty("relaunch-version") + ":all";
 				MavenArtifactDeclaration relaunchDeclaration = this.artifactManager.buildArtifactDeclaration(relaunchArtifactSpecifier);
-//				relaunchDeclaration.setShouldValidate(true);
+				resolveQueue.add(relaunchDeclaration);
 				log.info("Resolving Relaunch artifact: {}", relaunchDeclaration);
 
-				resolveQueue.add(relaunchDeclaration);
+				String mixinArtifactSpecifier = "org.polyfrost:polymixin:0.8.4";
+				MavenArtifactDeclaration mixinDeclaration = this.artifactManager.buildArtifactDeclaration(mixinArtifactSpecifier);
+				resolveQueue.add(mixinDeclaration);
+				log.info("Resolving Mixin artifact: {}", mixinDeclaration);
 			}
 		}
 
 		String oneConfigArtifactSpecifier = "org.polyfrost.oneconfig:" + targetSpecifier + ":" + oneConfigVersion;
 		MavenArtifactDeclaration oneConfigDeclaration = this.artifactManager.buildArtifactDeclaration(oneConfigArtifactSpecifier);
 		oneConfigDeclaration.setShouldValidate(true);
+		resolveQueue.add(oneConfigDeclaration);
 		log.info("Resolving OneConfig artifact: {}", oneConfigDeclaration);
 
-		resolveQueue.add(oneConfigDeclaration);
 
 		while (!resolveQueue.isEmpty()) {
 			MavenArtifactDeclaration artifactDeclaration = resolveQueue.iterator().next();
@@ -166,18 +170,6 @@ public class Stage1Loader extends LoaderBase {
 			String oneConfigMainClass = this.stage1Properties.getProperty("oneconfig-main-class");
 			if (oneConfigMainClass == null) {
 				throw new RuntimeException("oneconfig-main-class option is not found in stage1.properties");
-			}
-
-			try {
-				relaunch.attemptInjectMixin();
-			} catch (Exception e) {
-				logger.error("Failed to inject Mixin", e);
-			}
-
-			try {
-				relaunch.fixTweakerLoading();
-			} catch (Exception e) {
-				logger.error("Failed to fix tweaker loading", e);
 			}
 
 			classLoader.loadClass(oneConfigMainClass)

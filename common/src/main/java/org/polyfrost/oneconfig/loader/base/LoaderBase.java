@@ -42,7 +42,7 @@ public abstract class LoaderBase {
 		this.capabilities = capabilities;
 
 		Logger logger = LogManager.getLogger(getClass());
-		if (version.equalsIgnoreCase(UNKNOWN_VERSION)) {
+		if (UNKNOWN_VERSION.equalsIgnoreCase(version)) {
 			logger.warn("Jar version is unknown, please report this.");
 		}
 

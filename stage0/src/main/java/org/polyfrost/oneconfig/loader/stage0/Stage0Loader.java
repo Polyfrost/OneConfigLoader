@@ -7,12 +7,9 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.Properties;
 import java.util.function.Supplier;
-
-import javax.swing.*;
 
 import lombok.SneakyThrows;
 
@@ -55,8 +52,6 @@ public class Stage0Loader extends LoaderBase {
     @SneakyThrows
     @Override
     public void load() {
-        JOptionPane.showMessageDialog(null, "Loading hook");
-
 		Capabilities capabilities = this.getCapabilities();
 		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
 //		Capabilities.GameMetadata gameMetadata = capabilities.getGameMetadata();

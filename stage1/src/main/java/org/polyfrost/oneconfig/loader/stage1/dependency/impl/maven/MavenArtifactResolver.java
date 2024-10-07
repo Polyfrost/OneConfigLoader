@@ -453,6 +453,11 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 					continue;
 				}
 
+				String artifactId = artifactIdElement.getTextContent();
+				if ("mixin".equalsIgnoreCase(artifactId) || "fabric-loader".equalsIgnoreCase(artifactId)) {
+					continue;
+				}
+
 				Element versionElement = (Element) dependency.getElementsByTagName("version").item(0);
 				if (versionElement == null) {
 					continue;
@@ -466,7 +471,7 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 				list.add(
 						new MavenArtifactDeclaration(
 								groupIdElement.getTextContent(),
-								artifactIdElement.getTextContent(),
+								artifactId,
 								versionElement.getTextContent(),
 								null,
 								"jar"

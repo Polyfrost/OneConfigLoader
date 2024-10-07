@@ -2,6 +2,7 @@ package org.polyfrost.oneconfig.loader.relaunch;
 
 import static org.polyfrost.oneconfig.loader.relaunch.RelaunchImpl.FML_TWEAKER;
 
+import java.io.FileOutputStream;
 import java.util.function.BiFunction;
 
 import org.objectweb.asm.ClassReader;
@@ -13,6 +14,7 @@ import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.MethodInsnNode;
 import org.objectweb.asm.tree.MethodNode;
+import org.objectweb.asm.tree.VarInsnNode;
 
 /**
  * For when we do not have access to Mixin 0.8 (old OneConfig version on 1.8.9). ?
