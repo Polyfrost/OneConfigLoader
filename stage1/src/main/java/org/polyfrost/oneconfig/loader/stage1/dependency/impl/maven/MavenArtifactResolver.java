@@ -38,6 +38,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -239,6 +240,7 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 					.stream()
 					.map((mavenArtifactDeclaration) -> new MavenArtifactDependency(mavenArtifactDeclaration, Scope.RUNTIME, new ArrayList<>()))
 					.collect(Collectors.toList());
+			log.error("Dependencies: {}", dependencyList);
 			return new MavenArtifact(declaration, dependencyList);
 		}
 	}
@@ -404,6 +406,48 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 		throw new RuntimeException("Could not resolve snapshot version of " + declaration.getDeclaration());
 	}
 
+	private enum CheckType {
+		STARTS_WITH,
+		ENDS_WITH,
+		CONTAINS,
+	}
+
+	private static class CheckResult implements Predicate<String> {
+		private final CheckType type;
+		private final String value;
+
+		public CheckResult(CheckType type, String value) {
+			this.type = type;
+			this.value = value;
+		}
+
+		@Override
+		public boolean test(String s) {
+			switch (type) {
+				case STARTS_WITH:
+					return s.startsWith(value);
+				case ENDS_WITH:
+					return s.endsWith(value);
+				case CONTAINS:
+					return s.contains(value);
+				default:
+					return false;
+			}
+		}
+	}
+
+	// Ignored dependencies
+	private final List<CheckResult> ignoredDependencies = Arrays.asList(
+			new CheckResult(CheckType.STARTS_WITH, "mixin"),
+			new CheckResult(CheckType.STARTS_WITH, "fabric-loader"),
+			new CheckResult(CheckType.STARTS_WITH, "lwjgl"),
+			new CheckResult(CheckType.CONTAINS, "netty"),
+			new CheckResult(CheckType.STARTS_WITH, "DevAuth-forge-legacy"),
+			new CheckResult(CheckType.STARTS_WITH, "DevAuth-common"),
+			new CheckResult(CheckType.STARTS_WITH, "javax.servlet-api"),
+			new CheckResult(CheckType.STARTS_WITH, "log4j-")
+	);
+
 	private List<MavenArtifactDeclaration> getDependencies(ArtifactDeclaration declaration, InputStream inputStream) throws ParserConfigurationException, IOException, SAXException {
 		ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
 		{
@@ -453,13 +497,16 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 					continue;
 				}
 
-				String artifactId = artifactIdElement.getTextContent();
-				if ("mixin".equalsIgnoreCase(artifactId) || "fabric-loader".equalsIgnoreCase(artifactId)) {
+				Element versionElement = (Element) dependency.getElementsByTagName("version").item(0);
+				if (versionElement == null) {
 					continue;
 				}
 
-				Element versionElement = (Element) dependency.getElementsByTagName("version").item(0);
-				if (versionElement == null) {
+				String groupId = groupIdElement.getTextContent();
+				String artifactId = artifactIdElement.getTextContent();
+				String version = versionElement.getTextContent();
+				if (ignoredDependencies.stream().anyMatch(checkResult -> checkResult.test(artifactId))) {
+					log.warn("IGNORING DEPENDENCY: {}:{}:{}", groupId, artifactId, version);
 					continue;
 				}
 
@@ -470,9 +517,9 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 
 				list.add(
 						new MavenArtifactDeclaration(
-								groupIdElement.getTextContent(),
+								groupId,
 								artifactId,
-								versionElement.getTextContent(),
+								version,
 								null,
 								"jar"
 						)

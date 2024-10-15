@@ -78,6 +78,9 @@ dependencies {
             j9.dependencies.forEach { "${plat.name}9CompileOnly"(it) }
         }
     }
+
+	"modlauncherCompileOnly"("org.apache.logging.log4j:log4j-api:2.19.0")
+	"modlauncherCompileOnly"("org.apache.logging.log4j:log4j-core:2.19.0")
 }
 
 tasks {

@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.List;
 
 import net.minecraft.launchwrapper.ITweaker;
+import net.minecraft.launchwrapper.Launch;
 import net.minecraft.launchwrapper.LaunchClassLoader;
 
 /**
@@ -14,12 +15,17 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  */
 @SuppressWarnings("unused")
 public class LaunchWrapperTweaker implements ITweaker {
-    @Override
-    public void injectIntoClassLoader(LaunchClassLoader classLoader) {
+	public LaunchWrapperTweaker() {
+		LaunchClassLoader classLoader = Launch.classLoader;
+
 		classLoader.addClassLoaderExclusion("org.polyfrost.oneconfig.loader.base.");
 		classLoader.addClassLoaderExclusion("org.polyfrost.oneconfig.loader.utils.");
 
-        new Stage0Loader(new LaunchWrapperCapabilities()).load();
+		new Stage0Loader(new LaunchWrapperCapabilities()).load();
+	}
+
+    @Override
+    public void injectIntoClassLoader(LaunchClassLoader classLoader) {
     }
 
     //@formatter:off

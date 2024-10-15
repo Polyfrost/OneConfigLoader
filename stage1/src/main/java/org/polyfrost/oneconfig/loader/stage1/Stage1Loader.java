@@ -115,7 +115,7 @@ public class Stage1Loader extends LoaderBase {
 				resolveQueue.add(relaunchDeclaration);
 				log.info("Resolving Relaunch artifact: {}", relaunchDeclaration);
 
-				String mixinArtifactSpecifier = "org.polyfrost:polymixin:0.8.4";
+				String mixinArtifactSpecifier = "org.polyfrost:polymixin:0.8.4+build.2";
 				MavenArtifactDeclaration mixinDeclaration = this.artifactManager.buildArtifactDeclaration(mixinArtifactSpecifier);
 				resolveQueue.add(mixinDeclaration);
 				log.info("Resolving Mixin artifact: {}", mixinDeclaration);
@@ -171,6 +171,8 @@ public class Stage1Loader extends LoaderBase {
 			if (oneConfigMainClass == null) {
 				throw new RuntimeException("oneconfig-main-class option is not found in stage1.properties");
 			}
+
+			log.info("Bootstrapping OneConfig...");
 
 			classLoader.loadClass(oneConfigMainClass)
 					.getDeclaredMethod("init")

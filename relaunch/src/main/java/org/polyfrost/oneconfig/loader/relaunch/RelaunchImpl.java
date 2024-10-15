@@ -44,7 +44,6 @@ public class RelaunchImpl implements Relaunch {
 	private static final String CORE_MOD_MANAGER = "net.minecraftforge.fml.relauncher.CoreModManager";
 
 	static final String FML_TWEAKER = "net.minecraftforge.fml.common.launcher.FMLTweaker";
-	private static final String MIXIN_TWEAKER = "org.spongepowered.asm.launch.MixinTweaker";
 
     private static final String HAPPENED_PROPERTY = "oneconfig.loader.relaunched";
     private static final String ENABLED_PROPERTY = "oneconfig.loader.relaunch";
