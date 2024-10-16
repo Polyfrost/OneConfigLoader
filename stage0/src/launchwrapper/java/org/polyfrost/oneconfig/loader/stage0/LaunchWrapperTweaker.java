@@ -15,17 +15,19 @@ import net.minecraft.launchwrapper.LaunchClassLoader;
  */
 @SuppressWarnings("unused")
 public class LaunchWrapperTweaker implements ITweaker {
+	private final Stage0Loader stage0Loader;
 	public LaunchWrapperTweaker() {
 		LaunchClassLoader classLoader = Launch.classLoader;
 
 		classLoader.addClassLoaderExclusion("org.polyfrost.oneconfig.loader.base.");
 		classLoader.addClassLoaderExclusion("org.polyfrost.oneconfig.loader.utils.");
 
-		new Stage0Loader(new LaunchWrapperCapabilities()).load();
+		(stage0Loader = new Stage0Loader(new LaunchWrapperCapabilities())).load();
 	}
 
     @Override
     public void injectIntoClassLoader(LaunchClassLoader classLoader) {
+		stage0Loader.postLoad();
     }
 
     //@formatter:off

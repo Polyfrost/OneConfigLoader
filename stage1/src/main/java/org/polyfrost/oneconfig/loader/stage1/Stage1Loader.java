@@ -39,6 +39,8 @@ public class Stage1Loader extends LoaderBase {
 	private static final String PROPERTIES_FILE_PATH = "/assets/oneconfig-loader/metadata/stage1.properties";
 	private final MavenArtifactManager artifactManager;
 	private final Properties stage1Properties = new Properties();
+	private Class<?> oneconfigMainClass;
+	private Object oneconfigMainInstance;
 
 	@SneakyThrows
 	public Stage1Loader(Capabilities capabilities) {
@@ -161,10 +163,6 @@ public class Stage1Loader extends LoaderBase {
 
 		log.info("OneConfig artifacts loaded in {}ms", System.currentTimeMillis() - startTime);
 
-		Relaunch relaunch = Relaunch.maybeCreate();
-
-		relaunch.maybeRelaunch(DetectionSupplier.maybeCreate(), runtimeAccess.getAppendedUrls());
-
 		try {
 			ClassLoader classLoader = runtimeAccess.getClassLoader();
 			String oneConfigMainClass = this.stage1Properties.getProperty("oneconfig-main-class");
@@ -174,14 +172,28 @@ public class Stage1Loader extends LoaderBase {
 
 			log.info("Bootstrapping OneConfig...");
 
-			classLoader.loadClass(oneConfigMainClass)
-					.getDeclaredMethod("init")
-					.invoke(null);
-		} catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException |
-				 IllegalAccessException e) {
+			oneconfigMainInstance = (oneconfigMainClass = classLoader.loadClass(oneConfigMainClass)).getConstructor().newInstance();
+		} catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException | IllegalAccessException |
+                 InstantiationException e) {
 			throw new RuntimeException(e);
 		}
-	}
+    }
+
+	@Override
+	public void postLoad() {
+		Capabilities capabilities = getCapabilities();
+		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
+
+		Relaunch relaunch = Relaunch.maybeCreate();
+
+		relaunch.maybeRelaunch(DetectionSupplier.maybeCreate(), runtimeAccess.getAppendedUrls());
+
+		try {
+			oneconfigMainClass.getDeclaredMethod("init").invoke(oneconfigMainInstance);
+		} catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+			throw new RuntimeException(e);
+		}
+    }
 
 	private Path provideLocalArtifactPath(Artifact mavenArtifact) {
 		return XDG

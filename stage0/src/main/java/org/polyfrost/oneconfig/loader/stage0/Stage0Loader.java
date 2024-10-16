@@ -31,6 +31,8 @@ public class Stage0Loader extends LoaderBase {
     private static final String DEFAULT_MAVEN_BASE_URL = "https://repo.polyfrost.org/releases/";
 
     private final Properties stage0Properties;
+	private Class<?> stage1Class;
+	private Object stage1Instance;
 
     Stage0Loader(Capabilities capabilities) {
         super(
@@ -91,15 +93,21 @@ public class Stage0Loader extends LoaderBase {
 
         // Delegate loading to stage1
         logger.info("GO");
-        Class<?> stage1Class = runtimeAccess.getClassLoader().loadClass(stage1ClassName);
+        stage1Class = runtimeAccess.getClassLoader().loadClass(stage1ClassName);
 		Constructor<?> constructor = stage1Class.getDeclaredConstructor(Capabilities.class);
 		try {
 			constructor.setAccessible(true);
 		} catch (Throwable ignored) {
 		}
-        Object stage1Instance = constructor.newInstance(capabilities);
+        stage1Instance = constructor.newInstance(capabilities);
         stage1Class.getDeclaredMethod("load").invoke(stage1Instance);
     }
+
+	@SneakyThrows
+	@Override
+	public void postLoad() {
+		stage1Class.getDeclaredMethod("postLoad").invoke(stage1Instance);
+	}
 
 	private String fetchStage1ClassName() {
 		String value = System.getProperty("oneconfig.stage1.class");
