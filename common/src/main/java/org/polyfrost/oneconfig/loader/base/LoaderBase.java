@@ -79,4 +79,6 @@ public abstract class LoaderBase {
 	 * Initializes and runs the current loader.
 	 */
 	public abstract void load();
+
+	public abstract void postLoad();
 }
