@@ -28,12 +28,7 @@ public class LaunchWrapperRuntimeAccess implements Capabilities.RuntimeAccess {
 
 	@Override
 	@SneakyThrows
-	public void appendToClassPath(String id, boolean mod, @NotNull URL @NotNull ... urls) {
-		if (id.startsWith("org.ow2.asm") && id.contains("9.2")) {
-			log.warn("Detected ASM 9.2, removing... THIS SHOULD BE REMOVED LATER BY THE ONECONFIG DEVS...");
-			return;
-		}
-
+	public void appendToClassPath(boolean mod, @NotNull URL @NotNull ... urls) {
 		for (@NotNull URL url : urls) {
 			Launch.classLoader.addURL(url);
 

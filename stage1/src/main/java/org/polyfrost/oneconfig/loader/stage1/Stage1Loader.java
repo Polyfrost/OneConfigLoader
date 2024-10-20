@@ -1,19 +1,17 @@
 package org.polyfrost.oneconfig.loader.stage1;
 
-import java.io.IOException;
 import java.io.InputStream;
-import java.io.UncheckedIOException;
-import java.lang.reflect.Field;
+import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Properties;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.List;
 
+import com.google.gson.Gson;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 
@@ -21,13 +19,8 @@ import org.polyfrost.oneconfig.loader.base.Capabilities;
 import org.polyfrost.oneconfig.loader.base.LoaderBase;
 import org.polyfrost.oneconfig.loader.relaunch.DetectionSupplier;
 import org.polyfrost.oneconfig.loader.relaunch.Relaunch;
-import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifact;
-import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactDeclaration;
-import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactDependency;
-import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactManager;
-import org.polyfrost.oneconfig.loader.stage1.dependency.model.Artifact;
-import org.polyfrost.oneconfig.loader.ui.ErrorHandler;
-import org.polyfrost.oneconfig.loader.ui.LoaderFrame;
+import org.polyfrost.oneconfig.loader.stage1.backend.BackendArtifact;
+import org.polyfrost.oneconfig.loader.stage1.ui.LoaderFrame;
 import org.polyfrost.oneconfig.loader.utils.IOUtils;
 import org.polyfrost.oneconfig.loader.utils.XDG;
 
@@ -36,153 +29,50 @@ import org.polyfrost.oneconfig.loader.utils.XDG;
  * @since 1.1.0
  */
 @Log4j2
-@SuppressWarnings({"rawtypes"})
 public class Stage1Loader extends LoaderBase {
-	private static final String PROPERTIES_FILE_PATH = "/assets/oneconfig-loader/metadata/stage1.properties";
+	private static final String ONECONFIG_MAIN_CLASS = "org.polyfrost.oneconfig.internal.bootstrap.Bootstrap";
 
-	private final LoaderFrame loaderFrame;
-	private final MavenArtifactManager artifactManager;
-	private final Properties stage1Properties = new Properties();
+	private static final String ARTIFACT_SNAPSHOTS = "oneconfig.loader.stage1.snapshots";
+	private static final String STAGE1_ARTIFACT_SNAPSHOTS = "oneconfig.loader.stage1.update.snapshots";
+	private static final String RELAUNCH_ARTIFACT_SNAPSHOTS = "oneconfig.loader.stage1.relaunch.snapshots";
+	private static final String ONECONFIG_ARTIFACT_SNAPSHOTS = "oneconfig.loader.stage1.oneconfig.snapshots";
+
 	private Class<?> oneconfigMainClass;
 	private Object oneconfigMainInstance;
 
-	@SneakyThrows
-	public Stage1Loader(LoaderFrame loaderFrame, Capabilities capabilities) {
+	public Stage1Loader(Capabilities capabilities) {
 		super(
 				"stage1",
-				IOUtils.provideImplementationVersion(
-						Stage1Loader.class, UNKNOWN_VERSION
-				),
+				IOUtils.provideImplementationVersion(Stage1Loader.class, UNKNOWN_VERSION),
 				capabilities
 		);
-
-		this.loaderFrame = loaderFrame;
-
-		log.info("Loading stage1 properties from {}", PROPERTIES_FILE_PATH);
-		try (InputStream inputStream = this.getClass().getResourceAsStream(PROPERTIES_FILE_PATH)) {
-			this.stage1Properties.load(inputStream);
-		} catch (IOException e) {
-			throw new UncheckedIOException(e);
-		}
-
-		log.info("Looking for raw repositories...");
-		String rawRepositories = this.stage1Properties.getProperty("oneconfig-repositories");
-		if (rawRepositories == null) {
-			throw new RuntimeException("oneconfig-repositories option is not found in stage1.properties");
-		}
-
-		log.info("Found raw repositories: {}", rawRepositories);
-		URI[] repositories = Arrays.stream(rawRepositories.split(",")).map(rawRepository -> {
-			// If the repository does not end with a slash, add it
-			if (!rawRepository.endsWith("/")) {
-				rawRepository += "/";
-			}
-
-			return URI.create(rawRepository);
-		}).distinct().toArray(URI[]::new);
-
-		log.info("Creating artifact manager...");
-		this.artifactManager = new MavenArtifactManager(
-				XDG.provideApplicationStore("OneConfig"),
-				getRequestHelper(),
-				repositories
-		);
-
-		log.info("Artifact manager created");
 	}
 
 	@Override
 	public void load() {
-		long startTime = System.currentTimeMillis();
+		log.info("Creating UI");
+		LoaderFrame loaderFrame = new LoaderFrame();
 
 		log.info("Loading stage1...");
 		Capabilities capabilities = getCapabilities();
 		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
 		Capabilities.GameMetadata gameMetadata = capabilities.getGameMetadata();
 
-		log.info("Looking for OneConfig version...");
-		String oneConfigVersion = this.stage1Properties.getProperty("oneconfig-version");
-		if (oneConfigVersion == null) {
-			throw new RuntimeException("oneconfig-version option is not found in stage1.properties");
-		}
+		log.info("Displaying UI");
+		loaderFrame.display();
+
+		checkForUpdates(loaderFrame);
+		maybeDownloadRelaunch(loaderFrame);
+		downloadOneConfigArtifacts(loaderFrame);
 
 		String targetSpecifier = gameMetadata.getTargetSpecifier();
 		log.info("Target specifier: {}", targetSpecifier);
 
-		// Fetch oneConfig version info
-		final Set<MavenArtifactDeclaration> resolveQueue = new HashSet<>();
-		final Set<MavenArtifact> resolvedArtifacts = new HashSet<>();
-
-		if ("forge".equalsIgnoreCase(gameMetadata.getLoaderName())) {
-			String gameVersion = gameMetadata.getGameVersion();
-
-			// If we're on 1.8.9 or 1.12.2, add the relaunch module
-			if (gameVersion.equals("1.8.9") || gameVersion.equals("1.12.2")) {
-				log.info("Adding Relaunch module for legacy Forge");
-
-				String relaunchArtifactSpecifier = "org.polyfrost.oneconfig:relaunch:" + this.stage1Properties.getProperty("relaunch-version") + ":all";
-				MavenArtifactDeclaration relaunchDeclaration = this.artifactManager.buildArtifactDeclaration(relaunchArtifactSpecifier);
-				resolveQueue.add(relaunchDeclaration);
-				log.info("Resolving Relaunch artifact: {}", relaunchDeclaration);
-
-				String mixinArtifactSpecifier = "org.polyfrost:polymixin:0.8.4+build.2";
-				MavenArtifactDeclaration mixinDeclaration = this.artifactManager.buildArtifactDeclaration(mixinArtifactSpecifier);
-				resolveQueue.add(mixinDeclaration);
-				log.info("Resolving Mixin artifact: {}", mixinDeclaration);
-			}
-		}
-
-		String oneConfigArtifactSpecifier = "org.polyfrost.oneconfig:" + targetSpecifier + ":" + oneConfigVersion;
-		MavenArtifactDeclaration oneConfigDeclaration = this.artifactManager.buildArtifactDeclaration(oneConfigArtifactSpecifier);
-		oneConfigDeclaration.setShouldValidate(true);
-		resolveQueue.add(oneConfigDeclaration);
-		log.info("Resolving OneConfig artifact: {}", oneConfigDeclaration);
-
-
-		while (!resolveQueue.isEmpty()) {
-			MavenArtifactDeclaration artifactDeclaration = resolveQueue.iterator().next();
-			resolveQueue.remove(artifactDeclaration);
-			MavenArtifact resolvedArtifact;
-
-			try {
-				this.loaderFrame.updateMessage("Resolving artifact: " + artifactDeclaration.getDeclaration());
-				this.loaderFrame.updateProgress((float) Math.random()); // Just to make the progress bar move xD
-				resolvedArtifact = this.artifactManager.getArtifactResolver().resolveArtifact(artifactDeclaration);
-			} catch (Exception e) {
-				throw new RuntimeException(e);
-			}
-
-			if (resolvedArtifact != null) {
-				resolvedArtifacts.add(resolvedArtifact);
-
-				Set<MavenArtifactDeclaration> newDependencies = resolvedArtifact
-						.getDependencies()
-						.stream()
-						.map(MavenArtifactDependency::getDeclaration)
-						.filter(it -> resolvedArtifacts.stream().noneMatch(artifact -> artifact.getDeclaration().equals(it)))
-						.collect(Collectors.toSet());
-				resolveQueue.addAll(newDependencies);
-			} else {
-				logger.warn("Could not resolve artifact {}", artifactDeclaration);
-			}
-		}
-
-		log.info("Found {} artifacts to load:", resolvedArtifacts.size());
-
-		resolvedArtifacts.forEach(artifact -> checkAndAppendArtifactToClasspath(runtimeAccess, artifact));
-
-		log.info("OneConfig artifacts loaded in {}ms", System.currentTimeMillis() - startTime);
-
 		try {
 			ClassLoader classLoader = runtimeAccess.getClassLoader();
-			String oneConfigMainClass = this.stage1Properties.getProperty("oneconfig-main-class");
-			if (oneConfigMainClass == null) {
-				throw new RuntimeException("oneconfig-main-class option is not found in stage1.properties");
-			}
-
 			log.info("Bootstrapping OneConfig...");
 
-			oneconfigMainInstance = (oneconfigMainClass = classLoader.loadClass(oneConfigMainClass)).getConstructor().newInstance();
+			oneconfigMainInstance = (oneconfigMainClass = classLoader.loadClass(ONECONFIG_MAIN_CLASS)).getConstructor().newInstance();
 		} catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException | IllegalAccessException |
                  InstantiationException e) {
 			throw new RuntimeException(e);
@@ -205,39 +95,161 @@ public class Stage1Loader extends LoaderBase {
 		}
     }
 
-	private Path provideLocalArtifactPath(Artifact mavenArtifact) {
-		return XDG
-				.provideCacheDir("OneConfig")
-				.resolve("loader")
-				.resolve(XDG
-						.provideCacheDir("OneConfig")
-						.resolve("loader")
-						.resolve(mavenArtifact.getDeclaration().getRelativePath())
-				);
-	}
-
-	private void checkAndAppendArtifactToClasspath(Capabilities.RuntimeAccess runtimeAccess, MavenArtifact artifact) {
-		Path artifactFile = provideLocalArtifactPath(artifact);
-
-		if (!Files.exists(artifactFile)) {
-			try (InputStream inputStream = this.artifactManager.createArtifactInputStream(artifact)) {
-				if (inputStream == null) {
-					return; // Skip if the artifact is not found
-				}
-
-				Files.createDirectories(artifactFile.getParent());
-				Files.copy(inputStream, artifactFile);
-			} catch (IOException e) {
-				logger.fatal("Could not download artifact {}", artifact.getDeclaration(), e);
-				ErrorHandler.displayError(this, "Error while downloading artifact: " + artifact.getDeclaration());
+	private void checkForUpdates(LoaderFrame loaderFrame) {
+		boolean usingUpdateSnapshots = "true".equals(System.getProperty(ARTIFACT_SNAPSHOTS)) || "true".equals(System.getProperty(STAGE1_ARTIFACT_SNAPSHOTS));
+		BackendArtifact stage1Artifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/stage1?snapshots=" + usingUpdateSnapshots);
+		if (stage1Artifact == null) {
+			// Retry with the opposite snapshot setting
+			stage1Artifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/stage1?snapshots=" + !usingUpdateSnapshots);
+			if (stage1Artifact == null) {
+				throw new RuntimeException("Failed to fetch stage1 artifact");
 			}
 		}
 
-		try {
-			logger.info("Appending artifact {} to class path", artifact.getDeclaration());
-			runtimeAccess.appendToClassPath(artifact.getDeclaration().getDeclaration(), false, artifactFile.toUri().toURL());
-		} catch (IOException e) {
-			throw new RuntimeException("Failed to append artifact to class path", e);
+		Path dataDir = XDG
+				.provideCacheDir("OneConfig")
+				.resolve("loader")
+				.resolve("data");
+		Path selfFile = dataDir.resolve("stage1.jar");
+
+		if (!stage1Artifact.checksum.isMatching(selfFile)) {
+			loaderFrame.updateMessage("Downloading OneConfig Loader stage 1...");
+			stage1Artifact.downloadTo(getRequestHelper(), dataDir.resolve("stage1.update.jar"), loaderFrame::updateProgress);
+
+			// TODO: Prompt for restart
 		}
 	}
+
+	@SneakyThrows
+	private void maybeDownloadRelaunch(LoaderFrame loaderFrame) {
+		Capabilities capabilities = getCapabilities();
+		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
+
+		Capabilities.GameMetadata gameMetadata = capabilities.getGameMetadata();
+		if (!"forge".equalsIgnoreCase(gameMetadata.getLoaderName())) {
+			return;
+		}
+
+		String gameVersion = gameMetadata.getGameVersion();
+		if (!"1.8.9".equals(gameVersion) && !"1.12.2".equals(gameVersion)) {
+			return;
+		}
+
+		boolean usingRelaunchSnapshots = "true".equals(System.getProperty(ARTIFACT_SNAPSHOTS)) || "true".equals(System.getProperty(RELAUNCH_ARTIFACT_SNAPSHOTS));
+		BackendArtifact relaunchArtifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/relaunch?snapshots=" + usingRelaunchSnapshots);
+		if (relaunchArtifact == null) {
+			// Retry with the opposite snapshot setting
+			relaunchArtifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/relaunch?snapshots=" + !usingRelaunchSnapshots);
+			if (relaunchArtifact == null) {
+				throw new RuntimeException("Failed to fetch relaunch artifact");
+			}
+		}
+
+		Path dataDir = XDG
+				.provideCacheDir("OneConfig")
+				.resolve("loader")
+				.resolve("data");
+		Path relaunchFile = dataDir.resolve("relaunch.jar");
+
+		if (!relaunchArtifact.checksum.isMatching(relaunchFile)) {
+			loaderFrame.updateMessage("Downloading OneConfig Loader Relaunch...");
+			relaunchArtifact.downloadTo(getRequestHelper(), relaunchFile, loaderFrame::updateProgress);
+		}
+
+		runtimeAccess.appendToClassPath("relaunch", false, relaunchFile.toUri().toURL());
+	}
+
+	@SneakyThrows
+	private void downloadOneConfigArtifacts(LoaderFrame loaderFrame) {
+		Capabilities capabilities = getCapabilities();
+		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
+		Capabilities.GameMetadata gameMetadata = capabilities.getGameMetadata();
+
+		String gameVersion = gameMetadata.getGameVersion();
+		String loaderName = gameMetadata.getLoaderName();
+
+		Path dataDir = XDG
+				.provideCacheDir("OneConfig")
+				.resolve("loader")
+				.resolve("data");
+		Path artifactCacheFile = dataDir.resolve("artifact-cache.json");
+
+		boolean usingSnapshots = "true".equals(System.getProperty(ARTIFACT_SNAPSHOTS)) || "true".equals(System.getProperty(ONECONFIG_ARTIFACT_SNAPSHOTS));
+		List<BackendArtifact> artifacts = readArtifactsAt("https://api.polyfrost.org/v1/artifacts/oneconfig?version=" + gameVersion + "&loader=" + loaderName + "&snapshots=" + usingSnapshots);
+		if (artifacts == null) {
+			// Retry with the opposite snapshot setting
+			artifacts = readArtifactsAt("https://api.polyfrost.org/v1/artifacts/oneconfig?version=" + gameVersion + "&loader=" + loaderName + "&snapshots=" + !usingSnapshots);
+			if (artifacts == null) {
+				artifacts = readArtifactsFrom(Files.newInputStream(artifactCacheFile));
+				if (artifacts == null) {
+					throw new RuntimeException("Failed to fetch OneConfig artifacts");
+				}
+			}
+		}
+
+		if (artifacts.isEmpty()) {
+			throw new RuntimeException("No artifacts found for OneConfig");
+		}
+
+		// Compare all the hashes of any known artifacts and download any that are missing or have changed
+		for (BackendArtifact artifact : artifacts) {
+			Path artifactFile = dataDir.resolve(artifact.name);
+			if (!artifact.checksum.isMatching(artifactFile)) {
+				loaderFrame.updateMessage("Downloading OneConfig artifact: " + artifact.name);
+				artifact.downloadTo(getRequestHelper(), artifactFile, loaderFrame::updateProgress);
+			}
+
+			runtimeAccess.appendToClassPath(artifact.group + ":" + artifact.name, false, artifactFile.toUri().toURL());
+		}
+
+		// Write the new artifact cache
+		try (OutputStream outputStream = Files.newOutputStream(artifactCacheFile)) {
+			outputStream.write(new Gson().toJson(artifacts).getBytes(StandardCharsets.UTF_8));
+		}
+	}
+
+	@SneakyThrows
+	private BackendArtifact readArtifactAt(String url) {
+		URLConnection connection = getRequestHelper().establishConnection(URI.create(url).toURL());
+		if (!(connection instanceof HttpURLConnection)) {
+			throw new IllegalArgumentException("Connection is not an HTTP connection");
+		}
+
+		HttpURLConnection httpConnection = (HttpURLConnection) connection;
+		httpConnection.connect();
+
+		if (httpConnection.getResponseCode() != 200) {
+			return null;
+		}
+
+		try (InputStream inputStream = connection.getInputStream()) {
+			return new Gson().fromJson(new String(IOUtils.readFully(inputStream), StandardCharsets.UTF_8), BackendArtifact.class);
+		}
+	}
+
+	@SneakyThrows
+	@SuppressWarnings("unchecked")
+	private List<BackendArtifact> readArtifactsFrom(InputStream inputStream) {
+		return new Gson().fromJson(new String(IOUtils.readFully(inputStream), StandardCharsets.UTF_8), List.class);
+	}
+
+	@SneakyThrows
+	private List<BackendArtifact> readArtifactsAt(String url) {
+		URLConnection connection = getRequestHelper().establishConnection(URI.create(url).toURL());
+		if (!(connection instanceof HttpURLConnection)) {
+			throw new IllegalArgumentException("Connection is not an HTTP connection");
+		}
+
+		HttpURLConnection httpConnection = (HttpURLConnection) connection;
+		httpConnection.connect();
+
+		if (httpConnection.getResponseCode() != 200) {
+			return null;
+		}
+
+		try (InputStream inputStream = connection.getInputStream()) {
+			return readArtifactsFrom(inputStream);
+		}
+	}
+
 }

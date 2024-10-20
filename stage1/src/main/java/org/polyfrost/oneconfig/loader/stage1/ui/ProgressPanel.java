@@ -1,4 +1,7 @@
-package org.polyfrost.oneconfig.loader.ui;
+package org.polyfrost.oneconfig.loader.stage1.ui;
+
+import org.polyfrost.oneconfig.loader.ui.Palette;
+import org.polyfrost.oneconfig.loader.ui.Resources;
 
 import javax.swing.*;
 
