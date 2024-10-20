@@ -33,6 +33,8 @@ public class Stage0Loader extends LoaderBase {
     private static final String DEFAULT_MAVEN_BASE_URL = "https://repo.polyfrost.org/releases/";
 
     private final Properties stage0Properties;
+	private Class<?> stage1Class;
+	private Object stage1Instance;
 
     Stage0Loader(Capabilities capabilities) {
         super(
@@ -94,24 +96,12 @@ public class Stage0Loader extends LoaderBase {
 
         // Load in classloader as a library
         logger.info("Loading stage1 as a library");
-        runtimeAccess.appendToClassPath(false, stage1Jar.toUri().toURL());
+        runtimeAccess.appendToClassPath("org.polyfrost.oneconfig:stage1", false, stage1Jar.toUri().toURL()); //TODO is the id correct?
 
         // Delegate loading to stage1
         logger.info("GO");
-        Class<?> stage1Class = runtimeAccess.getClassLoader().loadClass(stage1ClassName);
-		Constructor<?> constructor;
-
-		try {
-			constructor = stage1Class.getDeclaredConstructor(LoaderFrame.class, Capabilities.class);
-		} catch (Throwable ignored) {
-			// Print out all constructors and exit
-			for (Constructor<?> c : stage1Class.getDeclaredConstructors()) {
-				logger.error("Constructor: {}", c);
-			}
-
-			throw new IllegalStateException("Stage1 constructor not found");
-		}
-
+        stage1Class = runtimeAccess.getClassLoader().loadClass(stage1ClassName);
+		Constructor<?> constructor = stage1Class.getDeclaredConstructor(LoaderFrame.class, Capabilities.class);
 		try {
 			constructor.setAccessible(true);
 		} catch (Throwable ignored) {
@@ -120,6 +110,12 @@ public class Stage0Loader extends LoaderBase {
         Object stage1Instance = constructor.newInstance(loaderFrame, capabilities);
         stage1Class.getDeclaredMethod("load").invoke(stage1Instance);
     }
+
+	@SneakyThrows
+	@Override
+	public void postLoad() {
+		stage1Class.getDeclaredMethod("postLoad").invoke(stage1Instance);
+	}
 
 	private String fetchStage1ClassName() {
 		String value = System.getProperty("oneconfig.stage1.class");

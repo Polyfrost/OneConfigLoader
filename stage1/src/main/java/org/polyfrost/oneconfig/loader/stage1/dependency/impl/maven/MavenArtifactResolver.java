@@ -38,6 +38,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -86,7 +87,7 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 		Path artifactRelativePath = declaration.getRelativePath();
 		Path localArtifactPath = localLibraries.resolve(artifactRelativePath);
 		String sha1Path = artifactRelativePath + ".sha1";
-		String rawPomPath = artifactRelativePath.toString().replace(declaration.getExtension(), "pom");
+		String rawPomPath = artifactRelativePath.toString().replace("-" + declaration.getClassifier(), "").replace(declaration.getExtension(), "pom");
 		Path pomPath = localLibraries.resolve(rawPomPath);
 
 		List<CompletableFuture<MavenArtifact>> futures = Arrays.stream(repositories)
@@ -187,6 +188,8 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 				log.info("Resolved artifact {} (repository: {}, took {}ms)", declaration.getDeclaration(), repository, System.currentTimeMillis() - startTime);
 				return loadArtifact(declaration, pomPath);
 			} catch (FileNotFoundException e) {
+				log.warn("SHA1 file ({}) not found @ {}", sha1Path, repository);
+
 				return null; // Ignore and continue
 			} catch (Throwable t) {
 				throw new RuntimeException("Error while checking SHA1 of " + declaration.getDeclaration(), t);
@@ -199,6 +202,8 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 			}
 		} catch (Throwable t) {
 			if (t instanceof FileNotFoundException) {
+				log.warn("POM file ({}) not found @ {}", pomPath, repository);
+
 				return null; // Ignore
 			}
 
@@ -217,6 +222,8 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 			}
 		} catch (Throwable t) {
 			if (t instanceof FileNotFoundException) {
+				log.warn("File ({}) not found @ {}", localArtifactPath, repository);
+
 				return null; // Ignore
 			}
 
@@ -233,6 +240,7 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 					.stream()
 					.map((mavenArtifactDeclaration) -> new MavenArtifactDependency(mavenArtifactDeclaration, Scope.RUNTIME, new ArrayList<>()))
 					.collect(Collectors.toList());
+			log.error("Dependencies: {}", dependencyList);
 			return new MavenArtifact(declaration, dependencyList);
 		}
 	}
@@ -398,6 +406,48 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 		throw new RuntimeException("Could not resolve snapshot version of " + declaration.getDeclaration());
 	}
 
+	private enum CheckType {
+		STARTS_WITH,
+		ENDS_WITH,
+		CONTAINS,
+	}
+
+	private static class CheckResult implements Predicate<String> {
+		private final CheckType type;
+		private final String value;
+
+		public CheckResult(CheckType type, String value) {
+			this.type = type;
+			this.value = value;
+		}
+
+		@Override
+		public boolean test(String s) {
+			switch (type) {
+				case STARTS_WITH:
+					return s.startsWith(value);
+				case ENDS_WITH:
+					return s.endsWith(value);
+				case CONTAINS:
+					return s.contains(value);
+				default:
+					return false;
+			}
+		}
+	}
+
+	// Ignored dependencies
+	private final List<CheckResult> ignoredDependencies = Arrays.asList(
+			new CheckResult(CheckType.STARTS_WITH, "mixin"),
+			new CheckResult(CheckType.STARTS_WITH, "fabric-loader"),
+			new CheckResult(CheckType.STARTS_WITH, "lwjgl"),
+			new CheckResult(CheckType.CONTAINS, "netty"),
+			new CheckResult(CheckType.STARTS_WITH, "DevAuth-forge-legacy"),
+			new CheckResult(CheckType.STARTS_WITH, "DevAuth-common"),
+			new CheckResult(CheckType.STARTS_WITH, "javax.servlet-api"),
+			new CheckResult(CheckType.STARTS_WITH, "log4j-")
+	);
+
 	private List<MavenArtifactDeclaration> getDependencies(ArtifactDeclaration declaration, InputStream inputStream) throws ParserConfigurationException, IOException, SAXException {
 		ByteArrayOutputStream byteStream = new ByteArrayOutputStream();
 		{
@@ -452,6 +502,14 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 					continue;
 				}
 
+				String groupId = groupIdElement.getTextContent();
+				String artifactId = artifactIdElement.getTextContent();
+				String version = versionElement.getTextContent();
+				if (ignoredDependencies.stream().anyMatch(checkResult -> checkResult.test(artifactId))) {
+					log.warn("IGNORING DEPENDENCY: {}:{}:{}", groupId, artifactId, version);
+					continue;
+				}
+
 				Element scopeElement = (Element) dependency.getElementsByTagName("scope").item(0);
 				if (scopeElement != null && "test".equalsIgnoreCase(scopeElement.getTextContent())) {
 					continue;
@@ -459,9 +517,9 @@ public class MavenArtifactResolver implements ArtifactResolver<MavenArtifact, Ma
 
 				list.add(
 						new MavenArtifactDeclaration(
-								groupIdElement.getTextContent(),
-								artifactIdElement.getTextContent(),
-								versionElement.getTextContent(),
+								groupId,
+								artifactId,
+								version,
 								null,
 								"jar"
 						)

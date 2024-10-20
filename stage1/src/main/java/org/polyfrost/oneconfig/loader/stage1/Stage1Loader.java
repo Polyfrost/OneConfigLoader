@@ -3,6 +3,7 @@ package org.polyfrost.oneconfig.loader.stage1;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.net.URI;
 import java.nio.file.Files;
@@ -14,11 +15,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import lombok.SneakyThrows;
-
 import lombok.extern.log4j.Log4j2;
 
 import org.polyfrost.oneconfig.loader.base.Capabilities;
 import org.polyfrost.oneconfig.loader.base.LoaderBase;
+import org.polyfrost.oneconfig.loader.relaunch.DetectionSupplier;
+import org.polyfrost.oneconfig.loader.relaunch.Relaunch;
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifact;
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactDeclaration;
 import org.polyfrost.oneconfig.loader.stage1.dependency.impl.maven.MavenArtifactDependency;
@@ -34,13 +36,15 @@ import org.polyfrost.oneconfig.loader.utils.XDG;
  * @since 1.1.0
  */
 @Log4j2
-@SuppressWarnings({"rawtypes", "unchecked"})
+@SuppressWarnings({"rawtypes"})
 public class Stage1Loader extends LoaderBase {
 	private static final String PROPERTIES_FILE_PATH = "/assets/oneconfig-loader/metadata/stage1.properties";
 
 	private final LoaderFrame loaderFrame;
 	private final MavenArtifactManager artifactManager;
 	private final Properties stage1Properties = new Properties();
+	private Class<?> oneconfigMainClass;
+	private Object oneconfigMainInstance;
 
 	@SneakyThrows
 	public Stage1Loader(LoaderFrame loaderFrame, Capabilities capabilities) {
@@ -106,13 +110,34 @@ public class Stage1Loader extends LoaderBase {
 		log.info("Target specifier: {}", targetSpecifier);
 
 		// Fetch oneConfig version info
-		String artifactSpecifier = "org.polyfrost.oneconfig:" + targetSpecifier + ":" + oneConfigVersion;
 		final Set<MavenArtifactDeclaration> resolveQueue = new HashSet<>();
 		final Set<MavenArtifact> resolvedArtifacts = new HashSet<>();
-		MavenArtifactDeclaration oneConfigDeclaration = this.artifactManager.buildArtifactDeclaration(artifactSpecifier);
+
+		if ("forge".equalsIgnoreCase(gameMetadata.getLoaderName())) {
+			String gameVersion = gameMetadata.getGameVersion();
+
+			// If we're on 1.8.9 or 1.12.2, add the relaunch module
+			if (gameVersion.equals("1.8.9") || gameVersion.equals("1.12.2")) {
+				log.info("Adding Relaunch module for legacy Forge");
+
+				String relaunchArtifactSpecifier = "org.polyfrost.oneconfig:relaunch:" + this.stage1Properties.getProperty("relaunch-version") + ":all";
+				MavenArtifactDeclaration relaunchDeclaration = this.artifactManager.buildArtifactDeclaration(relaunchArtifactSpecifier);
+				resolveQueue.add(relaunchDeclaration);
+				log.info("Resolving Relaunch artifact: {}", relaunchDeclaration);
+
+				String mixinArtifactSpecifier = "org.polyfrost:polymixin:0.8.4+build.2";
+				MavenArtifactDeclaration mixinDeclaration = this.artifactManager.buildArtifactDeclaration(mixinArtifactSpecifier);
+				resolveQueue.add(mixinDeclaration);
+				log.info("Resolving Mixin artifact: {}", mixinDeclaration);
+			}
+		}
+
+		String oneConfigArtifactSpecifier = "org.polyfrost.oneconfig:" + targetSpecifier + ":" + oneConfigVersion;
+		MavenArtifactDeclaration oneConfigDeclaration = this.artifactManager.buildArtifactDeclaration(oneConfigArtifactSpecifier);
 		oneConfigDeclaration.setShouldValidate(true);
-		log.info("Resolving OneConfig artifact: {}", oneConfigDeclaration);
 		resolveQueue.add(oneConfigDeclaration);
+		log.info("Resolving OneConfig artifact: {}", oneConfigDeclaration);
+
 
 		while (!resolveQueue.isEmpty()) {
 			MavenArtifactDeclaration artifactDeclaration = resolveQueue.iterator().next();
@@ -155,16 +180,30 @@ public class Stage1Loader extends LoaderBase {
 				throw new RuntimeException("oneconfig-main-class option is not found in stage1.properties");
 			}
 
-			loaderFrame.destroy();
+			log.info("Bootstrapping OneConfig...");
 
-			classLoader.loadClass(oneConfigMainClass)
-					.getDeclaredMethod("init")
-					.invoke(null);
-		} catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException |
-				 IllegalAccessException e) {
+			oneconfigMainInstance = (oneconfigMainClass = classLoader.loadClass(oneConfigMainClass)).getConstructor().newInstance();
+		} catch (ClassNotFoundException | NoSuchMethodException | InvocationTargetException | IllegalAccessException |
+                 InstantiationException e) {
 			throw new RuntimeException(e);
 		}
-	}
+    }
+
+	@Override
+	public void postLoad() {
+		Capabilities capabilities = getCapabilities();
+		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
+
+		Relaunch relaunch = Relaunch.maybeCreate();
+
+		relaunch.maybeRelaunch(DetectionSupplier.maybeCreate(), runtimeAccess.getAppendedUrls());
+
+		try {
+			oneconfigMainClass.getDeclaredMethod("init").invoke(oneconfigMainInstance);
+		} catch (IllegalAccessException | InvocationTargetException | NoSuchMethodException e) {
+			throw new RuntimeException(e);
+		}
+    }
 
 	private Path provideLocalArtifactPath(Artifact mavenArtifact) {
 		return XDG
@@ -196,7 +235,7 @@ public class Stage1Loader extends LoaderBase {
 
 		try {
 			logger.info("Appending artifact {} to class path", artifact.getDeclaration());
-			runtimeAccess.appendToClassPath(false, artifactFile.toUri().toURL());
+			runtimeAccess.appendToClassPath(artifact.getDeclaration().getDeclaration(), false, artifactFile.toUri().toURL());
 		} catch (IOException e) {
 			throw new RuntimeException("Failed to append artifact to class path", e);
 		}

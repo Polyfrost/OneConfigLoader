@@ -14,7 +14,9 @@ public class FabricLikeLanguageAdapter implements LanguageAdapter {
     static {
 		ClassLoader classLoader = FabricLikeLanguageAdapter.class.getClassLoader();
         Capabilities capabilities = new FabricLikeCapabilities(classLoader);
-        new Stage0Loader(capabilities).load();
+		Stage0Loader loader = new Stage0Loader(capabilities);
+		loader.load();
+		loader.postLoad();
     }
 
     @Override
