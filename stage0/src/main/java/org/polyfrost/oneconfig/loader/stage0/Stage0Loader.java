@@ -101,7 +101,7 @@ public class Stage0Loader extends LoaderBase {
         // Delegate loading to stage1
         logger.info("GO");
         stage1Class = runtimeAccess.getClassLoader().loadClass(stage1ClassName);
-		Constructor<?> constructor = stage1Class.getDeclaredConstructor(Capabilities.class);
+		Constructor<?> constructor = stage1Class.getDeclaredConstructor(LoaderFrame.class, Capabilities.class);
 		try {
 			constructor.setAccessible(true);
 		} catch (Throwable ignored) {
