@@ -40,9 +40,11 @@ public class FabricLikeRuntimeAccess implements Capabilities.RuntimeAccess {
 		Consumer<Path> appenderMiddleware;
 		try {
 			appenderMiddleware = QuiltLauncherBase.getLauncher()::addToClassPath;
+			System.out.println("Found Quilt middleware");
 		} catch (Throwable ignored) {
 			try {
 				appenderMiddleware = FabricLauncherBase.getLauncher()::addToClassPath;
+				System.out.println("Found Fabric middleware");
 			} catch (Throwable ignored2) {
 				try {
 					return net.fabricmc.loader.launch.common.FabricLauncherBase.getLauncher()::propose;

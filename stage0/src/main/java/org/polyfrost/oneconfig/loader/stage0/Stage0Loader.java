@@ -1,5 +1,6 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
@@ -15,6 +16,7 @@ import lombok.SneakyThrows;
 
 import org.polyfrost.oneconfig.loader.base.Capabilities;
 import org.polyfrost.oneconfig.loader.base.LoaderBase;
+import org.polyfrost.oneconfig.loader.ui.LoaderFrame;
 import org.polyfrost.oneconfig.loader.utils.IOUtils;
 import org.polyfrost.oneconfig.loader.utils.XDG;
 
@@ -43,7 +45,7 @@ public class Stage0Loader extends LoaderBase {
                 capabilities
         );
 
-		try (InputStream inputStream = this.getClass().getResourceAsStream("/polyfrost/stage0.properties")) {
+		try (InputStream inputStream = this.getClass().getResourceAsStream("/oneconfig-loader/metadata/stage0.properties")) {
 			this.stage0Properties = new Properties();
 			this.stage0Properties.load(inputStream);
 		} catch (IOException e) {
@@ -54,6 +56,8 @@ public class Stage0Loader extends LoaderBase {
     @SneakyThrows
     @Override
     public void load() {
+		LoaderFrame loaderFrame = new LoaderFrame();
+
 		Capabilities capabilities = this.getCapabilities();
 		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
 //		Capabilities.GameMetadata gameMetadata = capabilities.getGameMetadata();
@@ -78,6 +82,9 @@ public class Stage0Loader extends LoaderBase {
 		mavenUrl = mavenUrl.endsWith("/") ? mavenUrl : mavenUrl + "/";
 		mavenUrl = mavenUrl.replace('\\', '/');
 
+		// Display the loader frame now that all of our state is loaded
+		loaderFrame.display();
+
         // Fetch stage1 version info
         logger.info("Fetching stage1 version info");
 		String finalMavenUrl = mavenUrl;
@@ -85,7 +92,7 @@ public class Stage0Loader extends LoaderBase {
 
         // Lookup stage1 in cache, handle downloading
         logger.info("Getting stage1 from cache");
-        Path stage1Jar = lookupStage1CacheOrDownload(stage1Version, stage1JarUrl);
+        Path stage1Jar = lookupStage1CacheOrDownload(loaderFrame, stage1Version, stage1JarUrl);
 
         // Load in classloader as a library
         logger.info("Loading stage1 as a library");
@@ -99,7 +106,8 @@ public class Stage0Loader extends LoaderBase {
 			constructor.setAccessible(true);
 		} catch (Throwable ignored) {
 		}
-        stage1Instance = constructor.newInstance(capabilities);
+
+        Object stage1Instance = constructor.newInstance(loaderFrame, capabilities);
         stage1Class.getDeclaredMethod("load").invoke(stage1Instance);
     }
 
@@ -151,7 +159,7 @@ public class Stage0Loader extends LoaderBase {
 		return DEFAULT_MAVEN_BASE_URL;
 	}
 
-    private Path lookupStage1CacheOrDownload(String version, Supplier<String> uriSupplier) throws IOException {
+    private Path lookupStage1CacheOrDownload(LoaderFrame loaderFrame, String version, Supplier<String> uriSupplier) throws IOException {
         Path cache = XDG
                 .provideCacheDir("OneConfig")
                 .resolve("loader")
@@ -163,18 +171,30 @@ public class Stage0Loader extends LoaderBase {
 
 			URI uri = URI.create(uriSupplier.get());
 
-			// If it's HTTP, use the RequestHelper
-			if (uri.getScheme().equalsIgnoreCase("http") || uri.getScheme().equalsIgnoreCase("https")) {
-				try (InputStream inputStream = this.getRequestHelper().establishConnection(new URL(uri.toString())).getInputStream()) {
-					Files.copy(inputStream, cache, StandardCopyOption.REPLACE_EXISTING);
+			try (FileOutputStream outputStream = new FileOutputStream(cache.toFile())) {
+				InputStream inputStream;
+
+				// If it's HTTP, use the RequestHelper
+				if (uri.getScheme().equalsIgnoreCase("http") || uri.getScheme().equalsIgnoreCase("https")) {
+					loaderFrame.updateMessage("Downloading OneConfig Loader (Stage1)...");
+					inputStream = this.getRequestHelper().establishConnection(new URL(uri.toString())).getInputStream();
+				} else {
+					// Otherwise, just use the Path
+					loaderFrame.updateMessage("Copying OneConfig Loader (Stage1)...");
+					inputStream = uri.toURL().openStream();
 				}
 
-				return cache;
-			}
+				byte[] buffer = new byte[4096];
+				int totalBytes = inputStream.available();
+				int read;
+				int totalRead = 0;
+				while ((read = inputStream.read(buffer)) != -1) {
+					outputStream.write(buffer, 0, read);
+					totalRead += read;
+					loaderFrame.updateProgress((float) (totalRead / totalBytes));
+				}
 
-			// Otherwise, just use the Path
-			try (InputStream inputStream = uri.toURL().openStream()) {
-				Files.copy(inputStream, cache, StandardCopyOption.REPLACE_EXISTING);
+				inputStream.close();
 			}
 		}
 
