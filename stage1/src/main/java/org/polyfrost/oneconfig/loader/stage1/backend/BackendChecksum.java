@@ -10,12 +10,22 @@ import java.security.MessageDigest;
 public class BackendChecksum {
 
 	public final String type, hash;
-	private transient final MessageDigest digest;
+	private transient MessageDigest digest;
 
 	public BackendChecksum(String type, String hash) {
 		this.type = type;
 		this.hash = hash;
+		ensureDigest();
+	}
 
+	@SneakyThrows
+	public boolean isMatching(Path path) {
+		ensureDigest();
+
+		return hash.equals(PolyHashing.hash(path, digest));
+	}
+
+	private void ensureDigest() {
 		MessageDigest digest;
 
 		try {
@@ -32,11 +42,6 @@ public class BackendChecksum {
 		}
 
 		this.digest = digest;
-	}
-
-	@SneakyThrows
-	public boolean isMatching(Path path) {
-		return hash.equals(PolyHashing.hash(path, digest));
 	}
 
 }

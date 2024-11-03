@@ -70,23 +70,6 @@ public class IOUtils {
         }
     }
 
-	@SneakyThrows
-	public static int getJarVersion(URL jarFile) {
-		try (JarInputStream inputStream = new JarInputStream(jarFile.openStream(), false)) {
-			Manifest manifest = inputStream.getManifest();
-			if (manifest == null) {
-				return -1;
-			}
-
-			String version = manifest.getMainAttributes().getValue("Implementation-Version");
-			if (version == null) {
-				return -1;
-			}
-
-			return parseVersion(version);
-		}
-	}
-
 	public static byte[] readFully(InputStream inputStream) throws IOException {
 		byte[] buffer = new byte[8192];
 		int bytesRead;
@@ -96,17 +79,5 @@ public class IOUtils {
 		}
 
 		return output.toByteArray();
-	}
-
-	private static int parseVersion(String version) {
-		Matcher matcher = VERSION_REGEX.matcher(version);
-		if (!matcher.matches()) {
-			return -1;
-		}
-
-		int major = Integer.parseInt(matcher.group("major"));
-		int minor = Integer.parseInt(matcher.group("minor"));
-		int patch = matcher.group("patch") == null ? 0 : Integer.parseInt(matcher.group("patch"));
-		return major * 10000 + minor * 100 + patch;
 	}
 }

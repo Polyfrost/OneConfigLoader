@@ -8,7 +8,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Enumeration;
+import java.util.jar.JarInputStream;
+import java.util.jar.Manifest;
+import java.util.regex.Matcher;
 
+import com.github.zafarkhaja.semver.Version;
 import lombok.SneakyThrows;
 
 import org.polyfrost.oneconfig.loader.base.Capabilities;
@@ -53,6 +57,7 @@ public class Stage0Loader extends LoaderBase {
         // Lookup stage1
         logger.info("Getting stage1 from cache");
         Path stage1Jar = lookupStage1();
+		logger.info("Found stage1 at {}", stage1Jar);
 
         // Load in classloader as a library
         runtimeAccess.appendToClassPath("stage1", false, stage1Jar.toUri().toURL());
@@ -103,10 +108,10 @@ public class Stage0Loader extends LoaderBase {
 		Files.createDirectories(dataDir);
 
 		URL latestUrl = null;
-		int latestVersion = -1;
+		Version latestVersion = null;
 
 		if (Files.exists(stage1File)) {
-			latestVersion = IOUtils.getJarVersion(stage1File.toUri().toURL());
+			latestVersion = getJarVersion(stage1File.toUri().toURL());
 		}
 
 		Enumeration<URL> resources = Stage0Loader.class.getClassLoader().getResources(STAGE1_RESOURCE_PATH);
@@ -116,8 +121,14 @@ public class Stage0Loader extends LoaderBase {
 
 		while (resources.hasMoreElements()) {
 			URL url = resources.nextElement();
-			int version = IOUtils.getJarVersion(url);
-			if (version > latestVersion) {
+			Version version = getJarVersion(url);
+			logger.info("Found stage1 at {} with version {}", url, version);
+
+			if (version == null) {
+				continue;
+			}
+
+			if (latestVersion == null || version.isHigherThan(latestVersion)) {
 				latestUrl = url;
 				latestVersion = version;
 			}
@@ -132,5 +143,22 @@ public class Stage0Loader extends LoaderBase {
 
         return stage1File;
     }
+
+	@SneakyThrows
+	public static Version getJarVersion(URL jarFile) {
+		try (JarInputStream inputStream = new JarInputStream(jarFile.openStream(), false)) {
+			Manifest manifest = inputStream.getManifest();
+			if (manifest == null) {
+				return null;
+			}
+
+			String version = manifest.getMainAttributes().getValue("Implementation-Version");
+			if (version == null) {
+				return null;
+			}
+
+			return Version.parse(version);
+		}
+	}
 
 }

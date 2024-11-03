@@ -1,5 +1,6 @@
 package org.polyfrost.oneconfig.loader.stage1;
 
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
@@ -9,9 +10,14 @@ import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
+import java.util.jar.JarEntry;
+import java.util.jar.JarInputStream;
+import java.util.zip.ZipEntry;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 
@@ -64,6 +70,9 @@ public class Stage1Loader extends LoaderBase {
 		checkForUpdates(loaderFrame);
 		maybeDownloadRelaunch(loaderFrame);
 		downloadOneConfigArtifacts(loaderFrame);
+
+		// Close our updater window, we're done
+		loaderFrame.destroy();
 
 		String targetSpecifier = gameMetadata.getTargetSpecifier();
 		log.info("Target specifier: {}", targetSpecifier);
@@ -151,7 +160,7 @@ public class Stage1Loader extends LoaderBase {
 				.resolve("data");
 		Path relaunchFile = dataDir.resolve("relaunch.jar");
 
-		if (!relaunchArtifact.checksum.isMatching(relaunchFile)) {
+		if (!Files.exists(relaunchFile) || !relaunchArtifact.checksum.isMatching(relaunchFile)) {
 			loaderFrame.updateMessage("Downloading OneConfig Loader Relaunch...");
 			relaunchArtifact.downloadTo(getRequestHelper(), relaunchFile, loaderFrame::updateProgress);
 		}
@@ -176,6 +185,13 @@ public class Stage1Loader extends LoaderBase {
 
 		boolean usingSnapshots = "true".equals(System.getProperty(ARTIFACT_SNAPSHOTS)) || "true".equals(System.getProperty(ONECONFIG_ARTIFACT_SNAPSHOTS));
 		List<BackendArtifact> artifacts = readArtifactsAt("https://api.polyfrost.org/v1/artifacts/oneconfig?version=" + gameVersion + "&loader=" + loaderName + "&snapshots=" + usingSnapshots);
+
+		String dummyArtifactsPath = System.getProperty("oneconfig.loader.stage1.dummyArtifacts");
+		if (dummyArtifactsPath != null) {
+			artifacts = readArtifactsFrom(Files.newInputStream(Paths.get(dummyArtifactsPath)));
+			System.out.println("Using dummy artifacts: " + dummyArtifactsPath);
+		}
+
 		if (artifacts == null) {
 			// Retry with the opposite snapshot setting
 			artifacts = readArtifactsAt("https://api.polyfrost.org/v1/artifacts/oneconfig?version=" + gameVersion + "&loader=" + loaderName + "&snapshots=" + !usingSnapshots);
@@ -187,19 +203,56 @@ public class Stage1Loader extends LoaderBase {
 			}
 		}
 
+		System.out.println("Artifacts: " + artifacts);
 		if (artifacts.isEmpty()) {
 			throw new RuntimeException("No artifacts found for OneConfig");
 		}
 
 		// Compare all the hashes of any known artifacts and download any that are missing or have changed
 		for (BackendArtifact artifact : artifacts) {
-			Path artifactFile = dataDir.resolve(artifact.name);
-			if (!artifact.checksum.isMatching(artifactFile)) {
+			Path artifactFile = dataDir.resolve(artifact.name + ".jar");
+			if (!Files.exists(artifactFile) || !artifact.checksum.isMatching(artifactFile)) {
 				loaderFrame.updateMessage("Downloading OneConfig artifact: " + artifact.name);
 				artifact.downloadTo(getRequestHelper(), artifactFile, loaderFrame::updateProgress);
 			}
 
-			runtimeAccess.appendToClassPath(artifact.group + ":" + artifact.name, false, artifactFile.toUri().toURL());
+			if (artifact.jij) {
+				Path jijDir = dataDir
+						.resolve("jij")
+						.resolve(artifact.name);
+
+				// We need to extract all the JARs inside here and add them individually
+				try (JarInputStream jarInputStream = new JarInputStream(Files.newInputStream(artifactFile))) {
+					// All of our JARs are inside META-INF/jars
+					ZipEntry entry;
+					while ((entry = jarInputStream.getNextJarEntry()) != null) {
+						String name = entry.getName();
+						if (name.startsWith("META-INF/jars/") && name.endsWith(".jar")) {
+							// Now, we need to extract this JAR into it's own directory
+							Path jarFile = jijDir.resolve(name.substring("META-INF/jars/".length()));
+							if (!Files.exists(jarFile.getParent())) {
+								Files.createDirectories(jarFile.getParent());
+							}
+
+							try (FileOutputStream outputStream = new FileOutputStream(jarFile.toFile())) {
+								byte[] buffer = new byte[4096];
+								int read;
+								while ((read = jarInputStream.read(buffer)) != -1) {
+									outputStream.write(buffer, 0, read);
+								}
+							}
+
+							// Once the JAR is extracted, add it to the classpath
+							String jarName = jarFile.getFileName().toString();
+							runtimeAccess.appendToClassPath(jarName, artifact.name.contains("dependencies"), jarFile.toUri().toURL());
+						}
+
+						jarInputStream.closeEntry();
+					}
+				}
+			} else {
+				runtimeAccess.appendToClassPath(artifact.group + ":" + artifact.name, artifact.name.contains("dependencies"), artifactFile.toUri().toURL());
+			}
 		}
 
 		// Write the new artifact cache
@@ -224,13 +277,14 @@ public class Stage1Loader extends LoaderBase {
 
 		try (InputStream inputStream = connection.getInputStream()) {
 			return new Gson().fromJson(new String(IOUtils.readFully(inputStream), StandardCharsets.UTF_8), BackendArtifact.class);
+		} catch (Exception e) {
+			return null;
 		}
 	}
 
 	@SneakyThrows
-	@SuppressWarnings("unchecked")
 	private List<BackendArtifact> readArtifactsFrom(InputStream inputStream) {
-		return new Gson().fromJson(new String(IOUtils.readFully(inputStream), StandardCharsets.UTF_8), List.class);
+		return new Gson().fromJson(new String(IOUtils.readFully(inputStream), StandardCharsets.UTF_8), new TypeToken<List<BackendArtifact>>(){}.getType());
 	}
 
 	@SneakyThrows

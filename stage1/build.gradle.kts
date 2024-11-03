@@ -15,3 +15,11 @@ dependencies {
 
     "legacyCompileOnly"("net.minecraft:launchwrapper:1.12")
 }
+
+tasks.jar {
+	manifest {
+		attributes(
+			"Implementation-Version" to version,
+		)
+	}
+}

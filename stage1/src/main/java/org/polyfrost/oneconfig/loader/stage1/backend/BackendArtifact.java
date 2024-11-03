@@ -17,12 +17,18 @@ public class BackendArtifact {
 
 	public final String group, name, url;
 	public final BackendChecksum checksum;
+	public final boolean jij;
 
-	public BackendArtifact(String group, String name, String url, BackendChecksum checksum) {
+	public BackendArtifact(String group, String name, String url, BackendChecksum checksum, boolean jij) {
 		this.group = group;
 		this.name = name;
 		this.url = url;
 		this.checksum = checksum;
+		this.jij = jij;
+	}
+
+	public BackendArtifact(String group, String name, String url, BackendChecksum checksum) {
+		this(group, name, url, checksum, false);
 	}
 
 	@SneakyThrows
