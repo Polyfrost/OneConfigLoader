@@ -1,4 +1,4 @@
-package org.polyfrost.oneconfig.loader.ui;
+package org.polyfrost.oneconfig.loader.stage1.ui;
 
 import javax.imageio.ImageIO;
 

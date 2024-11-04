@@ -81,4 +81,8 @@ public abstract class LoaderBase {
 	public abstract void load();
 
 	public abstract void postLoad();
+
+	public static boolean isDevMode() {
+		return Objects.equals(System.getProperty("oneconfig.loader.dev"), "true");
+	}
 }
