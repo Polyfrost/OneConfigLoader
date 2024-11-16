@@ -189,7 +189,6 @@ public class Stage1Loader extends LoaderBase {
 		String dummyArtifactsPath = System.getProperty("oneconfig.loader.stage1.dummyArtifacts");
 		if (dummyArtifactsPath != null) {
 			artifacts = readArtifactsFrom(Files.newInputStream(Paths.get(dummyArtifactsPath)));
-			System.out.println("Using dummy artifacts: " + dummyArtifactsPath);
 		}
 
 		if (artifacts == null) {
@@ -203,7 +202,6 @@ public class Stage1Loader extends LoaderBase {
 			}
 		}
 
-		System.out.println("Artifacts: " + artifacts);
 		if (artifacts.isEmpty()) {
 			throw new RuntimeException("No artifacts found for OneConfig");
 		}
@@ -303,6 +301,8 @@ public class Stage1Loader extends LoaderBase {
 
 		try (InputStream inputStream = connection.getInputStream()) {
 			return readArtifactsFrom(inputStream);
+		} catch (Exception e) {
+			return null;
 		}
 	}
 

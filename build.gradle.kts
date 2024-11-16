@@ -8,7 +8,7 @@ plugins {
 }
 
 group = "org.polyfrost.oneconfig"
-version = "1.1.0-alpha.33"
+version = "1.1.0-alpha.34"
 
 allprojects {
     apply(plugin = "maven-publish")
@@ -18,7 +18,8 @@ allprojects {
 
     repositories {
         mavenCentral()
-        maven("https://repo.polyfrost.org/releases")
+		maven("https://repo.polyfrost.org/releases")
+		maven("https://repo.polyfrost.org/snapshots")
         maven("https://maven.neoforged.net/releases")
     }
 

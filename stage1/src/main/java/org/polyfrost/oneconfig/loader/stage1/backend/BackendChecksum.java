@@ -1,8 +1,10 @@
 package org.polyfrost.oneconfig.loader.stage1.backend;
 
-import cc.polyfrost.polyio.util.PolyHashing;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+
+import org.polyfrost.polyio.util.HashingHelper;
+
 import java.nio.file.Path;
 import java.security.MessageDigest;
 
@@ -22,7 +24,9 @@ public class BackendChecksum {
 	public boolean isMatching(Path path) {
 		ensureDigest();
 
-		return hash.equals(PolyHashing.hash(path, digest));
+		String pathHash = HashingHelper.hash(path, digest);
+		System.out.println("path: " + path + "|" + "hash: " + hash + " | pathHash: " + pathHash);
+		return hash.equals(pathHash);
 	}
 
 	private void ensureDigest() {
