@@ -17,7 +17,11 @@ val platforms = setOf(
     Platform(
         "launchwrapper",
 		// also depend on fabric-loader since it *can* be used with launchwrapper
-        setOf("net.minecraft:launchwrapper:1.12", "net.fabricmc:fabric-loader:0.13.3"),
+        setOf("net.minecraft:launchwrapper:1.12", "net.fabricmc:fabric-loader:0.13.3",
+			// Versions based on the one which MC include by default in 1.8.9 (minimal supported version)
+			"com.google.guava:guava:17.0",
+			"org.apache.commons:commons-lang3:3.3.2",
+		),
         extraAttributes = mapOf(
             "TweakClass" to "org.polyfrost.oneconfig.loader.stage0.LaunchWrapperTweaker",
         )
@@ -67,13 +71,16 @@ sourceSets {
 
 dependencies {
     include(projects.common)
-
+	include("com.github.zafarkhaja:java-semver:0.10.2")
     platforms.forEach { plat ->
         plat.dependencies.forEach { "${plat.name}CompileOnly"(it) }
         plat.j9Platform?.let { j9 ->
             j9.dependencies.forEach { "${plat.name}9CompileOnly"(it) }
         }
     }
+
+	"modlauncherCompileOnly"("org.apache.logging.log4j:log4j-api:2.19.0")
+	"modlauncherCompileOnly"("org.apache.logging.log4j:log4j-core:2.19.0")
 }
 
 tasks {
@@ -105,7 +112,7 @@ tasks {
                 manifest.attributes["Multi-Release"] = true
             }
             manifest.attributes += platform.extraAttributes
-            from(sourceSets.main.get().output)
+			from(jar)
 
             manifest.inheritFrom(jar.get().manifest)
             configurations = listOf(include)
@@ -114,7 +121,14 @@ tasks {
 
     named<ShadowJar>("shadowJar") {
         enabled = true
-    }
+		from(jar)
+	}
+
+	jar {
+		from(project(":stage1").tasks.named<Jar>("shadowJar").map { it.outputs.files }) {
+			rename { "oneconfig-loader/stage1.jar" }
+		}
+	}
 }
 
 configure<PublishingExtension> {

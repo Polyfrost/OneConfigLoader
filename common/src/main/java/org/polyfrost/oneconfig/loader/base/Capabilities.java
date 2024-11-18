@@ -2,6 +2,9 @@ package org.polyfrost.oneconfig.loader.base;
 
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import org.apache.logging.log4j.core.Appender;
@@ -28,9 +31,13 @@ public interface Capabilities {
 	 * @since 1.1.0
 	 */
 	interface RuntimeAccess {
-		void appendToClassPath(boolean mod, @NotNull URL @NotNull... urls);
+		void appendToClassPath(String id, boolean mod, @NotNull URL @NotNull... urls);
 
 		ClassLoader getClassLoader();
+
+		default Map<String, List<URL>> getAppendedUrls() {
+			return Collections.emptyMap();
+		}
 	}
 
 	/**

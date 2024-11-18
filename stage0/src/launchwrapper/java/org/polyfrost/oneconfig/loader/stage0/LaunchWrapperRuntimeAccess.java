@@ -4,8 +4,13 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import lombok.SneakyThrows;
+import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
 
 import net.minecraft.launchwrapper.Launch;
@@ -16,17 +21,21 @@ import org.polyfrost.oneconfig.loader.base.Capabilities;
  * @author xtrm
  * @since 1.1.0
  */
+@Log4j2
 public class LaunchWrapperRuntimeAccess implements Capabilities.RuntimeAccess {
 	public static final LaunchWrapperRuntimeAccess INSTANCE = new LaunchWrapperRuntimeAccess();
 
+	private final Map<String, List<URL>> ourUrls = new HashMap<>();
+
 	@Override
 	@SneakyThrows
-	public void appendToClassPath(boolean mod, @NotNull URL @NotNull ... urls) {
+	public void appendToClassPath(String id, boolean mod, @NotNull URL @NotNull ... urls) {
 		for (@NotNull URL url : urls) {
 			Launch.classLoader.addURL(url);
 
 			ClassLoader parentClassLoader = Launch.classLoader.getClass().getClassLoader();
 			addUrlToClassLoader(parentClassLoader, url);
+			ourUrls.computeIfAbsent(id, k -> new ArrayList<>()).add(url);
 		}
 	}
 
@@ -56,5 +65,9 @@ public class LaunchWrapperRuntimeAccess implements Capabilities.RuntimeAccess {
 	@Override
 	public ClassLoader getClassLoader() {
 		return Launch.classLoader;
+	}
+
+	public Map<String, List<URL>> getAppendedUrls() {
+		return ourUrls;
 	}
 }

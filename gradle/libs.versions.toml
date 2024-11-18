@@ -3,7 +3,7 @@ shadow = "8.1.1"
 lombok = "8.6"
 
 annotations = "24.1.0"
-log4j = "2.19.0" # real MC uses older versions of log4j but that doesn't really matter in this case
+log4j = "2.0-beta9" # real MC uses older versions of log4j but that doesn't really matter in this case
 gson = "2.2.4" # same for Gson, let's use the oldest version to ensure compatibility
 
 [plugins]

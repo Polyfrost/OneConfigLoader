@@ -26,7 +26,9 @@ public class ModLauncherLegacyTransformationService implements ITransformationSe
 
     @Override
     public void run() {
-        new Stage0Loader(ModLauncherCapabilities.INSTANCE).load();
+        Stage0Loader loader = new Stage0Loader(ModLauncherCapabilities.INSTANCE);
+		loader.load();
+		loader.postLoad();
     }
 
     @Override

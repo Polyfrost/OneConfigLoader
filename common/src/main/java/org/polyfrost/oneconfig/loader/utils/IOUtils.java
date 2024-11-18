@@ -1,11 +1,19 @@
 package org.polyfrost.oneconfig.loader.utils;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
+import lombok.SneakyThrows;
 import org.jetbrains.annotations.NotNull;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Utility class for IO operations.
@@ -14,6 +22,8 @@ import java.util.jar.Manifest;
  * @since 1.1.0
  */
 public class IOUtils {
+	private static final Pattern VERSION_REGEX = Pattern.compile("(?<major>\\d+).(?<minor>\\d+).?(?<patch>\\d+)?");
+
     private IOUtils() {
         throw new IllegalStateException("This class cannot be instantiated.");
     }
@@ -59,4 +69,15 @@ public class IOUtils {
             }
         }
     }
+
+	public static byte[] readFully(InputStream inputStream) throws IOException {
+		byte[] buffer = new byte[8192];
+		int bytesRead;
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		while ((bytesRead = inputStream.read(buffer)) != -1) {
+			output.write(buffer, 0, bytesRead);
+		}
+
+		return output.toByteArray();
+	}
 }

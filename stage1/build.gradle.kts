@@ -11,7 +11,15 @@ sourceSets {
 
 dependencies {
     implementation(projects.common)
-    include("cc.polyfrost:polyio:0.0.13")
+    include("org.polyfrost:polyio:0.1.0")
 
     "legacyCompileOnly"("net.minecraft:launchwrapper:1.12")
+}
+
+tasks.jar {
+	manifest {
+		attributes(
+			"Implementation-Version" to version,
+		)
+	}
 }

@@ -26,7 +26,7 @@ public class LegacyCapabilities implements Capabilities {
 	public RuntimeAccess fetchRuntimeAccess() {
 		return new RuntimeAccess() {
 			@Override
-			public void appendToClassPath(boolean mod, @NotNull URL @NotNull ... urls) {
+			public void appendToClassPath(String id, boolean mod, @NotNull URL @NotNull ... urls) {
 				for (@NotNull URL url : urls) {
 					Launch.classLoader.addURL(url);
 				}
