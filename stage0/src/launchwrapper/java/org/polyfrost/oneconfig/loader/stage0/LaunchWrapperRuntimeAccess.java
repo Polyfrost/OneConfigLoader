@@ -1,5 +1,6 @@
 package org.polyfrost.oneconfig.loader.stage0;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -25,9 +26,30 @@ public class LaunchWrapperRuntimeAccess implements Capabilities.RuntimeAccess {
 			Launch.classLoader.addURL(url);
 
 			ClassLoader parentClassLoader = Launch.classLoader.getClass().getClassLoader();
+			addUrlToClassLoader(parentClassLoader, url);
+		}
+	}
+
+	@SneakyThrows
+	private void addUrlToClassLoader(ClassLoader loader, URL url) {
+		if (loader instanceof URLClassLoader) {
 			Method method = URLClassLoader.class.getDeclaredMethod("addURL", URL.class);
 			method.setAccessible(true);
-			method.invoke(parentClassLoader, url);
+			method.invoke(loader, url);
+		} else {
+			Field ucpField;
+			try {
+				// Java 8-11
+				ucpField = loader.getClass().getDeclaredField("ucp");
+			} catch (NoSuchFieldException e) {
+				// Java 17
+				ucpField = loader.getClass().getSuperclass().getDeclaredField("ucp");
+			}
+			ucpField.setAccessible(true);
+			// URLClassPath is in different packages in different Java versions, so we use Object.
+			final Object ucp = ucpField.get(loader);
+			final Method urlAdder = ucp.getClass().getDeclaredMethod("addURL", URL.class);
+			urlAdder.invoke(ucp, url);
 		}
 	}
 
