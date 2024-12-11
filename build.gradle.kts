@@ -5,6 +5,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 plugins {
     alias(libs.plugins.shadow) apply(false)
     alias(libs.plugins.lombok) apply(false)
+	alias(libs.plugins.reproducible.builds) apply(false)
 }
 
 group = "org.polyfrost.oneconfig"
@@ -12,6 +13,7 @@ version = "1.1.0-alpha.34"
 
 allprojects {
     apply(plugin = "maven-publish")
+	apply(plugin = "org.gradlex.reproducible-builds")
 
 	group = rootProject.group
     version = rootProject.version
