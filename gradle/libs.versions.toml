@@ -1,13 +1,13 @@
 [versions]
-shadow = "8.1.1"
-lombok = "8.6"
+shadow = "8.3.5"
+lombok = "8.11"
 
 annotations = "26.0.1"
 log4j = "2.0-beta9" # real MC uses older versions of log4j but that doesn't really matter in this case
 gson = "2.2.4" # same for Gson, let's use the oldest version to ensure compatibility
 
 [plugins]
-shadow = { id = "com.github.johnrengelman.shadow", version.ref = "shadow" }
+shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
 lombok = { id = "io.freefair.lombok", version.ref = "lombok" }
 
 [libraries]

@@ -62,7 +62,7 @@ sourceSets {
                     srcDirs("src/${platform.name}/java9")
                 }
             }.also { j9set ->
-                tasks.getByName<JavaCompile>(j9set.compileJavaTaskName) {
+                tasks.named<JavaCompile>(j9set.compileJavaTaskName) {
                     javaCompiler.set(javaToolchains.compilerFor {
                         languageVersion.set(JavaLanguageVersion.of(16))
                     })
@@ -103,7 +103,7 @@ tasks {
 
     platforms.forEach { platform ->
         val set = platform.sourceSet!!
-        create(set.jarTaskName, ShadowJar::class) {
+        register(set.jarTaskName, ShadowJar::class) {
             archiveBaseName.set(project.name)
             archiveClassifier.set(set.name)
             group = "build"

@@ -16,13 +16,6 @@ allprojects {
 	group = rootProject.group
     version = rootProject.version
 
-    repositories {
-        mavenCentral()
-		maven("https://repo.polyfrost.org/releases")
-		maven("https://repo.polyfrost.org/snapshots")
-        maven("https://maven.neoforged.net/releases")
-    }
-
     configure<PublishingExtension> {
         repositories {
 			mavenLocal()
@@ -48,11 +41,11 @@ allprojects {
 subprojects {
     apply(plugin = "java-library")
     apply(plugin = "idea")
-    apply(plugin = "com.github.johnrengelman.shadow")
+    apply(plugin = "com.gradleup.shadow")
     apply(plugin = "io.freefair.lombok")
 
     val compileOnly by configurations
-    val include: Configuration by configurations.creating {
+    val include by configurations.registering {
         compileOnly.extendsFrom(this)
     }
 
@@ -60,7 +53,7 @@ subprojects {
 
     configure<JavaPluginExtension> {
         withSourcesJar()
-//        withJavadocJar()
+        withJavadocJar()
 
         toolchain {
             languageVersion.set(JavaLanguageVersion.of(8))
@@ -81,7 +74,7 @@ subprojects {
 
 	configure<PublishingExtension> {
 		publications {
-			create<MavenPublication>("mavenJava") {
+			register<MavenPublication>("mavenJava") {
 				artifactId = project.name
 				group = project.group
 				version = project.version.toString()
@@ -93,6 +86,12 @@ subprojects {
 	}
 
     tasks {
+		withType<Javadoc> {
+			options {
+				this as StandardJavadocDocletOptions
+				addStringOption("Xdoclint:none", "-quiet")
+			}
+		}
 
         named<Jar>("jar") {
             manifest.attributes += mapOf(
@@ -109,17 +108,12 @@ subprojects {
         }
 
         named<ShadowJar>("shadowJar") {
-            configurations = listOf(include)
+            configurations = listOf(include.get())
         }
 
-        val build by this
+        val assemble by this
         withType(ShadowJar::class) {
-            build.finalizedBy(this)
+            assemble.dependsOn(this)
         }
-
-        withType(JavaCompile::class) {
-            options.encoding = "UTF-8"
-        }
-
     }
 }
