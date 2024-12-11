@@ -29,8 +29,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -46,10 +44,9 @@ jobs:
             build-scan-publish: true
             build-scan-terms-of-use-url: "https://gradle.com/terms-of-service"
             build-scan-terms-of-use-agree: "yes"
-            gradle-home-cache-cleanup: true
             validate-wrappers: true
+            cache-cleanup: always
             cache-read-only: ${{ github.ref != 'refs/heads/main' && github.ref != 'refs/heads/modern' }}
-
 
       - name: Build
         run: ./gradlew build
