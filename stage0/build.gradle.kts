@@ -10,7 +10,8 @@ data class Platform(
 )
 data class J9Platform(
     val dependencies: Set<String>,
-    var sourceSet: SourceSet? = null
+	val moduleName: String,
+    var sourceSet: SourceSet? = null,
 )
 
 val platforms = setOf(
@@ -29,7 +30,10 @@ val platforms = setOf(
     Platform(
         "modlauncher",
         setOf("cpw.mods:modlauncher:8.0.9"),
-        J9Platform(setOf("cpw.mods:modlauncher:9.1.6"))
+        J9Platform(
+			setOf("cpw.mods:modlauncher:9.1.6"),
+			moduleName = "org.polyfrost.oneconfig.loader"
+		)
     ),
     Platform(
         "fabriclike",
@@ -110,6 +114,7 @@ tasks {
                     from(j9.sourceSet!!.output)
                 }
                 manifest.attributes["Multi-Release"] = true
+				manifest.attributes["Automatic-Module-Name"] = j9.moduleName
             }
             manifest.attributes += platform.extraAttributes
 			from(jar)
