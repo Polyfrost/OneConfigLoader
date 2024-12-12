@@ -11,8 +11,12 @@ sourceSets {
 
 dependencies {
     implementation(projects.common)
-    include("org.polyfrost:polyio:0.1.0")
-	include("me.xtrm:propy:0.0.5")
+    include("org.polyfrost:polyio:0.1.0") {
+		isTransitive = false
+	}
+	include("me.xtrm:propy:0.0.5") {
+		isTransitive = false
+	}
 
     "legacyCompileOnly"("net.minecraft:launchwrapper:1.12")
 }
