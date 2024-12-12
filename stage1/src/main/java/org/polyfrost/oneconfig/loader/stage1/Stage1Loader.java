@@ -1,5 +1,7 @@
 package org.polyfrost.oneconfig.loader.stage1;
 
+import static me.xtrm.propy.Property.propertyOf;
+
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -12,7 +14,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.jar.JarEntry;
 import java.util.jar.JarInputStream;
 import java.util.zip.ZipEntry;
 
@@ -20,6 +21,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import me.xtrm.propy.Property;
 
 import org.polyfrost.oneconfig.loader.base.Capabilities;
 import org.polyfrost.oneconfig.loader.base.LoaderBase;
@@ -36,12 +38,17 @@ import org.polyfrost.oneconfig.loader.utils.XDG;
  */
 @Log4j2
 public class Stage1Loader extends LoaderBase {
+	//FIXME: Detect this from the target artifacts
 	private static final String ONECONFIG_MAIN_CLASS = "org.polyfrost.oneconfig.internal.bootstrap.Bootstrap";
 
-	private static final String ARTIFACT_SNAPSHOTS = "oneconfig.loader.stage1.snapshots";
-	private static final String STAGE1_ARTIFACT_SNAPSHOTS = "oneconfig.loader.stage1.update.snapshots";
-	private static final String RELAUNCH_ARTIFACT_SNAPSHOTS = "oneconfig.loader.stage1.relaunch.snapshots";
-	private static final String ONECONFIG_ARTIFACT_SNAPSHOTS = "oneconfig.loader.stage1.oneconfig.snapshots";
+	private static final Property<Boolean> ARTIFACT_SNAPSHOTS =
+			propertyOf("oneconfig.loader.stage1.snapshots", false);
+	private static final Property<Boolean> STAGE1_ARTIFACT_SNAPSHOTS =
+			propertyOf("oneconfig.loader.stage1.update.snapshots", false);
+	private static final Property<Boolean> RELAUNCH_ARTIFACT_SNAPSHOTS =
+			propertyOf("oneconfig.loader.stage1.relaunch.snapshots", false);
+	private static final Property<Boolean> ONECONFIG_ARTIFACT_SNAPSHOTS =
+			propertyOf("oneconfig.loader.stage1.oneconfig.snapshots", false);
 
 	private Class<?> oneconfigMainClass;
 	private Object oneconfigMainInstance;
@@ -56,15 +63,16 @@ public class Stage1Loader extends LoaderBase {
 
 	@Override
 	public void load() {
-		log.info("Creating UI");
-		LoaderFrame loaderFrame = new LoaderFrame();
-
 		log.info("Loading stage1...");
 		Capabilities capabilities = getCapabilities();
 		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
 		Capabilities.GameMetadata gameMetadata = capabilities.getGameMetadata();
 
-		log.info("Displaying UI");
+		String targetSpecifier = gameMetadata.getTargetSpecifier();
+		log.info("Target specifier: {}", targetSpecifier);
+
+		log.info("Creating UI");
+		LoaderFrame loaderFrame = new LoaderFrame();
 		loaderFrame.display();
 
 		checkForUpdates(loaderFrame);
@@ -73,9 +81,6 @@ public class Stage1Loader extends LoaderBase {
 
 		// Close our updater window, we're done
 		loaderFrame.destroy();
-
-		String targetSpecifier = gameMetadata.getTargetSpecifier();
-		log.info("Target specifier: {}", targetSpecifier);
 
 		try {
 			ClassLoader classLoader = runtimeAccess.getClassLoader();
@@ -105,7 +110,7 @@ public class Stage1Loader extends LoaderBase {
     }
 
 	private void checkForUpdates(LoaderFrame loaderFrame) {
-		boolean usingUpdateSnapshots = "true".equals(System.getProperty(ARTIFACT_SNAPSHOTS)) || "true".equals(System.getProperty(STAGE1_ARTIFACT_SNAPSHOTS));
+		boolean usingUpdateSnapshots = shouldUseSnapshots(STAGE1_ARTIFACT_SNAPSHOTS);
 		BackendArtifact stage1Artifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/stage1?snapshots=" + usingUpdateSnapshots);
 		if (stage1Artifact == null) {
 			// Retry with the opposite snapshot setting
@@ -135,16 +140,11 @@ public class Stage1Loader extends LoaderBase {
 		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
 
 		Capabilities.GameMetadata gameMetadata = capabilities.getGameMetadata();
-		if (!"forge".equalsIgnoreCase(gameMetadata.getLoaderName())) {
+		if (!gameMetadata.mayRequireRelaunch()) {
 			return;
 		}
 
-		String gameVersion = gameMetadata.getGameVersion();
-		if (!"1.8.9".equals(gameVersion) && !"1.12.2".equals(gameVersion)) {
-			return;
-		}
-
-		boolean usingRelaunchSnapshots = "true".equals(System.getProperty(ARTIFACT_SNAPSHOTS)) || "true".equals(System.getProperty(RELAUNCH_ARTIFACT_SNAPSHOTS));
+		boolean usingRelaunchSnapshots = shouldUseSnapshots(RELAUNCH_ARTIFACT_SNAPSHOTS);
 		BackendArtifact relaunchArtifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/relaunch?snapshots=" + usingRelaunchSnapshots);
 		if (relaunchArtifact == null) {
 			// Retry with the opposite snapshot setting
@@ -183,27 +183,29 @@ public class Stage1Loader extends LoaderBase {
 				.resolve("data");
 		Path artifactCacheFile = dataDir.resolve("artifact-cache.json");
 
-		boolean usingSnapshots = "true".equals(System.getProperty(ARTIFACT_SNAPSHOTS)) || "true".equals(System.getProperty(ONECONFIG_ARTIFACT_SNAPSHOTS));
+		boolean usingSnapshots = shouldUseSnapshots(ONECONFIG_ARTIFACT_SNAPSHOTS);
 		List<BackendArtifact> artifacts = readArtifactsAt("https://api.polyfrost.org/v1/artifacts/oneconfig?version=" + gameVersion + "&loader=" + loaderName + "&snapshots=" + usingSnapshots);
 
 		String dummyArtifactsPath = System.getProperty("oneconfig.loader.stage1.dummyArtifacts");
 		if (dummyArtifactsPath != null) {
-			artifacts = readArtifactsFrom(Files.newInputStream(Paths.get(dummyArtifactsPath)));
+			Path dummyArtifactsPathObj = Paths.get(dummyArtifactsPath);
+			if (Files.exists(dummyArtifactsPathObj)) {
+				artifacts = readArtifactsFrom(Files.newInputStream(dummyArtifactsPathObj));
+			}
 		}
 
 		if (artifacts == null) {
 			// Retry with the opposite snapshot setting
 			artifacts = readArtifactsAt("https://api.polyfrost.org/v1/artifacts/oneconfig?version=" + gameVersion + "&loader=" + loaderName + "&snapshots=" + !usingSnapshots);
 			if (artifacts == null) {
-				artifacts = readArtifactsFrom(Files.newInputStream(artifactCacheFile));
-				if (artifacts == null) {
-					throw new RuntimeException("Failed to fetch OneConfig artifacts");
+				if (Files.exists(artifactCacheFile)) {
+					artifacts = readArtifactsFrom(Files.newInputStream(artifactCacheFile));
 				}
 			}
 		}
 
-		if (artifacts.isEmpty()) {
-			throw new RuntimeException("No artifacts found for OneConfig");
+		if (artifacts == null || artifacts.isEmpty()) {
+			throw new RuntimeException("Failed to fetch OneConfig artifacts");
 		}
 
 		// Compare all the hashes of any known artifacts and download any that are missing or have changed
@@ -262,15 +264,14 @@ public class Stage1Loader extends LoaderBase {
 	@SneakyThrows
 	private BackendArtifact readArtifactAt(String url) {
 		URLConnection connection = getRequestHelper().establishConnection(URI.create(url).toURL());
-		if (!(connection instanceof HttpURLConnection)) {
-			throw new IllegalArgumentException("Connection is not an HTTP connection");
-		}
 
-		HttpURLConnection httpConnection = (HttpURLConnection) connection;
-		httpConnection.connect();
+		connection.connect();
 
-		if (httpConnection.getResponseCode() != 200) {
-			return null;
+		if (connection instanceof HttpURLConnection) {
+			HttpURLConnection httpConnection = (HttpURLConnection) connection;
+			if (httpConnection.getResponseCode() != 200) {
+				return null;
+			}
 		}
 
 		try (InputStream inputStream = connection.getInputStream()) {
@@ -288,22 +289,29 @@ public class Stage1Loader extends LoaderBase {
 	@SneakyThrows
 	private List<BackendArtifact> readArtifactsAt(String url) {
 		URLConnection connection = getRequestHelper().establishConnection(URI.create(url).toURL());
-		if (!(connection instanceof HttpURLConnection)) {
-			throw new IllegalArgumentException("Connection is not an HTTP connection");
-		}
+		log.info("Fetching artifacts from {}", url);
 
-		HttpURLConnection httpConnection = (HttpURLConnection) connection;
-		httpConnection.connect();
+		connection.connect();
 
-		if (httpConnection.getResponseCode() != 200) {
-			return null;
+		if (connection instanceof HttpURLConnection) {
+			HttpURLConnection httpConnection = (HttpURLConnection) connection;
+			if (httpConnection.getResponseCode() != 200) {
+				return null;
+			}
 		}
 
 		try (InputStream inputStream = connection.getInputStream()) {
 			return readArtifactsFrom(inputStream);
 		} catch (Exception e) {
+			log.error("Failed to read artifacts from {}", url, e);
 			return null;
 		}
 	}
 
+	private static boolean shouldUseSnapshots(Property<Boolean> property) {
+		if (ARTIFACT_SNAPSHOTS.get()) {
+			return true;
+		}
+		return property.get();
+	}
 }

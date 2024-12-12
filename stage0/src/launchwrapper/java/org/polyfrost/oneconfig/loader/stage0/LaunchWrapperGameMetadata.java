@@ -23,6 +23,7 @@ public class LaunchWrapperGameMetadata implements Capabilities.GameMetadata {
 
 	private final String loaderName;
 	private final String gameVersion;
+	private final boolean isFabric;
 
 	LaunchWrapperGameMetadata() {
 		boolean isFabric = false;
@@ -32,9 +33,10 @@ public class LaunchWrapperGameMetadata implements Capabilities.GameMetadata {
 			isFabric = true;
 		} catch (Throwable ignored) {
 		}
+		this.isFabric = isFabric;
 		this.loaderName = isFabric ? "fabric" : "forge";
 		try {
-			this.gameVersion = fetchGameVersion(isFabric);
+			this.gameVersion = fetchGameVersion();
 		} catch (Throwable t) {
 			throw new RuntimeException("Failed to fetch game version", t);
 		}
@@ -45,7 +47,12 @@ public class LaunchWrapperGameMetadata implements Capabilities.GameMetadata {
 		return Launch.minecraftHome.toPath();
 	}
 
-	private static String fetchGameVersion(boolean isFabric) {
+	@Override
+	public boolean mayRequireRelaunch() {
+		return !this.isFabric;
+	}
+
+	private String fetchGameVersion() {
 		if (isFabric) {
 			FabricLoader loader = FabricLoader.getInstance();
 			ModContainer container = loader.getModContainer("minecraft").orElseThrow(() -> new RuntimeException("Failed to find 'minecraft' fabric mod container"));
