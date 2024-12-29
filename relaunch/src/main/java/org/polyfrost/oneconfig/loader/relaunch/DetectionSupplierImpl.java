@@ -18,7 +18,7 @@ public class DetectionSupplierImpl implements DetectionSupplier {
 				add(new ExcludedKotlinDetection());
 				add(new SignedMixinDetection());
 				addAll(createComplexPreloadLibraryDetectionList());
-				add(new PreloadLibraryDetection("org.spongepowered:mixin", "org", "spongepowered"));
+				add(new PreloadLibraryDetection("polymixin-", "org", "spongepowered"));
 				add(new MixinDetection());
 			}
 		};
@@ -28,10 +28,10 @@ public class DetectionSupplierImpl implements DetectionSupplier {
 		return new ArrayList<Detection>() {
 			{
 				String[][][] paths = {
-						{{"org.jetbrains.kotlin"}, {"kotlin"}},
-						{{"org.jetbrains.kotlinx"}, {"kotlinx", "coroutines"}},
-						{{"org.polyfrost:universalcraft"}, {"org", "polyfrost", "universal"}},
-						{{"org.polyfrost:polyui"}, {"org", "polyfrost", "polyui"}}
+						{{"kotlin-"}, {"kotlin"}},
+						{{"kotlinx-coroutines-"}, {"kotlinx", "coroutines"}},
+						{{"org.polyfrost:universalcraft-"}, {"org", "polyfrost", "universal"}},
+						{{"polyui-"}, {"org", "polyfrost", "polyui"}}
 				};
 
 				for (String[][] path : paths) {

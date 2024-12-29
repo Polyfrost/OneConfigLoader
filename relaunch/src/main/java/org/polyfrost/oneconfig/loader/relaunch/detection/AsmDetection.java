@@ -18,7 +18,7 @@ public class AsmDetection extends SimpleDetection {
 
 	@Override
 	public void checkRelaunch(String id, List<URL> urls) {
-		if (!id.startsWith("org.ow2.asm")) {
+		if (!id.startsWith("org.ow2.asm") && !id.startsWith("asm-")) {
 			return;
 		}
 		this.detectedUrls = urls;
