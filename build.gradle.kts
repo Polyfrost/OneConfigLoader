@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "org.polyfrost.oneconfig"
-version = "1.1.0-alpha.34"
+version = "1.1.0-alpha.35"
 
 allprojects {
     apply(plugin = "maven-publish")
