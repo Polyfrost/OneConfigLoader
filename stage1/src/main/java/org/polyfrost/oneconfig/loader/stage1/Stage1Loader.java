@@ -139,11 +139,6 @@ public class Stage1Loader extends LoaderBase {
 		Capabilities capabilities = getCapabilities();
 		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
 
-		Capabilities.GameMetadata gameMetadata = capabilities.getGameMetadata();
-		if (!gameMetadata.mayRequireRelaunch()) {
-			return;
-		}
-
 		boolean usingRelaunchSnapshots = shouldUseSnapshots(RELAUNCH_ARTIFACT_SNAPSHOTS);
 		BackendArtifact relaunchArtifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/relaunch?snapshots=" + usingRelaunchSnapshots);
 		if (relaunchArtifact == null) {

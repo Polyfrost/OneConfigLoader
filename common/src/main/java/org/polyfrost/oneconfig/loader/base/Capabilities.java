@@ -52,10 +52,6 @@ public interface Capabilities {
 		String getGameVersion();
 		String getLoaderName();
 
-		default boolean mayRequireRelaunch() {
-			return false;
-		}
-
 		default @NotNull String getTargetSpecifier() {
 			return String.format("%s-%s", getGameVersion(), getLoaderName());
 		}

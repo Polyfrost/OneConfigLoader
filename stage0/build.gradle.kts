@@ -1,149 +1,28 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
-data class Platform(
-    val name: String,
-    val dependencies: Set<String>,
-    val j9Platform: J9Platform? = null,
-    val extraAttributes: Map<String, String> = emptyMap(),
-
-    var sourceSet: SourceSet? = null,
-)
-data class J9Platform(
-    val dependencies: Set<String>,
-	val moduleName: String,
-    var sourceSet: SourceSet? = null,
-)
-
-val platforms = setOf(
-    Platform(
-        "launchwrapper",
-		// also depend on fabric-loader since it *can* be used with launchwrapper
-        setOf("net.minecraft:launchwrapper:1.12", "net.fabricmc:fabric-loader:0.13.3",
-			// Versions based on the one which MC include by default in 1.8.9 (minimal supported version)
-			"com.google.guava:guava:17.0",
-			"org.apache.commons:commons-lang3:3.3.2",
-		),
-        extraAttributes = mapOf(
-            "TweakClass" to "org.polyfrost.oneconfig.loader.stage0.LaunchWrapperTweaker",
-        )
-    ),
-    Platform(
-        "modlauncher",
-        setOf("cpw.mods:modlauncher:8.0.9"),
-        J9Platform(
-			setOf("cpw.mods:modlauncher:9.1.6"),
-			moduleName = "org.polyfrost.oneconfig.loader"
-		)
-    ),
-    Platform(
-        "fabriclike",
-        setOf("net.fabricmc:fabric-loader:0.13.3", "org.quiltmc:quilt-loader:0.24.0")
-    )
-)
-
 val include by configurations
-
-sourceSets {
-    fun createConfigured(name: String, block: SourceSet.() -> Unit = {}): SourceSet =
-        create(name) {
-            compileClasspath += main.get().compileClasspath
-            compileClasspath += main.get().output
-            compileClasspath += mock.get().output
-            block()
-        }
-
-    platforms.forEach { platform ->
-        val set = createConfigured(platform.name)
-        platform.j9Platform?.let { j9 ->
-            j9.sourceSet = createConfigured("${platform.name}9") {
-                compileClasspath += set.output
-
-                java {
-                    srcDirs("src/${platform.name}/java9")
-                }
-            }.also { j9set ->
-                tasks.named<JavaCompile>(j9set.compileJavaTaskName) {
-                    javaCompiler.set(javaToolchains.compilerFor {
-                        languageVersion.set(JavaLanguageVersion.of(16))
-                    })
-                }
-            }
-        }
-        platform.sourceSet = set
-    }
-}
 
 dependencies {
     include(projects.common)
 	include("com.github.zafarkhaja:java-semver:0.10.2")
-    platforms.forEach { plat ->
-        plat.dependencies.forEach { "${plat.name}CompileOnly"(it) }
-        plat.j9Platform?.let { j9 ->
-            j9.dependencies.forEach { "${plat.name}9CompileOnly"(it) }
-        }
-    }
 
-	"modlauncherCompileOnly"("org.apache.logging.log4j:log4j-api:2.19.0")
-	"modlauncherCompileOnly"("org.apache.logging.log4j:log4j-core:2.19.0")
+	@Suppress("RedundantSuppression", "VulnerableLibrariesLocal")
+	compileOnly("net.minecraft:launchwrapper:1.12")
+	@Suppress("RedundantSuppression", "VulnerableLibrariesLocal")
+	compileOnly("com.google.guava:guava:17.0")
+	compileOnly("org.apache.commons:commons-lang3:3.3.2")
 }
 
 tasks {
-    named<Jar>(sourceSets.main.get().sourcesJarTaskName) {
-		manifest.attributes("OneConfig-Stage1-Class" to "org.polyfrost.oneconfig.loader.stage1.Stage1Loader")
-
-        platforms.forEach { platform ->
-            from(platform.sourceSet!!.allSource)
-            platform.j9Platform?.let { j9 ->
-                into("META-INF/versions/9") {
-                    from(j9.sourceSet!!.allSource)
-                }
-            }
-        }
-    }
-
-    platforms.forEach { platform ->
-        val set = platform.sourceSet!!
-        register(set.jarTaskName, ShadowJar::class) {
-            archiveBaseName.set(project.name)
-            archiveClassifier.set(set.name)
-            group = "build"
-
-            from(set.output)
-            platform.j9Platform?.let { j9 ->
-                into("META-INF/versions/9") {
-                    from(j9.sourceSet!!.output)
-                }
-                manifest.attributes["Multi-Release"] = true
-				manifest.attributes["Automatic-Module-Name"] = j9.moduleName
-            }
-            manifest.attributes += platform.extraAttributes
-			from(jar)
-
-            manifest.inheritFrom(jar.get().manifest)
-            configurations = listOf(include)
-        }
-    }
-
     named<ShadowJar>("shadowJar") {
         enabled = true
 		from(jar)
+		configurations = listOf(include)
 	}
 
 	jar {
 		from(project(":stage1").tasks.named<Jar>("shadowJar").map { it.outputs.files }) {
 			rename { "oneconfig-loader/stage1.jar" }
-		}
-	}
-}
-
-configure<PublishingExtension> {
-	publications {
-		named("mavenJava", MavenPublication::class.java) {
-			platforms.forEach { platform ->
-				artifact(tasks.named<ShadowJar>(platform.sourceSet!!.jarTaskName)) {
-					classifier = platform.sourceSet!!.name
-				}
-			}
 		}
 	}
 }
