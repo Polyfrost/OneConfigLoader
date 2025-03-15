@@ -1,3 +1,5 @@
+version = "1.1.0-alpha.44"
+
 sourceSets {
     val main by this
     val legacy by creating {

@@ -30,7 +30,7 @@ public class DetectionSupplierImpl implements DetectionSupplier {
 				String[][][] paths = {
 						{{"kotlin-"}, {"kotlin"}},
 						{{"kotlinx-coroutines-"}, {"kotlinx", "coroutines"}},
-						{{"org.polyfrost:universalcraft-"}, {"org", "polyfrost", "universal"}},
+						{{"dev.deftu:omnicore-"}, {"dev", "deftu", "omnicore"}},
 						{{"polyui-"}, {"org", "polyfrost", "polyui"}}
 				};
 

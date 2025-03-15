@@ -9,14 +9,12 @@ plugins {
 }
 
 group = "org.polyfrost.oneconfig"
-version = "1.1.0-alpha.44"
 
 allprojects {
     apply(plugin = "maven-publish")
 	apply(plugin = "org.gradlex.reproducible-builds")
 
 	group = rootProject.group
-    version = rootProject.version
 
     configure<PublishingExtension> {
         repositories {
