@@ -17,17 +17,23 @@ allprojects {
 	group = rootProject.group
 
     configure<PublishingExtension> {
+		afterEvaluate {
+			publications.withType<MavenPublication> {
+				version = project.version.toString()
+			}
+		}
+
         repositories {
 			mavenLocal()
 
             mapOf(
-                "releases" to "basic",
-                "snapshots" to "basic",
-                "private" to "private"
+                "polyfrostReleases" to "basic",
+                "polyfrostSnapshots" to "basic",
+                "polyfrostPrivate" to "private"
             ).forEach { (channel, authMethod) ->
                 maven {
                     name = channel
-                    setUrl("https://repo.polyfrost.org/$channel")
+                    setUrl("https://repo.polyfrost.org/${channel.removePrefix("polyfrost").lowercase()}")
                     credentials(PasswordCredentials::class)
                     authentication {
                         create<BasicAuthentication>(authMethod)

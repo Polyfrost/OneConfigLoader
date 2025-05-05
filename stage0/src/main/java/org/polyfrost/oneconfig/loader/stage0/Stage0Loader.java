@@ -33,6 +33,8 @@ public class Stage0Loader extends LoaderBase {
 	private static final String STAGE1_ARTIFACT_LOCAL = "oneconfig.loader.stage0.local";
 	private static final String STAGE1_CLASS_NAME = "org.polyfrost.oneconfig.loader.stage1.Stage1Loader";
 
+	private static final String RELAUNCH_STATE = "oneconfig.loader.relaunch.state";
+
 	private static final String STAGE1_RESOURCE_PATH = "oneconfig-loader/stage1.jar";
 
 	private Class<?> stage1Class;
@@ -99,8 +101,16 @@ public class Stage0Loader extends LoaderBase {
         Path stage1File = dataDir.resolve("stage1.jar");
 
 		// If the update file exists, replace the possibly existing stage1 file with it and delete the update file
-		if (Files.exists(stage1UpdateFile)) {
-			Files.deleteIfExists(stage1File);
+		if (!isRelaunched() && Files.exists(stage1UpdateFile)) {
+			logger.info("Found stage1 update file, replacing stage1 with it");
+
+			try {
+				// If the stage1 file exists, delete it
+				Files.deleteIfExists(stage1File);
+			} catch (IOException e) {
+				logger.warn("Attempted to delete existing stage1 file and failed, will replace it instead", e);
+			}
+
 			Files.move(stage1UpdateFile, stage1File);
 		}
 
@@ -159,6 +169,15 @@ public class Stage0Loader extends LoaderBase {
 
 			return Version.parse(version);
 		}
+	}
+
+	public static boolean isRelaunched() {
+		String relaunchState = System.getProperty(RELAUNCH_STATE);
+		if (relaunchState == null) {
+			return false;
+		}
+
+		return Boolean.parseBoolean(relaunchState);
 	}
 
 }

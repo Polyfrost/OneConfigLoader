@@ -1,5 +1,6 @@
 package org.polyfrost.oneconfig.loader.stage1;
 
+import static me.xtrm.propy.MutableProperty.mutablePropertyOf;
 import static me.xtrm.propy.Property.propertyOf;
 
 import java.io.FileOutputStream;
@@ -21,6 +22,7 @@ import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
+import me.xtrm.propy.MutableProperty;
 import me.xtrm.propy.Property;
 
 import org.polyfrost.oneconfig.loader.base.Capabilities;
@@ -41,6 +43,9 @@ public class Stage1Loader extends LoaderBase {
 	//FIXME: Detect this from the target artifacts
 	private static final String ONECONFIG_MAIN_CLASS = "org.polyfrost.oneconfig.internal.bootstrap.Bootstrap";
 
+	private static final MutableProperty<Boolean> RELAUNCH_STATE =
+			mutablePropertyOf("oneconfig.loader.relaunch.state", false);
+
 	private static final Property<Boolean> ARTIFACT_SNAPSHOTS =
 			propertyOf("oneconfig.loader.stage1.snapshots", false);
 	private static final Property<Boolean> STAGE1_ARTIFACT_SNAPSHOTS =
@@ -49,6 +54,10 @@ public class Stage1Loader extends LoaderBase {
 			propertyOf("oneconfig.loader.stage1.relaunch.snapshots", false);
 	private static final Property<Boolean> ONECONFIG_ARTIFACT_SNAPSHOTS =
 			propertyOf("oneconfig.loader.stage1.oneconfig.snapshots", false);
+
+	private static boolean isUpdateChecked = false;
+	private static boolean isRelaunchDownloaded = false;
+	private static boolean isOneConfigDownloaded = false;
 
 	private Class<?> oneconfigMainClass;
 	private Object oneconfigMainInstance;
@@ -100,6 +109,7 @@ public class Stage1Loader extends LoaderBase {
 
 		Relaunch relaunch = Relaunch.maybeCreate();
 
+		RELAUNCH_STATE.set(true); // So that stage0 knows not to try to mess with files which are already loaded
 		relaunch.maybeRelaunch(DetectionSupplier.maybeCreate(), runtimeAccess.getAppendedUrls());
 
 		try {
@@ -110,6 +120,10 @@ public class Stage1Loader extends LoaderBase {
     }
 
 	private void checkForUpdates(LoaderFrame loaderFrame) {
+		if (isUpdateChecked) {
+			return;
+		}
+
 		boolean usingUpdateSnapshots = shouldUseSnapshots(STAGE1_ARTIFACT_SNAPSHOTS);
 		BackendArtifact stage1Artifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/stage1?snapshots=" + usingUpdateSnapshots);
 		if (stage1Artifact == null) {
@@ -132,10 +146,16 @@ public class Stage1Loader extends LoaderBase {
 
 			// TODO: Prompt for restart
 		}
+
+		isUpdateChecked = true;
 	}
 
 	@SneakyThrows
 	private void maybeDownloadRelaunch(LoaderFrame loaderFrame) {
+		if (isRelaunchDownloaded) {
+			return;
+		}
+
 		Capabilities capabilities = getCapabilities();
 		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
 
@@ -161,10 +181,15 @@ public class Stage1Loader extends LoaderBase {
 		}
 
 		runtimeAccess.appendToClassPath("relaunch", false, relaunchFile.toUri().toURL());
+		isRelaunchDownloaded = true;
 	}
 
 	@SneakyThrows
 	private void downloadOneConfigArtifacts(LoaderFrame loaderFrame) {
+		if (isOneConfigDownloaded) {
+			return;
+		}
+
 		Capabilities capabilities = getCapabilities();
 		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
 		Capabilities.GameMetadata gameMetadata = capabilities.getGameMetadata();
@@ -254,6 +279,8 @@ public class Stage1Loader extends LoaderBase {
 		try (OutputStream outputStream = Files.newOutputStream(artifactCacheFile)) {
 			outputStream.write(new Gson().toJson(artifacts).getBytes(StandardCharsets.UTF_8));
 		}
+
+		isOneConfigDownloaded = true;
 	}
 
 	@SneakyThrows

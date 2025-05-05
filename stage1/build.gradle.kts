@@ -1,4 +1,4 @@
-version = "1.1.0-alpha.44"
+version = "1.1.0-alpha.47"
 
 sourceSets {
     val main by this
