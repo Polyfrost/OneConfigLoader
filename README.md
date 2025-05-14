@@ -1,5 +1,12 @@
 # OneConfig Early Loading Stages
 
+![Repository badge](https://repo.polyfrost.org/api/badge/latest/snapshots/org/polyfrost/oneconfig/1.8.9-forge?color=1452cc&name=OneConfig)
+![Loader repository badge](https://repo.polyfrost.org/api/badge/latest/snapshots/org/polyfrost/oneconfig/stage0?color=1452cc&name=Loader%20(for%20Legacy%20Forge))
+
+![Stage0 repository badge](https://repo.polyfrost.org/api/badge/latest/snapshots/org/polyfrost/oneconfig/stage0?color=1452cc&name=Loader%20Stage0)
+![Stage1 repository badge](https://repo.polyfrost.org/api/badge/latest/snapshots/org/polyfrost/oneconfig/stage1?color=1452cc&name=Loader%20Stage1)
+![Relaunch repository badge](https://repo.polyfrost.org/api/badge/latest/snapshots/org/polyfrost/oneconfig/relaunch?color=1452cc&name=Loader%20Relaunch)
+
 This repository contains the source code for early loading of [OneConfig].
 
 This below documentation is not intended for end users or consuming developers of OneConfig, check out the
