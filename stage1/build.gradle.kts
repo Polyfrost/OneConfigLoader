@@ -1,4 +1,4 @@
-version = "1.1.0-alpha.47"
+version = "1.1.0-alpha.48" // When you bump this, you should also bump stage0, cause stage0 includes a copy of stage1 too
 
 sourceSets {
     val main by this

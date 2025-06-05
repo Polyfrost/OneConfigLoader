@@ -1,6 +1,6 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
-version = "1.1.0-alpha.46"
+version = "1.1.0-alpha.47"
 
 val include by configurations
 

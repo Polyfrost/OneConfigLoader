@@ -62,6 +62,8 @@ public class Stage1Loader extends LoaderBase {
 	private Class<?> oneconfigMainClass;
 	private Object oneconfigMainInstance;
 
+	private LoaderFrame loaderFrame = null;
+
 	public Stage1Loader(Capabilities capabilities) {
 		super(
 				"stage1",
@@ -80,16 +82,14 @@ public class Stage1Loader extends LoaderBase {
 		String targetSpecifier = gameMetadata.getTargetSpecifier();
 		log.info("Target specifier: {}", targetSpecifier);
 
-		log.info("Creating UI");
-		LoaderFrame loaderFrame = new LoaderFrame();
-		loaderFrame.display();
-
-		checkForUpdates(loaderFrame);
-		maybeDownloadRelaunch(loaderFrame);
-		downloadOneConfigArtifacts(loaderFrame);
+		checkForUpdates();
+		maybeDownloadRelaunch();
+		downloadOneConfigArtifacts();
 
 		// Close our updater window, we're done
-		loaderFrame.destroy();
+		if (this.loaderFrame != null) {
+			this.loaderFrame.destroy();
+		}
 
 		try {
 			ClassLoader classLoader = runtimeAccess.getClassLoader();
@@ -119,7 +119,7 @@ public class Stage1Loader extends LoaderBase {
 		}
     }
 
-	private void checkForUpdates(LoaderFrame loaderFrame) {
+	private void checkForUpdates() {
 		if (isUpdateChecked) {
 			return;
 		}
@@ -141,6 +141,7 @@ public class Stage1Loader extends LoaderBase {
 		Path selfFile = dataDir.resolve("stage1.jar");
 
 		if (!stage1Artifact.checksum.isMatching(selfFile)) {
+			requestLoaderFrame();
 			loaderFrame.updateMessage("Downloading OneConfig Loader stage 1...");
 			stage1Artifact.downloadTo(getRequestHelper(), dataDir.resolve("stage1.update.jar"), loaderFrame::updateProgress);
 
@@ -151,7 +152,7 @@ public class Stage1Loader extends LoaderBase {
 	}
 
 	@SneakyThrows
-	private void maybeDownloadRelaunch(LoaderFrame loaderFrame) {
+	private void maybeDownloadRelaunch() {
 		if (isRelaunchDownloaded) {
 			return;
 		}
@@ -176,6 +177,7 @@ public class Stage1Loader extends LoaderBase {
 		Path relaunchFile = dataDir.resolve("relaunch.jar");
 
 		if (!Files.exists(relaunchFile) || !relaunchArtifact.checksum.isMatching(relaunchFile)) {
+			requestLoaderFrame();
 			loaderFrame.updateMessage("Downloading OneConfig Loader Relaunch...");
 			relaunchArtifact.downloadTo(getRequestHelper(), relaunchFile, loaderFrame::updateProgress);
 		}
@@ -185,7 +187,7 @@ public class Stage1Loader extends LoaderBase {
 	}
 
 	@SneakyThrows
-	private void downloadOneConfigArtifacts(LoaderFrame loaderFrame) {
+	private void downloadOneConfigArtifacts() {
 		if (isOneConfigDownloaded) {
 			return;
 		}
@@ -232,6 +234,7 @@ public class Stage1Loader extends LoaderBase {
 		for (BackendArtifact artifact : artifacts) {
 			Path artifactFile = dataDir.resolve(artifact.name + ".jar");
 			if (!Files.exists(artifactFile) || !artifact.checksum.isMatching(artifactFile)) {
+				requestLoaderFrame();
 				loaderFrame.updateMessage("Downloading OneConfig artifact: " + artifact.name);
 				artifact.downloadTo(getRequestHelper(), artifactFile, loaderFrame::updateProgress);
 			}
@@ -281,6 +284,14 @@ public class Stage1Loader extends LoaderBase {
 		}
 
 		isOneConfigDownloaded = true;
+	}
+
+	private void requestLoaderFrame() {
+		if (this.loaderFrame == null) {
+			log.info("Creating UI");
+			loaderFrame = new LoaderFrame();
+			loaderFrame.display();
+		}
 	}
 
 	@SneakyThrows
