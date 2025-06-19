@@ -4,11 +4,10 @@ import java.awt.*;
 
 public class Palette {
 
-	public static final Color GRAY_900 = new Color(13, 14, 15, 255);
-	public static final Color GRAY_700 = new Color(34, 35, 38);
-	public static final Color PRIMARY_500 = new Color(26, 103, 255);
-	public static final Color PRIMARY_500_80 = new Color(26, 103, 204);
-	public static final Color WHITE_80 = new Color(255, 255, 255, 204);
+	public static final Color BG_PAGE_PAGE = new Color(17, 23, 28);
+	public static final Color FG_BRAND_BRAND = new Color(43, 75, 255);
+	public static final Color FG_BRAND_PRESSED = new Color(57, 87, 255);
+	public static final Color TEXT_PRIMARY_PRIMARY = new Color(213, 219, 255);
 	public static final Color TRANSPARENT = new Color(0, 0, 0, 0);
 
 }

@@ -18,7 +18,7 @@ class Resources {
 
 	static Font getFont() {
 		try {
-			return Font.createFont(Font.TRUETYPE_FONT, Objects.requireNonNull(Resources.class.getResourceAsStream("/assets/oneconfig-loader/Inter.ttf")));
+			return Font.createFont(Font.TRUETYPE_FONT, Objects.requireNonNull(Resources.class.getResourceAsStream("/assets/oneconfig-loader/Poppins-Regular.ttf")));
 		} catch (FontFormatException | IOException e) {
 			e.printStackTrace();
 			return new Font("Arial", Font.PLAIN, 13);

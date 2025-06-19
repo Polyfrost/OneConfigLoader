@@ -8,6 +8,15 @@ public class LoaderFrame extends JFrame {
 
 	private final ProgressPanel progressPanel = new ProgressPanel();
 
+	public static void main(String[] args) {
+		SwingUtilities.invokeLater(() -> {
+			LoaderFrame frame = new LoaderFrame();
+			frame.display();
+			frame.updateMessage("Loading...");
+			frame.updateProgress(0.5f);
+		});
+	}
+
 	public LoaderFrame() {
 		super("OneConfig");
 

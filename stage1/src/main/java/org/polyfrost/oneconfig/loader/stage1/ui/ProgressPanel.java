@@ -34,15 +34,17 @@ public class ProgressPanel extends JPanel {
 
 		Graphics2D g2d = (Graphics2D) g;
 		g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-		g2d.setColor(Palette.GRAY_900);
+		g2d.setColor(Palette.BG_PAGE_PAGE);
 		g2d.fillRoundRect(0, 0, getWidth(), getHeight(), 8, 8);
 		g2d.drawImage(logo, 60, 32, 280, 33, null);
-		g2d.setColor(Palette.GRAY_700);
+		g2d.setColor(new Color(Palette.FG_BRAND_BRAND.getRed(),
+				Palette.FG_BRAND_BRAND.getGreen(),
+				Palette.FG_BRAND_BRAND.getBlue(), 128));
 		g2d.fillRoundRect(24, 150 - 16 - 8, 352, 8, 6, 6);
-		g2d.setColor(Palette.PRIMARY_500);
+		g2d.setColor(Palette.FG_BRAND_BRAND);
 		g2d.fillRoundRect(24, 150 - 16 - 8, (int) (352 * progress), 8, 6, 6);
-		g2d.setColor(Color.WHITE);
-		g2d.setFont(font.deriveFont(getAdjustedFontSize(13f, font, g2d)));
+		g2d.setColor(Palette.TEXT_PRIMARY_PRIMARY);
+		g2d.setFont(font.deriveFont(getAdjustedFontSize(16f, font, g2d)));
 
 
 		String percentage = DECIMAL_FORMAT.format(progress * 100f) + "%";

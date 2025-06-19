@@ -1,7 +1,8 @@
 package org.polyfrost.oneconfig.loader.ui;
 
-import lombok.extern.log4j.Log4j2;
 import org.jetbrains.annotations.NotNull;
+
+import org.polyfrost.oneconfig.loader.base.Capabilities;
 import org.polyfrost.oneconfig.loader.base.LoaderBase;
 
 import javax.swing.*;
@@ -12,17 +13,72 @@ import java.awt.event.MouseEvent;
 import java.lang.reflect.Method;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.Path;
 
 /**
  * @author xtrm
  */
-@Log4j2
+//@Log4j2
 public class ErrorHandler {
     private static final String DISCORD_URL = "https://polyfrost.org/discord";
 
     private static final String TITLE = "OneConfig Loader (%s) - Error";
     private static final boolean CENTER_BODY = false;
     private static final int ICON_SIZE = 64;
+
+	public static void main(String[] args) {
+		ErrorHandler.displayError(new LoaderBase(
+				"testStage",
+				"1.0.0",
+				new Capabilities() {
+					@Override
+					public RuntimeAccess getRuntimeAccess() {
+						return new RuntimeAccess() {
+							@Override
+							public void appendToClassPath(String id, boolean mod, @NotNull URL @NotNull ... urls) {
+
+							}
+
+							@Override
+							public ClassLoader getClassLoader() {
+								return getClass().getClassLoader();
+							}
+						};
+					}
+
+					@Override
+					public GameMetadata getGameMetadata() {
+						return new GameMetadata() {
+
+							@Override
+							public Path getGameDir() {
+								return new java.io.File(".").toPath();
+							}
+
+							@Override
+							public String getGameVersion() {
+								return "1.0.0";
+							}
+
+							@Override
+							public String getLoaderName() {
+								return "testLoader";
+							}
+						};
+					}
+				}
+		) {
+			@Override
+			public void load() {
+
+			}
+
+			@Override
+			public void postLoad() {
+
+			}
+		}, "An error occured while constructing SSLSocketFactory");
+	}
 
     private ErrorHandler() {
         throw new IllegalStateException("This class cannot be instantiated.");
@@ -45,8 +101,8 @@ public class ErrorHandler {
         formattedMessage = "<html><body>" + maybeCenter + formattedMessage.replaceAll("\n", "<br/>");
 
         Runnable exitCallback = () -> exit(errorCode);
-        log.error(formattedTitle);
-        log.error(message);
+        //log.error(formattedTitle);
+        //log.error(message);
         try {
             showFrameDialog(formattedTitle, formattedMessage, exitCallback);
         } catch (HeadlessException ignored) {
@@ -113,13 +169,13 @@ public class ErrorHandler {
                 try {
                     Desktop.getDesktop().browse(new URI(DISCORD_URL));
                 } catch (Exception e) {
-                    log.error("Failed to open Discord URL: " + DISCORD_URL, e);
+                    //log.error("Failed to open Discord URL: " + DISCORD_URL, e);
                     int res = JOptionPane.showConfirmDialog(frame, "Failed to open Discord URL: " + DISCORD_URL + ".\nDo you want to copy it to your clipboard?", "Error", JOptionPane.YES_NO_OPTION);
                     if (res == JOptionPane.YES_OPTION) {
                         try {
                             Toolkit.getDefaultToolkit().getSystemClipboard().setContents(new StringSelection(DISCORD_URL), null);
                         } catch (Exception e1) {
-                            log.error("Failed to copy Discord URL in user's clipboard.", e1);
+                            //log.error("Failed to copy Discord URL in user's clipboard.", e1);
                             JOptionPane.showMessageDialog(frame, "Failed to copy to clipboard.", "Error", JOptionPane.ERROR_MESSAGE);
                         }
                     }
@@ -135,21 +191,21 @@ public class ErrorHandler {
             // Try and default to Metal UI
             UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
         } catch (Throwable e) {
-            log.warn("Failed to set Metal UI.", e);
+            //log.warn("Failed to set Metal UI.", e);
             try {
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Throwable e1) {
-                log.warn("Failed to set System UI.", e1);
+                //log.warn("Failed to set System UI.", e1);
             }
         }
 
-        UIManager.put("OptionPane.background", Palette.GRAY_900);
-        UIManager.put("Panel.background", Palette.GRAY_900);
-        UIManager.put("OptionPane.messageForeground", Palette.WHITE_80);
-        UIManager.put("Button.background", Palette.PRIMARY_500);
-        UIManager.put("Button.select", Palette.PRIMARY_500_80);
-        UIManager.put("Button.foreground", Palette.WHITE_80);
-        UIManager.put("Button.focus", Palette.TRANSPARENT);
+		UIManager.put("OptionPane.background", Palette.BG_PAGE_PAGE);
+		UIManager.put("Panel.background", Palette.BG_PAGE_PAGE);
+		UIManager.put("OptionPane.messageForeground", Palette.TEXT_PRIMARY_PRIMARY);
+		UIManager.put("Button.background", Palette.FG_BRAND_BRAND);
+		UIManager.put("Button.select", Palette.FG_BRAND_PRESSED);
+		UIManager.put("Button.foreground", Palette.TEXT_PRIMARY_PRIMARY);
+		UIManager.put("Button.focus", Palette.TRANSPARENT);
     }
 
     /**
