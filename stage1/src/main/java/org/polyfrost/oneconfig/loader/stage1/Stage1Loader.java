@@ -54,6 +54,8 @@ public class Stage1Loader extends LoaderBase {
 			propertyOf("oneconfig.loader.stage1.relaunch.snapshots", false);
 	private static final Property<Boolean> ONECONFIG_ARTIFACT_SNAPSHOTS =
 			propertyOf("oneconfig.loader.stage1.oneconfig.snapshots", false);
+	private static final Property<Boolean> IGNORE_UPDATES =
+			propertyOf("oneconfig.loader.stage1.ignoreupdates", false);
 
 	private static boolean isUpdateChecked = false;
 	private static boolean isRelaunchDownloaded = false;
@@ -125,12 +127,15 @@ public class Stage1Loader extends LoaderBase {
 		}
 
 		boolean usingUpdateSnapshots = shouldUseSnapshots(STAGE1_ARTIFACT_SNAPSHOTS);
-		BackendArtifact stage1Artifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/stage1?snapshots=" + usingUpdateSnapshots);
-		if (stage1Artifact == null) {
-			// Retry with the opposite snapshot setting
-			stage1Artifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/stage1?snapshots=" + !usingUpdateSnapshots);
+		BackendArtifact stage1Artifact = null;
+		if (!IGNORE_UPDATES.get()) {
+			stage1Artifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/stage1?snapshots=" + usingUpdateSnapshots);
 			if (stage1Artifact == null) {
-				throw new RuntimeException("Failed to fetch stage1 artifact");
+				// Retry with the opposite snapshot setting
+				stage1Artifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/stage1?snapshots=" + !usingUpdateSnapshots);
+				if (stage1Artifact == null) {
+					throw new RuntimeException("Failed to fetch stage1 artifact");
+				}
 			}
 		}
 
@@ -140,7 +145,7 @@ public class Stage1Loader extends LoaderBase {
 				.resolve("data");
 		Path selfFile = dataDir.resolve("stage1.jar");
 
-		if (!stage1Artifact.checksum.isMatching(selfFile)) {
+		if (!IGNORE_UPDATES.get() && (!stage1Artifact.checksum.isMatching(selfFile))) {
 			requestLoaderFrame();
 			loaderFrame.updateMessage("Downloading OneConfig Loader stage 1...");
 			stage1Artifact.downloadTo(getRequestHelper(), dataDir.resolve("stage1.update.jar"), loaderFrame::updateProgress);
@@ -161,12 +166,15 @@ public class Stage1Loader extends LoaderBase {
 		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
 
 		boolean usingRelaunchSnapshots = shouldUseSnapshots(RELAUNCH_ARTIFACT_SNAPSHOTS);
-		BackendArtifact relaunchArtifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/relaunch?snapshots=" + usingRelaunchSnapshots);
-		if (relaunchArtifact == null) {
-			// Retry with the opposite snapshot setting
-			relaunchArtifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/relaunch?snapshots=" + !usingRelaunchSnapshots);
+		BackendArtifact relaunchArtifact = null;
+		if (!IGNORE_UPDATES.get()) {
+			relaunchArtifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/relaunch?snapshots=" + usingRelaunchSnapshots);
 			if (relaunchArtifact == null) {
-				throw new RuntimeException("Failed to fetch relaunch artifact");
+				// Retry with the opposite snapshot setting
+				relaunchArtifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/relaunch?snapshots=" + !usingRelaunchSnapshots);
+				if (relaunchArtifact == null) {
+					throw new RuntimeException("Failed to fetch relaunch artifact");
+				}
 			}
 		}
 
@@ -176,7 +184,7 @@ public class Stage1Loader extends LoaderBase {
 				.resolve("data");
 		Path relaunchFile = dataDir.resolve("relaunch.jar");
 
-		if (!Files.exists(relaunchFile) || !relaunchArtifact.checksum.isMatching(relaunchFile)) {
+		if (!IGNORE_UPDATES.get() && (!Files.exists(relaunchFile) || !relaunchArtifact.checksum.isMatching(relaunchFile))) {
 			requestLoaderFrame();
 			loaderFrame.updateMessage("Downloading OneConfig Loader Relaunch...");
 			relaunchArtifact.downloadTo(getRequestHelper(), relaunchFile, loaderFrame::updateProgress);
@@ -206,23 +214,28 @@ public class Stage1Loader extends LoaderBase {
 		Path artifactCacheFile = dataDir.resolve("artifact-cache.json");
 
 		boolean usingSnapshots = shouldUseSnapshots(ONECONFIG_ARTIFACT_SNAPSHOTS);
-		List<BackendArtifact> artifacts = readArtifactsAt("https://api.polyfrost.org/v1/artifacts/oneconfig?version=" + gameVersion + "&loader=" + loaderName + "&snapshots=" + usingSnapshots);
+		List<BackendArtifact> artifacts = null;
 
-		String dummyArtifactsPath = System.getProperty("oneconfig.loader.stage1.dummyArtifacts");
-		if (dummyArtifactsPath != null) {
-			Path dummyArtifactsPathObj = Paths.get(dummyArtifactsPath);
-			if (Files.exists(dummyArtifactsPathObj)) {
-				artifacts = readArtifactsFrom(Files.newInputStream(dummyArtifactsPathObj));
+		if (!IGNORE_UPDATES.get()) {
+			artifacts = readArtifactsAt("https://api.polyfrost.org/v1/artifacts/oneconfig?version=" + gameVersion + "&loader=" + loaderName + "&snapshots=" + usingSnapshots);
+
+			String dummyArtifactsPath = System.getProperty("oneconfig.loader.stage1.dummyArtifacts");
+			if (dummyArtifactsPath != null) {
+				Path dummyArtifactsPathObj = Paths.get(dummyArtifactsPath);
+				if (Files.exists(dummyArtifactsPathObj)) {
+					artifacts = readArtifactsFrom(Files.newInputStream(dummyArtifactsPathObj));
+				}
+			}
+
+			if (artifacts == null) {
+				// Retry with the opposite snapshot setting
+				artifacts = readArtifactsAt("https://api.polyfrost.org/v1/artifacts/oneconfig?version=" + gameVersion + "&loader=" + loaderName + "&snapshots=" + !usingSnapshots);
 			}
 		}
 
 		if (artifacts == null) {
-			// Retry with the opposite snapshot setting
-			artifacts = readArtifactsAt("https://api.polyfrost.org/v1/artifacts/oneconfig?version=" + gameVersion + "&loader=" + loaderName + "&snapshots=" + !usingSnapshots);
-			if (artifacts == null) {
-				if (Files.exists(artifactCacheFile)) {
-					artifacts = readArtifactsFrom(Files.newInputStream(artifactCacheFile));
-				}
+			if (Files.exists(artifactCacheFile)) {
+				artifacts = readArtifactsFrom(Files.newInputStream(artifactCacheFile));
 			}
 		}
 
@@ -233,7 +246,7 @@ public class Stage1Loader extends LoaderBase {
 		// Compare all the hashes of any known artifacts and download any that are missing or have changed
 		for (BackendArtifact artifact : artifacts) {
 			Path artifactFile = dataDir.resolve(artifact.name + ".jar");
-			if (!Files.exists(artifactFile) || !artifact.checksum.isMatching(artifactFile)) {
+			if (!IGNORE_UPDATES.get() && (!Files.exists(artifactFile) || !artifact.checksum.isMatching(artifactFile))) {
 				requestLoaderFrame();
 				loaderFrame.updateMessage("Downloading OneConfig artifact: " + artifact.name);
 				artifact.downloadTo(getRequestHelper(), artifactFile, loaderFrame::updateProgress);
@@ -296,20 +309,27 @@ public class Stage1Loader extends LoaderBase {
 
 	@SneakyThrows
 	private BackendArtifact readArtifactAt(String url) {
-		URLConnection connection = getRequestHelper().establishConnection(URI.create(url).toURL());
+		URLConnection connection;
+		try {
+			connection = getRequestHelper().establishConnection(URI.create(url).toURL());
 
-		connection.connect();
+			connection.connect();
 
-		if (connection instanceof HttpURLConnection) {
-			HttpURLConnection httpConnection = (HttpURLConnection) connection;
-			if (httpConnection.getResponseCode() != 200) {
-				return null;
+			if (connection instanceof HttpURLConnection) {
+				HttpURLConnection httpConnection = (HttpURLConnection) connection;
+				if (httpConnection.getResponseCode() != 200) {
+					return null;
+				}
 			}
+		} catch (Exception e) {
+			log.error("Failed to connect to {}", url, e);
+			return null;
 		}
 
 		try (InputStream inputStream = connection.getInputStream()) {
 			return new Gson().fromJson(new String(IOUtils.readFully(inputStream), StandardCharsets.UTF_8), BackendArtifact.class);
 		} catch (Exception e) {
+			log.error("Failed to read artifact from {}", url, e);
 			return null;
 		}
 	}
