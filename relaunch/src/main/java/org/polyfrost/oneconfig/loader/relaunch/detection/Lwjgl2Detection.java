@@ -16,11 +16,11 @@ public class Lwjgl2Detection extends SimpleDetection {
 
 	@Override
 	public void checkRelaunch(String id, List<URL> urls) {
-		if (!id.startsWith("org.lwjgl.lwjgl")) {
+		if (!id.startsWith("lwjgl") || !id.contains("2.")) {
 			return;
 		}
 		this.detectedUrls = urls;
 		this.relaunch = true;
-		log.warn("Relaunching with Legacy-Fabric's LWJGL fork...");
+		log.warn("Relaunching with a LWJGL fork...");
 	}
 }
