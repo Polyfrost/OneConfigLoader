@@ -2,6 +2,7 @@ package org.polyfrost.oneconfig.loader.relaunch;
 
 import org.polyfrost.oneconfig.loader.relaunch.detection.AsmDetection;
 import org.polyfrost.oneconfig.loader.relaunch.detection.ExcludedKotlinDetection;
+import org.polyfrost.oneconfig.loader.relaunch.detection.Lwjgl2Detection;
 import org.polyfrost.oneconfig.loader.relaunch.detection.MixinDetection;
 import org.polyfrost.oneconfig.loader.relaunch.detection.PreloadLibraryDetection;
 import org.polyfrost.oneconfig.loader.relaunch.detection.SignedMixinDetection;
@@ -20,6 +21,7 @@ public class DetectionSupplierImpl implements DetectionSupplier {
 				addAll(createComplexPreloadLibraryDetectionList());
 				add(new PreloadLibraryDetection("polymixin-", "org", "spongepowered"));
 				add(new MixinDetection());
+				add(new Lwjgl2Detection());
 			}
 		};
 	}

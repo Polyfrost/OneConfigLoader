@@ -10,7 +10,6 @@ import java.nio.file.Paths;
 import java.util.Enumeration;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
-import java.util.regex.Matcher;
 
 import com.github.zafarkhaja.semver.Version;
 import lombok.SneakyThrows;
