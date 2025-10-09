@@ -28,9 +28,6 @@ This below documentation is not intended for end users or consuming developers o
 The **Wrapper** is the first entrypoint for **OneConfig** and is called depending on the platform as:
 
 - an [`ITweaker`](./stage0/src/launchwrapper/java/org/polyfrost/oneconfig/loader/stage0/LaunchWrapperTweaker.java) for [LaunchWrapper]
-- an [`ITransformationService`](./stage0/src/modlauncher/java/org/polyfrost/oneconfig/loader/stage0/ModLauncherLegacyTransformationService.java) for [ModLauncher]
-  - and [another one](./stage0/src/modlauncher/java9/org/polyfrost/oneconfig/loader/stage0/j9/ModLauncherTransformationService.java) for [ModLauncher] 9+
-- a [`LanguageAdapter`](./stage0/src/fabriclike/java/org/polyfrost/oneconfig/loader/stage0/FabricLikeLanguageAdapter.java) for [Fabric Loader] (and subsequently, [Quilt Loader])
 
 This direct first entrypoint encapsulates all the required metadata and methods and abstracts them into a platform-agnostic
 [`Capabilities`](./common/src/main/java/org/polyfrost/oneconfig/loader/ILoader.java#L33) interface, and delegates further loading to the 
