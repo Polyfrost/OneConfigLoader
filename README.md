@@ -22,6 +22,14 @@ This below documentation is not intended for end users or consuming developers o
   - Platform-relative code should be kept to a minimum, and should be isolated to the `stage0` bundle; everything else should be platform-agnostic.
 - No extra-downloading
   - If a file is needed, it should belong in a local shared cache on the computer.
+ 
+## Rationale
+
+When we first started developing OneConfig a couple of years ago, we wanted all versions of OneConfig to be auto-downloaded. That was back when we had a much different focus in mind in terms of user/dev experience. We have definitively ruled out the loader system for usage in Fabric, as JiJ and the version-agnostic nature of the mod loader makes everything very smooth for OneConfig.
+
+However, we will continue to ship OneConfig via the Loader on Legacy Forge. The reason behind this is that the ancient mod loader does not support simple things such as JiJ and does not come with Mixin by default, which makes everything very difficult to manage developer-wise. On top of that, Mixin 0.8 does not actually work on 1.8/1.12 as they run on an ASM version lower than what is supported. Having to compile on Mixin 0.7 would be detrimental to developers in 2025. Users also generally do not install library mods on Legacy Forge, and prefer mods including the libraries for them (blame Essential).
+
+After we release and we look towards Modern Forge support, we will examine whether OneConfig will need the loader system. We would prefer if it did not, as there is obvious concern about any mod auto-installing JAR files onto their computer, but ModLauncher/Forge has not really improved much for our technological use-cases. 
 
 ## Stage 0: Wrapper
 
