@@ -1,4 +1,4 @@
-version = "1.1.0-alpha.49" // When you bump this, you should also bump stage0, cause stage0 includes a copy of stage1 too
+version = "1.1.0-alpha.50" // When you bump this, you should also bump stage0, cause stage0 includes a copy of stage1 too
 
 sourceSets {
     val main by this
@@ -19,6 +19,8 @@ dependencies {
 	include("me.xtrm:propy:0.0.5") {
 		isTransitive = false
 	}
+
+	implementation("net.minecraft:launchwrapper:1.12")
 
     "legacyCompileOnly"("net.minecraft:launchwrapper:1.12")
 }

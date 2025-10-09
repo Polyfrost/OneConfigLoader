@@ -66,6 +66,8 @@ public class Stage1Loader extends LoaderBase {
 
 	private LoaderFrame loaderFrame = null;
 
+	private boolean delegateToDelayedTweaker = false;
+
 	public Stage1Loader(Capabilities capabilities) {
 		super(
 				"stage1",
@@ -76,6 +78,12 @@ public class Stage1Loader extends LoaderBase {
 
 	@Override
 	public void load() {
+		if (DelayedStage0Tweaker.isRequired()) {
+			DelayedStage0Tweaker.prepare();
+			this.delegateToDelayedTweaker = true;
+			return;
+		}
+
 		log.info("Loading stage1...");
 		Capabilities capabilities = getCapabilities();
 		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
@@ -106,6 +114,10 @@ public class Stage1Loader extends LoaderBase {
 
 	@Override
 	public void postLoad() {
+		if (this.delegateToDelayedTweaker) {
+			DelayedStage0Tweaker.inject();
+			return;
+		}
 		Capabilities capabilities = getCapabilities();
 		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
 
