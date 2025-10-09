@@ -61,9 +61,8 @@ subprojects {
         withSourcesJar()
         withJavadocJar()
 
-        toolchain {
-            languageVersion.set(JavaLanguageVersion.of(8))
-        }
+		targetCompatibility = JavaVersion.VERSION_1_8
+		sourceCompatibility = JavaVersion.VERSION_1_8
     }
 
     dependencies {
@@ -121,5 +120,18 @@ subprojects {
         withType(ShadowJar::class) {
             assemble.dependsOn(this)
         }
+
+		fun applyCompilerOptions(compileOptions: JavaCompile) {
+			compileOptions.targetCompatibility = "1.8"
+			compileOptions.sourceCompatibility = "1.8"
+		}
+
+		named<JavaCompile>("compileJava") {
+			applyCompilerOptions(this)
+		}
+
+		withType<JavaCompile> {
+			applyCompilerOptions(this)
+		}
     }
 }
