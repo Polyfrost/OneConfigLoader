@@ -7,6 +7,8 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URLConnection;
@@ -19,11 +21,12 @@ import java.util.jar.JarInputStream;
 import java.util.zip.ZipEntry;
 
 import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import lombok.SneakyThrows;
 import lombok.extern.log4j.Log4j2;
 import me.xtrm.propy.MutableProperty;
 import me.xtrm.propy.Property;
+
+import org.jetbrains.annotations.NotNull;
 
 import org.polyfrost.oneconfig.loader.base.Capabilities;
 import org.polyfrost.oneconfig.loader.base.LoaderBase;
@@ -68,12 +71,22 @@ public class Stage1Loader extends LoaderBase {
 
 	private boolean delegateToDelayedTweaker = false;
 
+	private static Capabilities lastDetectedCapabilities = null;
+
 	public Stage1Loader(Capabilities capabilities) {
 		super(
 				"stage1",
 				IOUtils.provideImplementationVersion(Stage1Loader.class, UNKNOWN_VERSION),
 				capabilities
 		);
+		lastDetectedCapabilities = capabilities;
+	}
+
+	/**
+	 * Don't ask.
+	 */
+	Stage1Loader() {
+		this(lastDetectedCapabilities);
 	}
 
 	@Override
@@ -348,7 +361,7 @@ public class Stage1Loader extends LoaderBase {
 
 	@SneakyThrows
 	private List<BackendArtifact> readArtifactsFrom(InputStream inputStream) {
-		return new Gson().fromJson(new String(IOUtils.readFully(inputStream), StandardCharsets.UTF_8), new TypeToken<List<BackendArtifact>>(){}.getType());
+		return new Gson().fromJson(new String(IOUtils.readFully(inputStream), StandardCharsets.UTF_8), new CustomBackendArtifactListType());
 	}
 
 	@SneakyThrows
@@ -378,5 +391,22 @@ public class Stage1Loader extends LoaderBase {
 			return true;
 		}
 		return property.get();
+	}
+
+	public static class CustomBackendArtifactListType implements ParameterizedType {
+		@Override
+		public Type @NotNull [] getActualTypeArguments() {
+			return new Type[]{BackendArtifact.class};
+		}
+
+		@Override
+		public @NotNull Type getRawType() {
+			return List.class;
+		}
+
+		@Override
+		public Type getOwnerType() {
+			return null;
+		}
 	}
 }
