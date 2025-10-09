@@ -50,7 +50,7 @@ public class PreloadLibraryDetection implements Detection {
 		if (!id.startsWith(this.id)) {
 			return;
 		}
-		try (FileSystem fileSystem = FileSystems.newFileSystem(Paths.get(urls.get(0).toURI()), null)) {
+		try (FileSystem fileSystem = FileSystems.newFileSystem(Paths.get(urls.get(0).toURI()), (ClassLoader) null)) {
 			libPath = fileSystem.getPath(firstPath, restOfPath);
 
 			if (Files.notExists(libPath)) {
