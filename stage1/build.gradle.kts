@@ -1,4 +1,4 @@
-version = "54" // When you bump this, you should also bump stage0, cause stage0 includes a copy of stage1 too
+version = "1.1.0-alpha.54" // When you bump this, you should also bump stage0, cause stage0 includes a copy of stage1 too
 
 sourceSets {
     val main by this
@@ -30,7 +30,7 @@ dependencies {
 tasks.jar {
 	manifest {
 		attributes(
-			"Implementation-Version" to "1.1.0-alpha.$version", // Compat with old versions of stage0
+			"Implementation-Version" to version,
 		)
 	}
 }

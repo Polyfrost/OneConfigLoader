@@ -15,6 +15,7 @@ import lombok.SneakyThrows;
 
 import org.polyfrost.oneconfig.loader.base.Capabilities;
 import org.polyfrost.oneconfig.loader.base.LoaderBase;
+import org.polyfrost.oneconfig.loader.stage0.version.Version;
 import org.polyfrost.oneconfig.loader.utils.IOUtils;
 import org.polyfrost.oneconfig.loader.utils.XDG;
 
@@ -116,7 +117,7 @@ public class Stage0Loader extends LoaderBase {
 		Files.createDirectories(dataDir);
 
 		URL latestUrl = null;
-		Integer latestVersion = null;
+		Version latestVersion = null;
 
 		if (Files.exists(stage1File)) {
 			latestVersion = getJarVersion(stage1File.toUri().toURL());
@@ -129,14 +130,14 @@ public class Stage0Loader extends LoaderBase {
 
 		while (resources.hasMoreElements()) {
 			URL url = resources.nextElement();
-			Integer version = getJarVersion(url);
+			Version version = getJarVersion(url);
 			logger.info("Found stage1 at {} with version {}", url, version);
 
 			if (version == null) {
 				continue;
 			}
 
-			if (latestVersion == null || version > latestVersion) {
+			if (latestVersion == null || version.compareTo(latestVersion) > 0) {
 				latestUrl = url;
 				latestVersion = version;
 			}
@@ -153,7 +154,7 @@ public class Stage0Loader extends LoaderBase {
     }
 
 	@SneakyThrows
-	public static Integer getJarVersion(URL jarFile) {
+	public static Version getJarVersion(URL jarFile) {
 		try (JarInputStream inputStream = new JarInputStream(jarFile.openStream(), false)) {
 			Manifest manifest = inputStream.getManifest();
 			if (manifest == null) {
@@ -161,11 +162,11 @@ public class Stage0Loader extends LoaderBase {
 			}
 
 			String version = manifest.getMainAttributes().getValue("Implementation-Version");
-			if (version == null) {
+			if (version == null || version.isEmpty()) {
 				return null;
 			}
 
-			return Integer.parseInt(version.substring(version.lastIndexOf('.') + 1));
+			return Version.parse(version);
 		}
 	}
 
