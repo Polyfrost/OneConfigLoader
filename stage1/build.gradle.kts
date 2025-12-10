@@ -30,7 +30,7 @@ dependencies {
 tasks.jar {
 	manifest {
 		attributes(
-			"Implementation-Version" to "999.999.999-alpha.$version", // Compat with old versions of stage0
+			"Implementation-Version" to "1.1.0-alpha.$version", // Compat with old versions of stage0
 		)
 	}
 }
