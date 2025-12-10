@@ -79,13 +79,15 @@ subprojects {
 
 	configure<PublishingExtension> {
 		publications {
-			register<MavenPublication>("mavenJava") {
-				artifactId = project.name
-				group = project.group
-				version = project.version.toString()
+			if (project.name == "stage0") {
+				register<MavenPublication>("mavenJava") {
+					artifactId = project.name
+					group = project.group
+					version = project.version.toString()
 
-				artifact(tasks.named("shadowJar"))
-				artifact(tasks.named("sourcesJar"))
+					artifact(tasks.named("shadowJar"))
+					artifact(tasks.named("sourcesJar"))
+				}
 			}
 		}
 	}
