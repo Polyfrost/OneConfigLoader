@@ -34,6 +34,7 @@ import org.polyfrost.oneconfig.loader.relaunch.DetectionSupplier;
 import org.polyfrost.oneconfig.loader.relaunch.Relaunch;
 import org.polyfrost.oneconfig.loader.stage1.backend.BackendArtifact;
 import org.polyfrost.oneconfig.loader.stage1.ui.LoaderFrame;
+import org.polyfrost.oneconfig.loader.stage1.ui.Resources;
 import org.polyfrost.oneconfig.loader.utils.IOUtils;
 import org.polyfrost.oneconfig.loader.utils.XDG;
 
@@ -55,6 +56,8 @@ public class Stage1Loader extends LoaderBase {
 			propertyOf("oneconfig.loader.stage1.update.snapshots", false);
 	private static final Property<Boolean> RELAUNCH_ARTIFACT_SNAPSHOTS =
 			propertyOf("oneconfig.loader.stage1.relaunch.snapshots", false);
+	private static final Property<Boolean> ASSETS_ARTIFACT_SNAPSHOTS =
+			propertyOf("oneconfig.loader.stage1.assets.snapshots", false);
 	private static final Property<Boolean> ONECONFIG_ARTIFACT_SNAPSHOTS =
 			propertyOf("oneconfig.loader.stage1.oneconfig.snapshots", false);
 	private static final Property<Boolean> IGNORE_UPDATES =
@@ -62,6 +65,7 @@ public class Stage1Loader extends LoaderBase {
 
 	private static boolean isUpdateChecked = false;
 	private static boolean isRelaunchDownloaded = false;
+	private static boolean isAssetsDownloaded = false;
 	private static boolean isOneConfigDownloaded = false;
 
 	private Class<?> oneconfigMainClass;
@@ -105,6 +109,14 @@ public class Stage1Loader extends LoaderBase {
 		String targetSpecifier = gameMetadata.getTargetSpecifier();
 		log.info("Target specifier: {}", targetSpecifier);
 
+		try {
+			downloadAssetsArtifact();
+			Resources.loadAssetsClass(runtimeAccess);
+		} catch (Exception e) {
+			log.error("Failed to load assets, continuing without them", e);
+		}
+
+		// Loader frame requested from this point on
 		checkForUpdates();
 		maybeDownloadRelaunch();
 		downloadOneConfigArtifacts();
@@ -217,6 +229,42 @@ public class Stage1Loader extends LoaderBase {
 
 		runtimeAccess.appendToClassPath("relaunch", false, relaunchFile.toUri().toURL());
 		isRelaunchDownloaded = true;
+	}
+
+	@SneakyThrows
+	private void downloadAssetsArtifact() {
+		if (isAssetsDownloaded) {
+			return;
+		}
+
+		Capabilities capabilities = getCapabilities();
+		Capabilities.RuntimeAccess runtimeAccess = capabilities.getRuntimeAccess();
+
+		boolean usingAssetsSnapshots = shouldUseSnapshots(ASSETS_ARTIFACT_SNAPSHOTS);
+		BackendArtifact assetsArtifact = null;
+		if (!IGNORE_UPDATES.get()) {
+			assetsArtifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/loader-assets?snapshots=" + usingAssetsSnapshots);
+			if (assetsArtifact == null) {
+				// Retry with the opposite snapshot setting
+				assetsArtifact = readArtifactAt("https://api.polyfrost.org/v1/artifacts/loader-assets?snapshots=" + !usingAssetsSnapshots);
+				if (assetsArtifact == null) {
+					throw new RuntimeException("Failed to fetch loader assets artifact");
+				}
+			}
+		}
+
+		Path dataDir = XDG
+				.provideCacheDir("OneConfig")
+				.resolve("loader")
+				.resolve("data");
+		Path assetsFile = dataDir.resolve("loader-assets.jar");
+
+		if (!IGNORE_UPDATES.get() && (!Files.exists(assetsFile) || !assetsArtifact.checksum.isMatching(assetsFile))) {
+			assetsArtifact.downloadTo(getRequestHelper(), assetsFile, (ignored) -> {});
+		}
+
+		runtimeAccess.appendToClassPath("loader-assets", false, assetsFile.toUri().toURL());
+		isAssetsDownloaded = true;
 	}
 
 	@SneakyThrows

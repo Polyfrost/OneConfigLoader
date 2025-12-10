@@ -1,12 +1,11 @@
 import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 
-version = "1.1.0-alpha.53"
+version = "1.1.0-alpha.54"
 
 val include by configurations
 
 dependencies {
     include(projects.common)
-	include("com.github.zafarkhaja:java-semver:0.10.2")
 
 	@Suppress("RedundantSuppression", "VulnerableLibrariesLocal")
 	compileOnly("net.minecraft:launchwrapper:1.12")
